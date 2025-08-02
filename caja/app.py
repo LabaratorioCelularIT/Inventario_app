@@ -65,6 +65,8 @@ OBJETIVOS_DEFAULT = {
     100: 5
 }
 
+print.outln("it works")
+
 # Funciones de utilidad
 def fecha_hoy():
     return datetime.now(TZ).strftime("%d-%m-%Y")
