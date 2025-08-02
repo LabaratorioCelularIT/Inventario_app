@@ -65,7 +65,6 @@ OBJETIVOS_DEFAULT = {
     100: 5
 }
 
-print.outln("it works")
 
 # Funciones de utilidad
 def fecha_hoy():
