@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Faltantes del Día</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e6f0ff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .topbar {
+      background-color: #003366;
+      color: white;
+      padding: 20px;
+      font-size: 22px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      color: #003366;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .fecha {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 18px;
+      color: #666;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #f0f8ff;
+    }
+
+    .positivo {
+      color: green;
+      font-weight: bold;
+    }
+
+    .negativo {
+      color: red;
+      font-weight: bold;
+    }
+
+    .volver {
+      margin-top: 30px;
+      text-align: center;
+    }
+
+    .volver a {
+      background-color: #c9302c;
+      color: white;
+      padding: 12px 20px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .volver a:hover {
+      background-color: #a72824;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">📉 Faltantes del Día</div>
+
+  <div class="container">
+    <h2>Resumen de Faltantes por Sucursal</h2>
+    <div class="fecha">Fecha: {{ fecha }}</div>
+
+    <table>
+      <tr>
+        <th>Sucursal</th>
+        <th>Denom</th>
+        <th>Objetivo</th>
+        <th>Actual</th>
+        <th>Diferencia</th>
+      </tr>
+      {% for d in datos %}
+      <tr>
+        <td>{{ d.sucursal }}</td>
+        <td>${{ d.denom }}</td>
+        <td>{{ d.objetivo }}</td>
+        <td>{{ d.actual }}</td>
+        <td class="{{ 'positivo' if d.diferencia < 0 else 'negativo' }}">
+          {{ d.diferencia }}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="volver">
+    <a href="/panel-admin">⬅ Volver al Panel</a>
+  </div>
+</body>
+</html>

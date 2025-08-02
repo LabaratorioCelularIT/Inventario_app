@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ver Ciclos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --azul-rey: #003366;
+      --celeste: #e6f0ff;
+      --blanco: #ffffff;
+      --gris: #f1f1f1;
+      --sombra: rgba(0, 0, 0, 0.1);
+      --rojo: #e74c3c;
+      --verde: #2ecc71;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--celeste);
+    }
+
+    header {
+      background-color: var(--azul-rey);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      box-shadow: 0 2px 5px var(--sombra);
+    }
+
+    .contenedor {
+      max-width: 900px;
+      margin: 2rem auto;
+      background-color: var(--blanco);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px var(--sombra);
+      padding: 2rem;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: var(--azul-rey);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+
+    th {
+      background-color: var(--gris);
+    }
+
+    .acciones {
+      margin-top: 1rem;
+      text-align: right;
+    }
+
+    .btn-eliminar {
+      background-color: var(--rojo);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    .btn-volver {
+      display: block;
+      width: fit-content;
+      margin: 1rem auto 2rem auto;
+      background-color: var(--azul-rey);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .resumen {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+
+    .separador {
+      border-top: 2px solid var(--celeste);
+      margin: 2rem 0;
+    }
+
+    .verde { color: var(--verde); }
+    .rojo { color: var(--rojo); }
+  </style>
+</head>
+<body>
+  <header>Resumen de Ciclos</header>
+
+  <div class="contenedor">
+    <a class="btn-volver" href="/panel-admin">← Volver al Panel</a>
+
+    {% for ciclo in ciclos %}
+      <h2>{{ ciclo.sucursal }} - {{ ciclo.fecha }}</h2>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Denominación</th>
+            <th>Objetivo</th>
+            <th>Actual</th>
+            <th>Repuesto</th>
+            <th>Diferencia</th>
+            <th>Total ($)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fila in ciclo.desglosado %}
+          <tr>
+            <td>${{ fila.denom }}</td>
+            <td>{{ fila.objetivo }}</td>
+            <td>{{ fila.actual }}</td>
+            <td>{{ fila.repuesto }}</td>
+            <td class="{% if fila.diferencia < 0 %}rojo{% elif fila.diferencia > 0 %}verde{% endif %}">
+              {{ fila.diferencia }}
+            </td>
+            <td>${{ fila.total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="resumen">
+        Total a entregar: <span class="rojo">${{ ciclo.total_dado }}</span> &nbsp; | &nbsp;
+        Total a recibir: <span class="verde">${{ ciclo.total_recibido }}</span>
+      </div>
+
+      <form method="POST" action="/eliminar-ciclo/{{ ciclo.id }}" class="acciones">
+        <button class="btn-eliminar" onclick="return confirm('¿Seguro que deseas eliminar este ciclo?')">Eliminar</button>
+      </form>
+
+      <div class="separador"></div>
+    {% endfor %}
+  </div>
+</body>
+</html>

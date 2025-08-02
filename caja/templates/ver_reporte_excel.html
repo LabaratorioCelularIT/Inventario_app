@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte Diario de Corte</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --fg: #003366;
+      --card: #ffffff;
+      --accent: #337ab7;
+      --accent-hover: #286090;
+      --danger: #d9534f;
+      --danger-hover: #c9302c;
+    }
+
+    body {
+      background-color: var(--bg);
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      color: var(--fg);
+    }
+
+    .topbar {
+      background-color: var(--fg);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      position: relative;
+      border-bottom: 3px solid #001f3f;
+    }
+
+    .topbar img {
+      height: 70px;
+      margin-right: 15px;
+    }
+
+    .topbar .title {
+      font-size: 26px;
+      font-weight: bold;
+      color: white;
+      display: flex;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background-color: var(--card);
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+            color: #003366;
+            margin-top: 30px;
+        }
+
+     table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background-color: var(--accent);
+      color: white;
+    }
+
+        .highlight {
+            font-weight: bold;
+            font-size: 18px;
+            margin: 10px 0;
+        }
+
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+
+    .filter-bar label {
+      font-weight: bold;
+      font-size: 15px;
+      color: var(--fg);
+    }
+
+    .filter-bar select,
+    .filter-bar input[type="date"],
+    .filter-bar button {
+      padding: 10px 14px;
+      font-size: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    .filter-bar button {
+      background-color: var(--accent);
+      color: white;
+      font-weight: bold;
+      border: none;
+      transition: background-color 0.3s ease;
+      cursor: pointer;
+    }
+
+    .filter-bar button:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .card {
+      background-color: var(--card);
+      padding: 25px;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+      margin-top: 10px;
+    }
+
+    ul {
+      margin-top: 10px;
+      padding-left: 20px;
+    }
+
+    .back-button {
+      display: inline-block;
+      margin-top: 30px;
+      background-color: var(--danger);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+
+    .back-button:hover {
+      background-color: var(--danger-hover);
+    }
+
+    @media (max-width: 600px) {
+      .topbar .title {
+        flex-direction: column;
+        font-size: 20px;
+      }
+
+      .topbar img {
+        height: 60px;
+        margin-bottom: 10px;
+      }
+
+      table, th, td {
+        font-size: 13px;
+      }
+
+      .container {
+        padding: 20px;
+        margin: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="title">
+      <img src="/static/logo.png" alt="Logo">
+      Celulares Crédito Fácil – Reporte Diario de Corte
+    </div>
+  </div>
+
+  <div class="container">
+    <form method="get" class="filter-bar">
+      <label>Sucursal:
+        <select name="sucursal">
+          {% for s in ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"] %}
+            <option value="{{ s }}" {% if s == sucursal %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Fecha:
+        <input type="date" name="fecha" value="{{ fecha }}">
+      </label>
+      <button type="submit">Filtrar</button>
+    </form>
+
+    <div class="card">
+      <div class="summary">
+        <strong>Ventas Totales: ${{ "{:,.2f}".format(total_ventas) }}</strong><br>
+        Efectivo: ${{ "{:,.2f}".format(total_efectivo) }} |
+        Tarjeta: ${{ "{:,.2f}".format(total_tarjeta) }} |
+        Dólar: ${{ "{:,.2f}".format(total_dolar) }} |
+        Mixto: ${{ "{:,.2f}".format(total_mixto) }}<br>
+        Gastos: ${{ "{:,.2f}".format(total_gastos) }} |
+        Anticipos: ${{ "{:,.2f}".format(total_anticipos) }} |
+        Dólares: ${{ "{:,.2f}".format(total_dolares) }}
+      </div>
+
+      {% if gastos %}
+      <h2>Gastos</h2>
+      <table>
+        <thead>
+          <tr><th>Fecha</th><th>Motivo</th><th>Monto</th></tr>
+        </thead>
+        <tbody>
+          {% for g in gastos %}
+          <tr>
+            <td>{{ g["fecha"] }}</td>
+            <td>{{ g["motivo"] }}</td>
+            <td>${{ "{:,.2f}".format(g["monto"]) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      {% if notas %}
+      <h2>Notas</h2>
+      <ul>
+        {% for nota in notas %}
+        <li>{{ nota }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+
+    <a class="back-button" href="{{ url_for('panel_admin') if session['tipo'] == 'admin' else url_for('panel_consulta') }}">← Volver al Panel</a>
+  </div>
+</body>
+</html>

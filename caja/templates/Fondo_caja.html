@@ -1,0 +1,487 @@
+from flask import Flask, render_template, request, redirect, session, send_file
+import sqlite3
+import os
+from datetime import datetime
+from openpyxl import load_workbook
+from io import BytesIO
+from datetime import datetime, timedelta
+
+app = Flask(__name__)
+app.secret_key = 'clave-secreta-caja'
+DB_PATH = 'caja.sqlite3'
+
+def init_db():
+    with sqlite3.connect(DB_PATH) as conn:
+        c = conn.cursor()
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT UNIQUE,
+                contrasena TEXT,
+                tipo TEXT,
+                sucursal TEXT
+            )
+        ''')
+        conn.commit()
+
+def registrar_log(usuario, tipo, accion):
+    fecha_hora = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    conn = sqlite3.connect("caja.sqlite3")
+    cur = conn.cursor()
+    cur.execute("INSERT INTO log_actividad (usuario, tipo, accion, fecha) VALUES (?, ?, ?, ?)",
+                (usuario, tipo, accion, fecha_hora))
+    conn.commit()
+    conn.close()
+
+@app.route("/", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        tipo_usuario = request.form["tipo"]
+        nombre = request.form["usuario"]
+        contrasena = request.form["contrasena"]
+        sucursal = request.form.get("sucursal")
+
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute("SELECT id, contrasena, tipo, sucursal FROM usuarios WHERE nombre = ?", (nombre,))
+        usuario = cur.fetchone()
+        conn.close()
+
+        if usuario and usuario[1] == contrasena and usuario[2] == tipo_usuario:
+            session["usuario"] = nombre
+            session["tipo"] = tipo_usuario
+            session["sucursal"] = sucursal if tipo_usuario == "consulta" else usuario[3]
+
+            registrar_log(nombre, tipo_usuario, "Inicio de sesión exitoso")
+
+            if tipo_usuario == "admin":
+                return redirect("/panel-admin")
+            elif tipo_usuario == "consulta":
+                return redirect("/panel-consulta")
+            elif tipo_usuario == "reparto":
+                return redirect("/panel-reparto")
+            else:
+                return "Tipo de usuario desconocido", 403
+        else:
+            return render_template("login.html", error="Credenciales incorrectas", tipo=tipo_usuario)
+    return render_template("login.html")
+
+@app.route("/panel-admin")
+def panel_admin():
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return redirect("/")
+    return render_template("panel-admin.html")
+
+@app.route("/panel-consulta")
+def panel_consulta():
+    if "usuario" not in session or session.get("tipo") != "consulta":
+        return redirect("/")
+    return render_template("panel-consulta.html")
+
+@app.route("/limpiar-carrito", methods=["POST"])
+def limpiar_carrito():
+    session.pop("carrito", None)
+    session.pop("total", None)
+    return '', 204
+
+@app.route("/logout")
+def logout():
+    registrar_log(session.get("usuario", "Desconocido"), session.get("tipo", "Desconocido"), "Cerró sesión")
+    session.clear()
+    return redirect("/")
+
+@app.route("/log-actividad")
+def log_actividad():
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return redirect("/")
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT usuario, tipo, accion, fecha FROM log_actividad ORDER BY id DESC")
+        logs = cur.fetchall()
+
+    return render_template("log_actividad.html", logs=logs)
+
+from flask import render_template, request, redirect, session
+from datetime import datetime
+import sqlite3
+
+@app.route("/gastos", methods=["GET", "POST"])
+def gastos():
+    if "usuario" not in session:
+        return redirect("/")
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    tipo_usuario = session.get("tipo")
+    sucursales = ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
+    sucursal_filtro = request.args.get("sucursal") or session["sucursal"]
+
+    if request.method == "POST":
+        motivo = request.form["motivo"]
+        monto = float(request.form["monto"])
+        fecha = datetime.now().strftime("%d-%m-%Y")
+        sucursal = session["sucursal"]
+
+        cur.execute("INSERT INTO gastos (motivo, monto, fecha, sucursal) VALUES (?, ?, ?, ?)", (motivo, monto, fecha, sucursal))
+        conn.commit()
+
+        registrar_log(session["usuario"], session["tipo"], f"Registró un gasto en {sucursal} de ${monto:.2f} - {motivo}")
+        return redirect("/gastos")
+
+    # Consulta de gastos
+    if tipo_usuario == "admin":
+        cur.execute("SELECT id, motivo, monto, fecha, sucursal FROM gastos WHERE sucursal = ? ORDER BY id DESC", (sucursal_filtro,))
+    else:
+        cur.execute("SELECT id, motivo, monto, fecha, sucursal FROM gastos WHERE sucursal = ? ORDER BY id DESC", (session["sucursal"],))
+
+    gastos = cur.fetchall()
+    conn.close()
+
+    return render_template("gastos.html", tipo=session["tipo"], sucursal=session["sucursal"])
+
+@app.route("/ventas", methods=["GET", "POST"])
+def ventas():
+    if "usuario" not in session:
+        return redirect("/")
+
+    if "carrito" not in session:
+        session["carrito"] = []
+
+    if request.method == "POST":
+        # Agregar producto al carrito
+        descripcion = request.form["descripcion"]
+        concepto = request.form["concepto"]
+        tipo = request.form["tipo"]
+        referencia = request.form.get("referencia", "")
+        precio = float(request.form["precio"])
+        dolar = float(request.form["dolar"]) if request.form.get("dolar") else 0.0
+
+        session["carrito"].append({
+            "descripcion": descripcion,
+            "concepto": concepto,
+            "tipo": tipo,
+            "referencia": referencia,
+            "precio": precio,
+            "dolar": dolar
+        })
+        session.modified = True
+        return redirect("/ventas")
+
+    # Esto evita el error si el carrito está vacío
+    carrito = session.get("carrito", [])
+    total = sum(item["precio"] for item in carrito)
+
+    return render_template("ventas.html", carrito=carrito, total=total)
+
+@app.route("/eliminar-venta/<int:venta_id>")
+def eliminar_venta(venta_id):
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return redirect("/")
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM ventas WHERE id = ?", (venta_id,))
+    conn.commit()
+    conn.close()
+    return redirect("/ventas")
+
+@app.route("/eliminar-gasto/<int:gasto_id>")
+def eliminar_gasto(gasto_id):
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return redirect("/")
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM gastos WHERE id = ?", (gasto_id,))
+    conn.commit()
+    conn.close()
+    return redirect("/gastos")
+
+@app.route("/corte-del-dia")
+def corte_del_dia():
+    if "usuario" not in session:
+        return redirect("/")
+
+    fecha = datetime.now().strftime("%d-%m-%Y")
+    sucursal = session["sucursal"]
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT SUM(precio) FROM ventas
+        WHERE fecha = ? AND sucursal = ? AND tipo != 'Tarjeta'
+    """, (fecha, sucursal))
+    ventas_efectivo = cur.fetchone()[0] or 0
+
+    cur.execute("""
+        SELECT SUM(precio) FROM ventas
+        WHERE fecha = ? AND sucursal = ? AND tipo = 'Tarjeta'
+    """, (fecha, sucursal))
+    ventas_tarjeta = cur.fetchone()[0] or 0
+
+    cur.execute("""
+        SELECT SUM(monto) FROM gastos
+        WHERE fecha = ? AND sucursal = ?
+    """, (fecha, sucursal))
+    gastos = cur.fetchone()[0] or 0
+
+    cur.execute("""
+        SELECT monto FROM fondo_caja
+        WHERE fecha = ? AND sucursal = ?
+        ORDER BY id DESC LIMIT 1
+    """, (fecha, sucursal))
+    fondo = cur.fetchone()
+    fondo_inicial = fondo[0] if fondo else 0
+
+    conn.close()
+
+    total_caja = fondo_inicial + ventas_efectivo - gastos
+
+    registrar_log(session["usuario"], session["tipo"], f"Consultó corte del día ({sucursal} - {fecha})")
+
+    return render_template("corte-del-dia.html",
+        fecha=fecha,
+        sucursal=sucursal,
+        ventas_efectivo=ventas_efectivo,
+        ventas_tarjeta=ventas_tarjeta,
+        gastos=gastos,
+        fondo_inicial=fondo_inicial,
+        total_caja=total_caja
+    )
+
+@app.route("/ver-reporte-excel")
+def ver_reporte_excel():
+    if "usuario" not in session:
+        return redirect("/")
+
+    sucursal = session["sucursal"]
+    fecha = datetime.now().strftime("%d-%m-%Y")
+    tipo = session.get("tipo", "admin")
+    ruta_panel = "/panel-admin" if tipo == "admin" else "/panel-consulta"
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("SELECT descripcion, concepto, tipo, referencia, precio, pagado, cambio, dolar FROM ventas WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    ventas = cur.fetchall()
+    total_ventas = sum(v[4] for v in ventas)
+
+    cur.execute("SELECT motivo, monto FROM gastos WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    gastos = cur.fetchall()
+    total_gastos = sum(g[1] for g in gastos)
+
+    cur.execute("SELECT tipo, cantidad, monto FROM dolares WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    dolares = cur.fetchall()
+    total_dolares = sum(d[2] for d in dolares)
+
+    cur.execute("SELECT sucursal, monto FROM transferencias WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    transferencias = cur.fetchall()
+    total_transferencias = sum(t[1] for t in transferencias)
+
+    cur.execute("SELECT texto FROM notas WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    notas = cur.fetchall()
+
+    cur.execute("SELECT monto FROM fondo_caja WHERE fecha = ? AND sucursal = ? ORDER BY id DESC LIMIT 1", (fecha, sucursal))
+    fondo = cur.fetchone()
+    fondo = fondo[0] if fondo else 0
+
+    conn.close()
+
+    total_corte = fondo + total_ventas - total_gastos
+
+    registrar_log(session["usuario"], session["tipo"], f"Consultó reporte visual de Excel ({sucursal} - {fecha})")
+
+    return render_template("ver_reporte_excel.html",
+                           fecha=fecha,
+                           sucursal=sucursal,
+                           ventas=ventas,
+                           gastos=gastos,
+                           dolares=dolares,
+                           transferencias=transferencias,
+                           notas=notas,
+                           total_ventas=round(total_ventas, 2),
+                           total_gastos=round(total_gastos, 2),
+                           total_dolares=round(total_dolares, 2),
+                           total_transferencias=round(total_transferencias, 2),
+                           fondo=round(fondo, 2),
+                           total_corte=round(total_corte, 2),
+                           ruta_panel=ruta_panel)
+
+@app.route("/reporte-excel")
+def reporte_excel():
+    if "usuario" not in session:
+        return redirect("/")
+
+    sucursal = session["sucursal"]
+    fecha = datetime.now().strftime("%d-%m-%Y")
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("SELECT descripcion, concepto, tipo, referencia, precio, pagado, cambio, dolar FROM ventas WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    ventas = cur.fetchall()
+
+    cur.execute("SELECT motivo, monto FROM gastos WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    gastos = cur.fetchall()
+
+    cur.execute("SELECT monto FROM fondo_caja WHERE fecha = ? AND sucursal = ? ORDER BY id DESC LIMIT 1", (fecha, sucursal))
+    fondo = cur.fetchone()
+
+    cur.execute("SELECT tipo, cantidad, monto FROM dolares WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    dolares = cur.fetchall()
+
+    cur.execute("SELECT monto FROM anticipos WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    anticipos = cur.fetchall()
+
+    cur.execute("SELECT monto FROM transferencias WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    transferencias = cur.fetchall()
+
+    cur.execute("SELECT texto FROM notas WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    notas = cur.fetchall()
+
+    conn.close()
+
+    plantilla_path = "CORTE.xlsx"
+    wb = load_workbook(plantilla_path)
+    nueva_hoja = wb.copy_worksheet(wb.active)
+    nueva_hoja.title = f"{sucursal}_{fecha}"
+    ws = nueva_hoja
+
+    fila = 2
+    for v in ventas:
+        ws[f"B{fila}"] = v[0]
+        ws[f"C{fila}"] = v[1]
+        ws[f"D{fila}"] = v[2]
+        ws[f"E{fila}"] = v[3]
+        ws[f"F{fila}"] = v[4]
+        ws[f"G{fila}"] = v[5]
+        fila += 1
+    ws["H2"] = "=SUM(G2:G40)"
+
+    if fondo:
+        ws["I5"] = fondo[0]
+
+    fila_g = 7
+    for g in gastos:
+        ws[f"L{fila_g}"] = g[0]
+        ws[f"M{fila_g}"] = g[1]
+        fila_g += 1
+    ws["M41"] = "=SUM(M7:M40)"
+
+    fila_a = 7
+    for a in anticipos:
+        ws[f"W{fila_a}"] = a[0]
+        fila_a += 1
+    ws["W41"] = "=SUM(W7:W40)"
+
+    fila_d = 7
+    for d in dolares:
+        ws[f"R{fila_d}"] = d[0]
+        ws[f"S{fila_d}"] = d[1]
+        ws[f"T{fila_d}"] = d[2]
+        fila_d += 1
+    ws["T41"] = "=SUM(T7:T40)"
+
+    fila_t = 7
+    for t in transferencias:
+        ws[f"Y{fila_t}"] = t[0]
+        fila_t += 1
+    ws["Y41"] = "=SUM(Y7:Y40)"
+
+    fila_n = 7
+    for n in notas:
+        ws[f"AA{fila_n}"] = n[0]
+        fila_n += 1
+
+    ws["I3"] = "=H2"
+    ws["I4"] = "=W41"
+    ws["I6"] = "=I5 + H2 - M41"
+
+    if "CORTE DIARIO" in wb.sheetnames:
+        wb.remove(wb["CORTE DIARIO"])
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    registrar_log(session["usuario"], session["tipo"], f"Generó archivo Excel de reporte ({sucursal} - {fecha})")
+
+    return send_file(output, download_name=f"corte_{sucursal}_{fecha}.xlsx", as_attachment=True)
+
+if not os.path.exists(DB_PATH):
+    init_db()
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5003)
+
+@app.route("/cobrar", methods=["POST"])
+def cobrar():
+    if "usuario" not in session:
+        return redirect("/")
+
+    carrito = session.get("carrito", [])
+    if not carrito:
+        return redirect("/ventas")
+
+    efectivo = float(request.form.get("efectivo", 0))
+    tarjeta = float(request.form.get("tarjeta", 0))
+    dolares = float(request.form.get("dolares", 0))
+    dolar = float(request.form.get("dolar", 0))
+    total_carrito = float(request.form.get("total_carrito", 0))
+
+    total_pagado = efectivo + tarjeta + (dolares * dolar)
+    cambio = total_pagado - total_carrito
+    fecha = datetime.now().strftime("%d-%m-%Y")
+    sucursal = session["sucursal"]
+
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    for producto in carrito:
+        cur.execute("""
+            INSERT INTO ventas (descripcion, concepto, tipo, referencia, precio, pagado, cambio, dolar, fecha, sucursal)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            producto["descripcion"],
+            producto["concepto"],
+            producto["tipo"],
+            producto["referencia"],
+            producto["precio"],
+            total_pagado,
+            cambio,
+            dolar,
+            fecha,
+            sucursal
+        ))
+
+    conn.commit()
+    conn.close()
+
+    registrar_log(session["usuario"], session["tipo"], f"Cobró una venta por ${total_carrito:.2f} en {sucursal}")
+    session["carrito"] = []
+    return redirect("/ventas")
+
+@app.route("/cobrar", methods=["POST"])
+def cobrar():
+    # Aquí puedes procesar la venta, guardar en base de datos, etc.
+    # ...
+
+    # Limpiar carrito y total
+    session.pop("carrito", None)
+    session.pop("total", None)
+
+    # Redirigir al panel o a una página de confirmación
+    if session.get("tipo") == "admin":
+        return redirect("/panel-admin")
+    else:
+        return redirect("/panel-consulta")
+
+@app.route("/fondo")
+def ver_fondo_caja():
+    conn = sqlite3.connect("caja.sqlite3")
+    c = conn.cursor()
+    c.execute("SELECT fecha, sucursal, cantidad FROM fondo_caja ORDER BY fecha DESC, sucursal ASC")
+    registros = c.fetchall()
+    conn.close()
+    return render_template("fondo_caja.html", registros=registros)

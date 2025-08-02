@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registrar Feria - {{ sucursal }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --azul-rey: #003366;
+      --celeste: #e6f0ff;
+      --blanco: #ffffff;
+      --gris: #f5f5f5;
+      --resaltado: #d0e6ff;
+      --rojo: #d9534f;
+      --verde: #2e8b57;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--celeste);
+      color: #000;
+    }
+
+    .topbar {
+      background-color: var(--azul-rey);
+      color: white;
+      text-align: center;
+      padding: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .volver {
+      display: block;
+      text-align: center;
+      margin: 20px auto 0;
+    }
+
+    .volver a {
+      background-color: var(--rojo);
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 16px;
+      display: inline-block;
+    }
+
+    .volver a:hover {
+      background-color: #b52b27;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      background: var(--blanco);
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+
+    .denominacion {
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .denominacion h2 {
+      margin-top: 0;
+      font-size: 22px;
+      color: #003366;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin: 12px 0 6px;
+    }
+
+    input[type="number"] {
+      width: 100px;
+      padding: 10px;
+      font-size: 16px;
+      margin-right: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .resumen {
+      margin-top: 12px;
+      font-size: 16px;
+    }
+
+    .faltante { color: var(--rojo); font-weight: bold; }
+    .correcto { color: var(--verde); font-weight: bold; }
+
+    .boton {
+      display: block;
+      background-color: var(--azul-rey);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 10px;
+      font-size: 18px;
+      margin: 40px auto 0;
+      cursor: pointer;
+    }
+
+    .boton:hover {
+      background-color: #00509e;
+    }
+
+    @media screen and (max-width: 600px) {
+      input[type="number"] {
+        width: 90%;
+        margin-bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">Registrar Feria - {{ sucursal }}</div>
+
+  <div class="volver">
+    <a class="volver-btn" href="{{ '/panel-admin' if tipo == 'admin' else '/panel-consulta' }}">⬅ Volver al Panel</a>
+  </div>
+
+  <form method="POST" action="/confirmar-feria">
+    <div class="container">
+      {% for d in denom %}
+        <div class="denominacion">
+          <h2>Denominación ${{ d }}</h2>
+
+          <label>Objetivo (monedas):</label>
+          <input type="number" name="objetivo_{{ d }}" value="{{ objetivos[d] }}" readonly>
+
+          <label>Cant. Actual (monedas):</label>
+          <input type="number" name="actual_{{ d }}" id="actual_{{ d }}" value="{{ actuales[d] }}" oninput="actualizarResumen({{ d }})">
+
+          <label>Cant. Reponer (monedas):</label>
+          <input type="number" name="reponer_{{ d }}" id="reponer_{{ d }}" value="">
+
+          <div class="resumen" id="resumen_{{ d }}"></div>
+        </div>
+      {% endfor %}
+      <button type="submit" class="boton">Guardar Feria</button>
+    </div>
+  </form>
+
+  <script>
+    const objetivos = {{ objetivos|tojson }};
+    const actuales = {{ actuales|tojson }};
+    const denom = {{ denom|tojson }};
+
+    function actualizarResumen(d) {
+      const actual = parseInt(document.getElementById('actual_' + d).value) || 0;
+      const objetivo = parseInt(objetivos[d]) || 0;
+      const diferencia = objetivo - actual;
+      const valorObjetivo = objetivo * d;
+      const valorActual = actual * d;
+      let resumen = "V. Objetivo: $" + valorObjetivo + "<br>V. Actual: $" + valorActual + "<br>";
+
+      if (diferencia > 0) {
+        resumen += `<span class="faltante">Faltan (neto): ${diferencia} monedas ($${diferencia * d}) - Repuesto: sugerido: ${diferencia} monedas</span>`;
+      } else if (diferencia < 0) {
+        resumen += `<span class="faltante">Sobran (neto): ${Math.abs(diferencia)} monedas ($${Math.abs(diferencia) * d})</span>`;
+      } else {
+        resumen += `<span class="correcto">Cantidad correcta</span>`;
+      }
+
+      document.getElementById('resumen_' + d).innerHTML = resumen;
+    }
+
+    window.onload = () => {
+      denom.forEach(d => actualizarResumen(d));
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat de Soporte</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --fg: #003366;
+      --card: #ffffff;
+      --accent: #337ab7;
+      --accent-hover: #286090;
+      --danger: #c0392b;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      margin: 0;
+      padding: 0;
+      color: var(--fg);
+    }
+
+    .topbar {
+      background-color: var(--fg);
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .topbar img {
+      height: 60px;
+      margin-right: 15px;
+    }
+
+    .topbar .title {
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+      display: flex;
+      align-items: center;
+    }
+
+    .chat-container {
+      max-width: 900px;
+      margin: 30px auto;
+      background: var(--card);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .mensajes {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 20px;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+
+    .mensaje {
+      margin-bottom: 12px;
+      padding: 10px;
+      border-left: 4px solid var(--accent);
+      background: #eef6ff;
+      border-radius: 6px;
+    }
+
+    .mensaje .meta {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .mensaje .texto {
+      font-size: 15px;
+    }
+
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    select, input[type="text"], input[type="file"] {
+      padding: 10px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      flex: 1;
+      min-width: 150px;
+    }
+
+    button {
+      padding: 12px 20px;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 16px;
+      min-width: 100px;
+    }
+
+    button:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .volver {
+      display: inline-block;
+      margin-top: 25px;
+      background-color: var(--danger);
+      color: white;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .volver:hover {
+      background-color: #a93226;
+    }
+
+    .adjunto {
+      margin-top: 6px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .topbar {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .topbar img {
+        height: 50px;
+        margin-bottom: 8px;
+      }
+
+      .topbar .title {
+        font-size: 18px;
+      }
+
+      form {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      button {
+        width: 100%;
+      }
+
+      select, input[type="text"], input[type="file"] {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      💬 Chat entre Módulos
+    </div>
+  </div>
+
+  <div class="chat-container">
+    <div class="mensajes" id="mensajes"></div>
+
+    <form id="form-chat">
+      <select id="destinatario" required>
+        <option value="" disabled selected>Enviar a...</option>
+        <option value="Todos">Todos</option>
+        <option value="Caja">Caja</option>
+        <option value="Cambio">Calculadora de Cambio</option>
+        <option value="Inventario">Inventario</option>
+      </select>
+
+      <input type="text" id="mensaje" placeholder="Escribe tu mensaje..." required>
+      <input type="file" id="archivo">
+      <button type="submit">Enviar</button>
+    </form>
+
+    <a href="/" class="volver">← Volver al panel</a>
+  </div>
+
+  <script>
+    let modulo = "{{ modulo if modulo else 'General' }}";
+
+    function cargarMensajes() {
+      fetch(`/chat/recibir?modulo=${modulo}`)
+        .then(res => res.json())
+        .then(data => {
+          const cont = document.getElementById("mensajes");
+          cont.innerHTML = "";
+          data.reverse().forEach(msg => {
+            const div = document.createElement("div");
+            div.className = "mensaje";
+            div.innerHTML = `
+              <div class="meta"><strong>${msg.remitente}</strong> → ${msg.destinatario} | ${msg.fecha}</div>
+              <div class="texto">${msg.mensaje}</div>
+              ${msg.archivo ? `<div class="adjunto">📎 <a href="/static/chat/${msg.archivo}" target="_blank">${msg.archivo}</a></div>` : ""}
+            `;
+            cont.appendChild(div);
+          });
+          cont.scrollTop = cont.scrollHeight;
+        });
+    }
+
+    setInterval(cargarMensajes, 5000);
+    cargarMensajes();
+
+    document.getElementById("form-chat").addEventListener("submit", async e => {
+      e.preventDefault();
+      const mensaje = document.getElementById("mensaje").value.trim();
+      const destinatario = document.getElementById("destinatario").value;
+      const archivoInput = document.getElementById("archivo");
+      let archivoNombre = "";
+
+      if (archivoInput.files.length > 0) {
+        const archivo = archivoInput.files[0];
+        const formData = new FormData();
+        formData.append("archivo", archivo);
+        const res = await fetch("/subir_archivo_chat", { method: "POST", body: formData });
+        const data = await res.json();
+        archivoNombre = data.nombre;
+      }
+
+      fetch("/chat/enviar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mensaje, destinatario, archivo: archivoNombre, modulo })
+      }).then(() => {
+        document.getElementById("mensaje").value = "";
+        document.getElementById("archivo").value = "";
+        cargarMensajes();
+      });
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Modificar Ciclo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --azul: #003366;
+      --celeste: #e6f0ff;
+      --blanco: #ffffff;
+      --gris: #f5f5f5;
+      --resaltado: #d0e6ff;
+      --sombra: rgba(0, 0, 0, 0.1);
+      --peligro: #d9534f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--celeste);
+      color: #000;
+    }
+
+    .topbar {
+      background-color: var(--azul);
+      color: white;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px var(--sombra);
+    }
+
+    .topbar img {
+      height: 60px;
+      margin-right: 12px;
+    }
+
+    .topbar .titulo {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .contenedor {
+      max-width: 800px;
+      margin: 40px auto;
+      background-color: var(--blanco);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px var(--sombra);
+    }
+
+    h2 {
+      text-align: center;
+      color: var(--azul);
+      margin-bottom: 20px;
+    }
+
+    .fila {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .fila label {
+      font-weight: bold;
+    }
+
+    .fila input {
+      width: 100%;
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .boton {
+      background-color: var(--azul);
+      color: white;
+      padding: 12px 16px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    .boton:hover {
+      background-color: #002244;
+    }
+
+    .volver {
+      display: block;
+      margin-top: 30px;
+      text-align: center;
+      text-decoration: none;
+      color: var(--azul);
+      font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+      .fila {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .fila label {
+        grid-column: span 2;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <img src="/static/logo.png" alt="Logo">
+    <div class="titulo">Modificar Ciclo - {{ sucursal }} - {{ fecha }}</div>
+  </div>
+
+  <div class="contenedor">
+    <h2>Editar Datos del Ciclo</h2>
+    <form method="POST">
+      {% for den, valores in datos.items() %}
+        <div class="fila">
+          <label>$ {{ den }}</label>
+          <input type="number" name="objetivo_{{ den }}" value="{{ valores.objetivo }}" placeholder="Objetivo" min="0">
+          <input type="number" name="actual_{{ den }}" value="{{ valores.actual }}" placeholder="Actual" min="0">
+          <input type="number" name="repuesto_{{ den }}" value="{{ valores.repuesto }}" placeholder="Repuesto" min="0">
+        </div>
+      {% endfor %}
+
+      <button type="submit" class="boton">Guardar Cambios</button>
+    </form>
+
+    <a href="/ver-ciclos" class="volver">⬅ Volver a Ver Ciclos</a>
+  </div>
+
+</body>
+</html>

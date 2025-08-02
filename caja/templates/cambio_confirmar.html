@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Confirmar Ciclo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --azul: #003366;
+      --celeste: #e6f0ff;
+      --blanco: #ffffff;
+      --gris: #f5f5f5;
+      --sombra: rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--celeste);
+      margin: 0;
+    }
+
+    .topbar {
+      background-color: var(--azul);
+      padding: 20px;
+      color: white;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 30px auto;
+      background: var(--blanco);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 10px var(--sombra);
+    }
+
+    h2 {
+      text-align: center;
+      color: var(--azul);
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+
+    th {
+      background-color: var(--gris);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    button {
+      padding: 12px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn-confirmar {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .btn-cancelar {
+      background-color: #dc3545;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">Confirmar Ciclo</div>
+
+  <div class="container">
+    <h2>Resumen del Ciclo</h2>
+    <table>
+      <tr>
+        <th>Denominación</th>
+        <th>Objetivo</th>
+        <th>Actual</th>
+        <th>Repuesto</th>
+        <th>Diferencia</th>
+      </tr>
+      {% for d in datos %}
+      <tr>
+        <td>${{ d["denominacion"] }}</td>
+        <td>{{ d["objetivo"] }}</td>
+        <td>{{ d["actual"] }}</td>
+        <td>{{ d["repuesto"] }}</td>
+        <td>{{ d["diferencia"] }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <div class="btn-group">
+      <form method="POST" action="/guardar-ciclo">
+        <input type="hidden" name="json_datos" value="{{ datos|tojson }}">
+        <button class="btn-confirmar" type="submit">Confirmar Ciclo</button>
+      </form>
+      <form action="/ciclo-index">
+        <button class="btn-cancelar" type="submit">Cancelar</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

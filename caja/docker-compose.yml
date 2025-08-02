@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  caja:
+    build: .
+    container_name: caja_app
+    ports:
+      - "5003:5003"
+    volumes:
+      - .:/app                    # código fuente
+      - ../inventario.sqlite3:/app/inventario.sqlite3  # base de datos central
+    restart: always
+    environment:
+      - FLASK_ENV=development

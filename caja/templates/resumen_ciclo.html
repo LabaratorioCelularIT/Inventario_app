@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Resumen Feria</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { background: #e6f0ff; font-family: 'Segoe UI'; padding: 20px; }
+    .box { background: white; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; }
+    .tabla { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .tabla th, .tabla td { padding: 10px; border-bottom: 1px solid #ccc; text-align: right; }
+    .tabla th { background: #003366; color: white; }
+    .resumen { margin-top: 20px; font-weight: bold; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>Resumen de Feria - {{ resumen.fecha }}</h2>
+    <table class="tabla">
+      <tr>
+        <th>Denominación</th>
+        <th>Cantidad</th>
+        <th>Total</th>
+      </tr>
+      {% for denom, cant in resumen.datos %}
+        <tr>
+          <td>${{ denom }}</td>
+          <td>{{ cant }}</td>
+          <td>${{ denom * cant }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+    <div class="resumen">
+      Total Entregado: ${{ resumen.total_dado }}
+    </div>
+  </div>
+</body>
+</html>

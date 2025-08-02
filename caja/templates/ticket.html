@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Ticket</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      font-size: 11.5px;
+      margin: 0;
+      padding: 0;
+      background: white;
+      color: black;
+    }
+
+    .ticket {
+      width: 58mm;
+      padding: 6px 10px;
+      box-sizing: border-box;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    @media print {
+      body {
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ticket">
+    <pre id="contenido-ticket">
+Celulares Crédito Fácil
+Sucursal: {{ sucursal }}
+Fecha: {{ fecha }}
+Atendió: {{ nombre_usuario }}
+
+{% for item in productos %}
+Producto: {{ item.descripcion }}
+{% if item.tipo %}Financiera: {{ item.tipo }}{% endif %}
+{% if item.referencia %}Ref: {{ item.referencia }}{% endif %}
+Precio: ${{ '%.2f'|format(item.precio) }}
+------------------------------
+{% endfor %}
+
+Total:  ${{ '%.2f'|format(total) }}
+Pagado: ${{ '%.2f'|format(total_pagado) }}
+Cambio:  ${{ '%.2f'|format(cambio) }}
+
+¡Gracias por su compra!
+    </pre>
+  </div>
+
+  <script>
+    async function imprimirTicket() {
+      try {
+        const contenido = document.getElementById("contenido-ticket").innerText;
+        const respuesta = await fetch("http://localhost:5500/imprimir", {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: contenido
+        });
+        if (!respuesta.ok) throw new Error("Código " + respuesta.status);
+        setTimeout(() => window.close(), 1000);
+      } catch (err) {
+        alert("Error al imprimir: " + err.message);
+      }
+    }
+
+    window.onload = () => {
+      setTimeout(imprimirTicket, 400);
+    };
+  </script>
+</body>
+</html>

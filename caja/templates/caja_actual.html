@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Editar Caja Actual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+  <style>
+    :root {
+      --azul: #003366;
+      --celeste: #e6f0ff;
+      --blanco: #ffffff;
+      --borde: #ccc;
+      --sombra: rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--celeste);
+      color: #000;
+    }
+
+    .topbar {
+      background-color: var(--azul);
+      padding: 20px;
+      color: white;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: var(--blanco);
+      border-radius: 12px;
+      box-shadow: 0 4px 10px var(--sombra);
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .row label {
+      font-weight: bold;
+    }
+
+    input[type="number"] {
+      padding: 6px;
+      width: 80px;
+      border: 1px solid var(--borde);
+      border-radius: 4px;
+      text-align: right;
+    }
+
+    .acciones {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .acciones button,
+    .acciones a {
+      background-color: var(--azul);
+      color: white;
+      padding: 10px 16px;
+      margin: 8px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .acciones button:hover,
+    .acciones a:hover {
+      background-color: #00264d;
+    }
+
+    .volver {
+      display: inline-block;
+      background-color: var(--azul);
+      color: white;
+      padding: 10px 20px;
+      margin-top: 30px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+
+    .volver:hover {
+      background-color: #005299;
+    }
+
+    .volver-container {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">Editar Fondo de Caja</div>
+
+  <div class="container">
+    <form method="POST">
+      {% for row in fondo %}
+        <div class="row">
+          <label>${{ row["denom"] }}</label>
+          <input type="number" name="{{ row['denom'] }}" value="{{ row['cantidad'] }}" min="0">
+        </div>
+      {% endfor %}
+      <div class="acciones">
+        <button type="submit">Guardar Cambios</button>
+      </div>
+    </form>
+
+    <div class="volver-container">
+      {% if session['tipo'] == 'admin' %}
+        <a href="{{ url_for('panel_admin') }}" class="volver">⬅️ Volver</a>
+      {% elif session['tipo'] == 'consulta' %}
+        <a href="{{ url_for('panel_consulta') }}" class="volver">⬅️ Volver</a>
+      {% elif session['tipo'] == 'reparto' %}
+        <a href="{{ url_for('panel_reparto') }}" class="volver">⬅️ Volver</a>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

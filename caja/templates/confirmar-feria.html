@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Confirmar Feria</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+  <style>
+    :root {
+      --azul: #003366;
+      --celeste: #e6f0ff;
+      --blanco: #ffffff;
+      --gris: #f2f2f2;
+      --verde: #4CAF50;
+      --rojo: #e74c3c;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--celeste);
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+
+    .topbar {
+      background-color: var(--azul);
+      color: var(--blanco);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      background-color: var(--blanco);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      border-bottom: 2px solid var(--azul);
+      padding-bottom: 5px;
+    }
+
+    .info-line {
+      margin: 10px 0;
+    }
+
+    ul.resumen-claro {
+      list-style: none;
+      padding: 0;
+      font-size: 16px;
+    }
+
+    ul.resumen-claro li {
+      margin: 5px 0;
+    }
+
+    .resumen {
+      background-color: var(--gris);
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .botones {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 30px;
+    }
+
+    .btn {
+      padding: 12px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-confirmar {
+      background-color: var(--verde);
+      color: white;
+    }
+
+    .btn-cancelar {
+      background-color: var(--rojo);
+      color: white;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+ <div class="topbar">Confirmar Feria</div>
+
+<div class="container">
+  <div class="section">
+    <p class="info-line">📍 <strong>Sucursal:</strong> {{ data.sucursal }}</p>
+    <p class="info-line">📅 <strong>Fecha:</strong> {{ data.fecha }}</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Resumen por Denominación</div>
+    <ul class="resumen-claro">
+      {% for denom in denom %}
+        {% set objetivo = data.diferencias[denom]["objetivo"] %}
+        {% set actual = data.diferencias[denom]["actual"] %}
+        {% set diferencia = actual - objetivo %}
+        {% if diferencia > 0 %}
+          <li style="color: green;">✅ Sobran {{ diferencia }} de ${{ denom }}</li>
+        {% elif diferencia < 0 %}
+          <li style="color: red;">❌ Faltan {{ diferencia | abs }} de ${{ denom }}</li>
+        {% else %}
+          <li style="color: gray;">✔️ Justo en ${{ denom }}</li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="section resumen">
+    <div class="section-title">Totales Generales</div>
+    <p><strong>Valor Objetivo:</strong> ${{ data.total_objetivo }}</p>
+    <p><strong>Valor Actual:</strong> ${{ data.total_actual }}</p>
+    <p><strong>Total a Reponer:</strong> ${{ data.total_reponer }}</p>
+    <p><strong>Total a Entregar:</strong> ${{ data.total_entregar }}</p>
+    <p><strong>Total de Sobrante:</strong> ${{ data.total_sobrante }}</p>
+  </div>
+
+  <form method="POST" action="/guardar-feria">
+    <input type="hidden" name="clave" value="262293">
+    <input type="hidden" name="sucursal" value="{{ data.sucursal }}">
+    <input type="hidden" name="fecha" value="{{ data.fecha }}">
+
+    {% for denom in denom %}
+      <input type="hidden" name="actual_{{ denom }}" value="{{ data.diferencias[denom]['actual'] }}">
+      <input type="hidden" name="objetivo_{{ denom }}" value="{{ data.diferencias[denom]['objetivo'] }}">
+      <input type="hidden" name="reponer_{{ denom }}" value="{{ data.repuesto[denom] }}">
+    {% endfor %}
+
+    <div class="botones">
+      <a href="/feria" class="btn btn-cancelar">Cancelar</a>
+      <button type="submit" class="btn btn-confirmar">Guardar Feria</button>
+    </div>
+  </form>
+</div>
+</body>
+</html>

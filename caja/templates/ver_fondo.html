@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Fondo Actual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --azul: #003366;
+      --celeste: #f0f8ff;
+      --blanco: #ffffff;
+      --gris: #f8f8f8;
+      --sombra: rgba(0, 0, 0, 0.1);
+      --resaltado: #d9ecf5;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background-color: var(--celeste);
+      color: #333;
+    }
+
+    .topbar {
+      background-color: var(--azul);
+      color: white;
+      padding: 16px;
+      text-align: center;
+      font-size: 22px;
+      font-weight: bold;
+      box-shadow: 0 2px 5px var(--sombra);
+    }
+
+    .container {
+      max-width: 520px;
+      margin: 40px auto;
+      background-color: var(--blanco);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 0 8px var(--sombra);
+    }
+
+    h2 {
+      color: var(--azul);
+      margin-top: 0;
+      text-align: center;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .destacado {
+      font-weight: bold;
+      color: var(--azul);
+    }
+
+    .volver {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 16px;
+      background-color: var(--azul);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      text-align: center;
+      transition: background-color 0.2s;
+    }
+
+    .volver:hover {
+      background-color: #001f4d;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .footer span {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">💼 Fondo Actual</div>
+
+  <div class="container">
+    <h2>🧾 Detalle del Fondo Principal</h2>
+    <ul>
+      {% for item in fondo %}
+      <li>Monedas de ${{ item.denominacion }}: <span class="destacado">{{ item.cantidad }}</span> (Valor total: ${{ item.valor }})</li>
+      {% endfor %}
+    </ul>
+
+    <div class="footer">💰 <span>Total general del fondo: ${{ total_fondo }}</span></div>
+
+        <div style="text-align: center; margin-top: 20px;">
+      {% if session['tipo'] == 'admin' %}
+        <a href="{{ url_for('panel_admin') }}" class="volver">⬅️ Volver</a>
+      {% elif session['tipo'] == 'consulta' %}
+        <a href="{{ url_for('panel_consulta') }}" class="volver">⬅️ Volver</a>
+      {% elif session['tipo'] == 'reparto' %}
+        <a href="{{ url_for('panel_reparto') }}" class="volver">⬅️ Volver</a>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

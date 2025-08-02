@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Caja</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: linear-gradient(to bottom right, #dbeeff, #ffffff);
+      --fg: #003366;
+      --card: #ffffff;
+      --accent: #337ab7;
+      --accent-hover: #286090;
+      --danger: #d9534f;
+      --border: #c0d6ec;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .login-card {
+      background-color: var(--card);
+      padding: 40px;
+      border-radius: 18px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+      width: 90%;
+      max-width: 460px;
+      text-align: center;
+      border: 1px solid var(--border);
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo {
+      height: 100px;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-weight: bold;
+      color: var(--fg);
+      font-size: 24px;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 15px;
+      text-align: left;
+      color: var(--fg);
+      margin-bottom: 5px;
+      margin-top: 14px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: border 0.3s ease;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    button {
+      margin-top: 25px;
+      width: 100%;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 17px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .error-msg {
+      background-color: var(--danger);
+      color: white;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 18px;
+      font-size: 14px;
+    }
+
+    .hidden { display: none; }
+
+    /* MODAL */
+    .modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal {
+  background-color: white;
+  border-radius: 14px;
+  padding: 40px 30px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal h3 {
+  margin-top: 0;
+  color: #003366;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.modal-buttons {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.modal-buttons button {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.btn-confirm {
+  background-color: #337ab7;
+  color: white;
+}
+
+.btn-cancel {
+  background-color: #d9534f;
+  color: white;
+}
+
+    @media (max-width: 500px) {
+      .login-card { padding: 28px; }
+      h2 { font-size: 20px; }
+      button { font-size: 15px; padding: 12px; }
+    }
+  </style>
+
+  <script>
+    function toggleSucursal() {
+      const tipo = document.getElementById("tipo").value;
+      const sucursalGroup = document.getElementById("sucursal-group");
+      sucursalGroup.classList.toggle("hidden", tipo !== "consulta");
+    }
+
+    function confirmarSucursal(event) {
+      const tipo = document.getElementById("tipo").value;
+      if (tipo === "consulta") {
+        const sucursal = document.getElementById("sucursal").value;
+        if (!sucursal) {
+          alert("Por favor selecciona una sucursal.");
+          event.preventDefault();
+          return false;
+        }
+
+        event.preventDefault(); // Detener envío
+        document.getElementById("modal-text").innerText = `¿Seguro que quieres entrar a la sucursal de ${sucursal}?`;
+        document.getElementById("modal-overlay").style.display = "flex";
+        return false;
+      }
+    }
+
+    function aceptarModal() {
+      document.getElementById("modal-overlay").style.display = "none";
+      document.querySelector("form").submit();
+    }
+
+    function cancelarModal() {
+      document.getElementById("modal-overlay").style.display = "none";
+    }
+
+    window.onload = function() {
+      toggleSucursal();
+      document.getElementById("tipo").addEventListener("change", toggleSucursal);
+    };
+  </script>
+</head>
+<body>
+  <div class="login-card">
+    <img class="logo" src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.src='https://via.placeholder.com/80x80?text=Logo';">
+    <h2>Celulares Crédito Fácil</h2>
+
+    {% if error %}
+    <div class="error-msg">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" onsubmit="return confirmarSucursal(event)">
+      <label for="tipo">Tipo de usuario:</label>
+      <select id="tipo" name="tipo" required>
+        <option value="">Selecciona una opción</option>
+        <option value="admin" {% if tipo == "admin" %}selected{% endif %}>Admin</option>
+        <option value="consulta" {% if tipo == "consulta" %}selected{% endif %}>Consulta</option>
+        <option value="reparto" {% if tipo == "reparto" %}selected{% endif %}>Reparto</option>
+      </select>
+
+      <label for="usuario">Usuario:</label>
+      <input type="text" name="usuario" required>
+
+      <label for="contrasena">Contraseña:</label>
+      <input type="password" name="contrasena" required>
+
+      <div id="sucursal-group" class="hidden">
+        <label for="sucursal">Sucursal:</label>
+        <select name="sucursal" id="sucursal">
+          <option value="">Selecciona una sucursal</option>
+          <option value="Hidalgo">Hidalgo</option>
+          <option value="Colinas">Colinas</option>
+          <option value="Voluntad 1">Voluntad 1</option>
+          <option value="Reservas">Reservas</option>
+          <option value="Villas">Villas</option>
+        </select>
+      </div>
+
+      <button type="submit">Iniciar Sesión</button>
+    </form>
+  </div>
+
+  <!-- Modal de confirmación -->
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-text">¿Seguro que quieres entrar a esta sucursal?</h3>
+    <div class="modal-buttons">
+      <button class="btn-confirm" onclick="aceptarModal()">Aceptar</button>
+      <button class="btn-cancel" onclick="cancelarModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
