@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de Reparto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e6f0ff;
+      color: #2c3e50;
+    }
+
+    .navbar {
+      background-color: #003366;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: white;
+      flex-wrap: wrap;
+    }
+
+    .navbar-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-grow: 1;
+      gap: 10px;
+    }
+
+    .navbar-center img {
+      height: 40px;
+    }
+
+    .navbar-center span {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .navbar button,
+    .chat-btn {
+      background-color: #e74c3c;
+      border: none;
+      color: white;
+      padding: 10px 16px;
+      font-size: 15px;
+      cursor: pointer;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+
+    .navbar button:hover {
+      background-color: #c0392b;
+    }
+
+    .chat-btn {
+      background-color: #3498db;
+      position: relative;
+    }
+
+    .chat-btn:hover {
+      background-color: #2980b9;
+    }
+
+    .chat-notif {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background-color: red;
+      color: white;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 50%;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 40px auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 22px;
+    }
+
+    .alert-box {
+      background-color: #ecf0f1;
+      border-left: 5px solid #3498db;
+      padding: 15px;
+      text-align: left;
+      margin-bottom: 25px;
+      border-radius: 6px;
+    }
+
+    .alert-box strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .btn {
+      display: inline-block;
+      background-color: #3498db;
+      color: white;
+      padding: 12px 18px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 15px;
+      margin: 10px 5px;
+    }
+
+    .btn:hover {
+      background-color: #2980b9;
+    }
+
+    @media (max-width: 600px) {
+      .btn {
+        display: block;
+        width: 100%;
+        margin: 10px 0;
+      }
+
+      .navbar {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .navbar-center {
+        margin-bottom: 10px;
+      }
+
+      .navbar-right {
+        flex-direction: column;
+      }
+
+      .container {
+        margin: 20px;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-center">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <span>Celulares Crédito Fácil</span>
+  </div>
+  <div class="navbar-right">
+    <a href="/chat" class="chat-btn">
+      💬 Chat
+      <span id="notif" class="chat-notif" style="display:none;">!</span>
+    </a>
+    <form action="/logout" method="get" style="margin:0;">
+      <button type="submit">Cerrar sesión</button>
+    </form>
+  </div>
+</div>
+
+<div class="container">
+  <h2>Bienvenido {{ session['usuario'] }} - Reparto</h2>
+
+  <div class="alert-box">
+    <strong>Modo reparto activado</strong>
+    Solo tienes acceso a inventario general, listado y transferencias.
+  </div>
+
+  <a href="/resumen-general" class="btn">📦 Inventario General</a>
+  <a href="/listado_articulos" class="btn">📋 Listado de Productos</a>
+  <a href="/transferencias" class="btn">🔁 Listado Transferencias</a>
+  <a href="/reportes-transferencias" class="btn">📑 Reporte de Transferencias</a>
+
+  <p style="margin-top: 30px; color: #7f8c8d;">🔧 Próximamente se habilitarán más funciones para tu rol.</p>
+</div>
+
+<script>
+  async function revisarNotificaciones() {
+    const res = await fetch("/chat/notificaciones?modulo=Inventario");
+    const data = await res.json();
+    if (data.nuevos > 0) {
+      document.getElementById("notif").style.display = "inline-block";
+      document.getElementById("notif").textContent = data.nuevos;
+    }
+  }
+
+  setInterval(revisarNotificaciones, 5000);
+  revisarNotificaciones();
+</script>
+
+</body>
+</html>

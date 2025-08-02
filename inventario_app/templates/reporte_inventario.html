@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reporte de Inventario</title>
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --fg: #003366;
+      --card: #ffffff;
+      --textarea: #f9f9f9;
+      --btn: #3498db;
+      --btn-hover: #2980b9;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+    }
+
+    .topbar {
+      background-color: var(--fg);
+      padding: 15px 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .logo-texto {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-texto img {
+      height: 60px;
+    }
+
+    .logo-texto span {
+      color: white;
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .container {
+      max-width: 950px;
+      margin: 30px auto;
+      background-color: var(--card);
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+      font-size: 24px;
+      color: var(--fg);
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      margin-top: 15px;
+      padding: 12px;
+      background-color: var(--btn);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn:hover {
+      background-color: var(--btn-hover);
+    }
+
+    .top-button {
+      margin-bottom: 20px;
+      background-color: #555;
+      width: auto;
+      font-size: 14px;
+      padding: 10px 16px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 60vh;
+      margin-top: 20px;
+      resize: none;
+      padding: 15px;
+      border-radius: 8px;
+      background-color: var(--textarea);
+      color: var(--fg);
+      font-family: monospace;
+      border: 1px solid #ccc;
+    }
+
+    select, input[type="checkbox"] {
+      margin-bottom: 10px;
+      padding: 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background-color: #ffffff;
+      color: var(--fg);
+      width: 100%;
+    }
+
+    label {
+      display: block;
+      margin: 8px 0 4px;
+      font-weight: bold;
+    }
+
+    .checkbox-group {
+      margin-top: 20px;
+      margin-bottom: 20px;
+    }
+
+    .checkbox-group label {
+      font-weight: normal;
+    }
+
+    #div_solo_reparacion {
+      margin-bottom: 20px;
+      padding: 8px 0;
+    }
+
+    @media (max-width: 600px) {
+      .logo-texto {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .logo-texto img {
+        height: 50px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      .btn {
+        font-size: 15px;
+      }
+
+      .top-button {
+        width: 100%;
+      }
+    }
+  </style>
+
+  <script>
+    function mostrarCampos() {
+      const tipo = document.getElementById("tipo_reporte").value;
+      const tiendaDiv = document.getElementById("div_tienda");
+      const productoDiv = document.getElementById("div_producto");
+      const ordenDiv = document.getElementById("div_orden");
+
+      tiendaDiv.style.display = "none";
+      productoDiv.style.display = "none";
+      ordenDiv.style.display = "none";
+
+      if (tipo === "general") {
+        ordenDiv.style.display = "block";
+      } else if (tipo === "tienda") {
+        tiendaDiv.style.display = "block";
+      } else if (tipo === "producto") {
+        tiendaDiv.style.display = "block";
+        productoDiv.style.display = "block";
+      }
+
+      document.getElementById("div_solo_reparacion").style.display = "block";
+    }
+
+    function copiarTexto() {
+      const textArea = document.getElementById("reporte");
+      textArea.select();
+      document.execCommand("copy");
+      alert("Texto copiado al portapapeles.");
+    }
+
+    window.onload = () => {
+      mostrarCampos();
+    };
+  </script>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo-texto">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      <span>Celulares Crédito Fácil</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <button onclick="location.href='/dashboard'" class="btn top-button">🔙 Volver al Panel</button>
+
+    <h2>📋 Reporte de Inventario Activo</h2>
+
+    <form method="POST">
+      <label for="tipo_reporte">Tipo de Reporte:</label>
+      <select name="tipo_reporte" id="tipo_reporte" onchange="mostrarCampos()">
+        <option value="general" {% if tipo_reporte == 'general' %}selected{% endif %}>General</option>
+        <option value="tienda" {% if tipo_reporte == 'tienda' %}selected{% endif %}>Por Tienda</option>
+        <option value="producto" {% if tipo_reporte == 'producto' %}selected{% endif %}>Por Producto</option>
+      </select>
+
+      <div id="div_orden" style="display:none;">
+        <label for="orden_general">Ordenar por:</label>
+        <select name="orden_general" id="orden_general">
+          <option value="modelo" {% if orden_general == 'modelo' %}selected{% endif %}>Modelo</option>
+          <option value="sucursal" {% if orden_general == 'sucursal' %}selected{% endif %}>Sucursal</option>
+        </select>
+      </div>
+
+      <div id="div_tienda" style="display:none;">
+        <label for="tienda">Seleccionar Tienda:</label>
+        <select name="tienda" id="tienda">
+          {% for tienda in tiendas %}
+          <option value="{{ tienda }}" {% if tienda == tienda_seleccionada %}selected{% endif %}>{{ tienda }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="div_producto" style="display:none;">
+        <label for="producto">Seleccionar Producto:</label>
+        <select name="producto" id="producto">
+          {% for producto in productos %}
+          <option value="{{ producto }}" {% if producto == producto_seleccionado %}selected{% endif %}>{{ producto }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="div_solo_reparacion" style="display:none;">
+        <label><input type="checkbox" name="solo_reparacion" {% if solo_reparacion %}checked{% endif %}> Solo mostrar artículos en reparación</label>
+      </div>
+
+      <div class="checkbox-group">
+        <label>Campos a Incluir:</label>
+        <label><input type="checkbox" name="campos" value="imei" {% if 'imei' in campos %}checked{% endif %}> IMEI</label>
+        <label><input type="checkbox" name="campos" value="producto" {% if 'producto' in campos %}checked{% endif %}> Producto (Marca/Modelo)</label>
+        <label><input type="checkbox" name="campos" value="memoria" {% if 'memoria' in campos %}checked{% endif %}> Memoria</label>
+        <label><input type="checkbox" name="campos" value="color" {% if 'color' in campos %}checked{% endif %}> Color</label>
+        <label><input type="checkbox" name="campos" value="tienda" {% if 'tienda' in campos %}checked{% endif %}> Tienda</label>
+        <label><input type="checkbox" name="campos" value="estado" {% if 'estado' in campos %}checked{% endif %}> Estado</label>
+        <label><input type="checkbox" name="campos" value="precio" {% if 'precio' in campos %}checked{% endif %}> Precio Compra</label>
+      </div>
+
+      <button type="submit" class="btn">📄 Generar Reporte</button>
+    </form>
+
+    <textarea id="reporte" readonly>{{ texto }}</textarea>
+    <button class="btn" onclick="copiarTexto()">📋 Copiar al portapapeles</button>
+  </div>
+</body>
+</html>

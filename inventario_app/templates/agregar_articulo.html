@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Agregar Artículo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e6f0ff;
+      color: #2c3e50;
+      margin: 0;
+      padding: 0;
+    }
+
+    .topbar {
+      background-color: #003366;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-bottom: 3px solid #001f3f;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .topbar img {
+      height: 60px;
+      margin-right: 15px;
+    }
+
+    .topbar .title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #003366;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    label {
+      font-weight: bold;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 11px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      color: #2c3e50;
+      box-sizing: border-box;
+    }
+
+    .full-width {
+      grid-column: span 2;
+    }
+
+    .boton {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+
+    .boton:hover {
+      background-color: #2980b9;
+    }
+
+    .mensaje {
+      margin-top: 20px;
+      font-weight: bold;
+      color: #27ae60;
+    }
+
+    .error {
+      color: #e74c3c;
+    }
+
+    .btn-volver {
+      display: block;
+      text-align: center;
+      background-color: #2980b9;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+      margin-top: 40px;
+    }
+
+    .btn-volver:hover {
+      background-color: #21618c;
+    }
+
+    @media (max-width: 768px) {
+      form {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        flex-direction: column;
+      }
+
+      .topbar .title {
+        font-size: 22px;
+        text-align: center;
+        margin-top: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <div class="title">Celulares Crédito Fácil</div>
+  </div>
+
+  <div class="container">
+    <h2>Agregar Artículo al Inventario</h2>
+
+    <form method="POST">
+      <!-- Campos -->
+      <div>
+        <label for="tipo_producto">Tipo de Producto</label>
+        <input list="tipos_producto" name="tipo_producto_nombre" id="tipo_producto" required>
+        <datalist id="tipos_producto">
+          {% for tipo in tipos %}
+          <option value="{{ tipo[1] }}">
+          {% endfor %}
+        </datalist>
+        <input type="hidden" name="tipo_id" id="tipo_id">
+      </div>
+
+      <div>
+        <label for="memoria">Memoria</label>
+        <select name="memoria" id="memoria" required>
+          <option value="">-- Selecciona memoria --</option>
+          <option value="32+2">32+2</option>
+          <option value="32+3">32+3</option>
+          <option value="64+2">64+2</option>
+          <option value="64+3">64+3</option>
+          <option value="64+4">64+4</option>
+          <option value="128+4">128+4</option>
+          <option value="128+6">128+6</option>
+          <option value="128+8">128+8</option>
+          <option value="256+4">256+4</option>
+          <option value="256+6">256+6</option>
+          <option value="256+8">256+8</option>
+          <option value="256+12">256+12</option>
+          <option value="512+6">512+6</option>
+          <option value="512+8">512+8</option>
+          <option value="512+12">512+12</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="color">Color (opcional)</label>
+        <select name="color" id="color">
+          <option value="">-- Selecciona un color --</option>
+          <option value="Naranja">Naranja</option>
+          <option value="Azul">Azul</option>
+          <option value="Negro">Negro</option>
+          <option value="Blanco">Blanco</option>
+          <option value="Morado">Morado</option>
+          <option value="Rosa">Rosa</option>
+          <option value="Amarillo">Amarillo</option>
+          <option value="Verde">Verde</option>
+          <option value="Celeste">Celeste</option>
+          <option value="Plata">Plata</option>
+          <option value="Gris">Gris</option>
+          <option value="Dorado">Dorado</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="proveedor">Proveedor</label>
+        <input type="text" name="proveedor" id="proveedor">
+      </div>
+
+      <div>
+        <label for="precio">Precio de Compra</label>
+        <input type="number" name="precio" id="precio" step="0.01">
+      </div>
+
+      <div>
+        <label for="factura_id">ID Factura</label>
+        <input type="text" name="factura_id" id="factura_id">
+      </div>
+
+      <div>
+        <label for="fecha_compra">Fecha de Compra</label>
+        <input type="date" name="fecha_compra" id="fecha_compra">
+      </div>
+
+      <div>
+        <label for="sucursal">Asignar a Tienda</label>
+        <select name="sucursal" id="sucursal" required>
+          {% for suc in sucursales %}
+          <option value="{{ suc }}">{{ suc }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label for="estado">Estatus Inicial</label>
+        <select name="estado" id="estado">
+          <option value="Nuevo">Nuevo</option>
+          <option value="Reparación">Reparación</option>
+          <option value="Reparado">Reparado</option>
+          <option value="Vendido">Vendido</option>
+          <option value="Liquidación">Liquidación</option>
+          <option value="Perdido">Perdido</option>
+        </select>
+      </div>
+
+      <div class="full-width"><h3>Añadir IMEI Manualmente</h3></div>
+
+      <div>
+        <label for="imei">IMEI 1 (Principal)</label>
+        <input type="text" name="imei" id="imei">
+        <br><br>
+        <button type="button" class="boton" onclick="agregarImeiManual()">Agregar a lista</button>
+      </div>
+
+      <div>
+        <label for="imei2">IMEI 2 (Opcional)</label>
+        <input type="text" name="imei2" id="imei2">
+      </div>
+
+      <div class="full-width">
+        <h3>Pegar Lista de IMEIs (Automático)</h3>
+        <textarea id="lista_imeis" rows="5" placeholder="Pega aquí líneas completas con IMEIs incluidos..."></textarea>
+        <br><br>
+        <button type="button" class="boton" onclick="procesarIMEIs()">Procesar IMEIs</button>
+        <button type="button" class="boton" onclick="limpiarIMEIs()">Limpiar lista</button>
+        <br><br>
+        <label for="imeis_resultado">IMEIs Detectados:</label>
+        <textarea name="imeis_detectados" id="imeis_resultado" rows="3" readonly></textarea>
+      </div>
+
+      <div class="full-width">
+        <button type="submit" class="boton">Agregar Artículo</button>
+      </div>
+    </form>
+
+    {% if mensaje %}
+    <div class="mensaje {% if '❌' in mensaje %}error{% endif %}">{{ mensaje }}</div>
+    {% endif %}
+
+    <a href="/dashboard" class="btn-volver">← Volver al Panel Principal</a>
+  </div>
+
+<script>
+  function procesarIMEIs() {
+    const input = document.getElementById("lista_imeis").value;
+    const encontrados = input.match(/\b\d{15}\b/g) || [];
+    const resultado = document.getElementById("imeis_resultado");
+    const actuales = resultado.value ? resultado.value.split(",").map(x => x.trim()) : [];
+    const combinados = [...new Set([...actuales, ...encontrados])];
+    resultado.value = combinados.join(", ");
+    alert("✅ IMEIs procesados correctamente.");
+  }
+
+  function agregarImeiManual() {
+    const input = document.getElementById("imei");
+    const resultado = document.getElementById("imeis_resultado");
+    const imei = input.value.trim();
+    if (/^\d{15}$/.test(imei)) {
+      const actuales = resultado.value ? resultado.value.split(",").map(x => x.trim()) : [];
+      if (!actuales.includes(imei)) {
+        actuales.push(imei);
+        resultado.value = actuales.join(", ");
+        input.value = "";
+      } else {
+        alert("Este IMEI ya está en la lista.");
+      }
+    } else {
+      alert("Ingrese un IMEI válido de 15 dígitos.");
+    }
+  }
+
+  function limpiarIMEIs() {
+    if (confirm("¿Deseas limpiar todos los IMEIs detectados?")) {
+      document.getElementById("imeis_resultado").value = "";
+      document.getElementById("lista_imeis").value = "";
+    }
+  }
+
+  const tipoInput = document.getElementById('tipo_producto');
+  const tipoHidden = document.getElementById('tipo_id');
+  const tiposMap = {
+    {% for tipo in tipos %}
+      "{{ tipo[1] | escape }}": "{{ tipo[0] }}",
+    {% endfor %}
+  };
+  tipoInput.addEventListener('input', () => {
+    const nombre = tipoInput.value;
+    tipoHidden.value = tiposMap[nombre] || "";
+  });
+</script>
+
+</body>
+</html>

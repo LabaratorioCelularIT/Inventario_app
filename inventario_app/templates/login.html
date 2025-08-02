@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Inicio de Sesión - Celulares Crédito Fácil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --fg: #003366;
+      --card: white;
+      --primary: #3498db;
+      --primary-dark: #2980b9;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 30px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    .logo {
+      max-width: 120px;
+      margin-bottom: 15px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      color: var(--fg);
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background-color: white;
+      color: var(--fg);
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background-color: var(--primary-dark);
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+  <script>
+    function mostrarSucursalSiConsulta() {
+      const tipo = document.getElementById("tipo").value;
+      const sucursal = document.getElementById("sucursalDiv");
+      if (tipo === "consulta") {
+        sucursal.classList.remove("hidden");
+      } else {
+        sucursal.classList.add("hidden");
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <div class="container">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo">
+    <h2>Celulares Crédito Fácil</h2>
+
+    <form method="POST" action="/login">
+      <label for="tipo">Tipo de usuario:</label>
+      <select name="tipo" id="tipo" required onchange="mostrarSucursalSiConsulta()">
+        <option value="">Selecciona una opción</option>
+        <option value="consulta">Consulta</option>
+        <option value="admin">Administrador</option>
+        <option value="reparto">Reparto</option>
+      </select>
+
+      <label for="usuario">Usuario:</label>
+      <input type="text" name="usuario" id="usuario" required placeholder="Escribe tu usuario...">
+
+      <label for="password">Contraseña:</label>
+      <input type="password" name="password" required placeholder="Contraseña">
+
+      <div id="sucursalDiv" class="hidden">
+        <label for="sucursal">Sucursal:</label>
+        <select name="sucursal">
+          {% for suc in sucursales %}
+          <option value="{{ suc }}">{{ suc }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit">Iniciar Sesión</button>
+    </form>
+  </div>
+</body>
+</html>

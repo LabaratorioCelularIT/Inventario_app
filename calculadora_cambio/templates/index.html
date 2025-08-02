@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Calculadora de Cambio</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .resumen {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .resumen .faltan {
+      color: red;
+      font-weight: bold;
+    }
+    .resumen .sobran {
+      color: green;
+      font-weight: bold;
+    }
+    .inputs label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .fondo-btn {
+      display: inline-block;
+      margin: 1rem 0.5rem 1rem 0;
+      background: #663399;
+      color: white;
+      padding: 0.4rem 1rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Encabezado -->
+  <div class="header">
+    <img src="{{ url_for('static', filename='logo_empresa.jpeg') }}" alt="Logo">
+    <h1>Celulares Crédito Fácil</h1>
+  </div>
+
+  <div class="container">
+    <div class="extras">
+      <a href="/login?next=fondo">🔐 Caja actual</a>
+      <a href="/login?next=ver_ciclos">🔐 Ver ciclos</a>
+    </div>
+
+    <!-- Botones adicionales -->
+    <a class="fondo-btn" href="/ver_caja">📊 Ver Fondo Actual</a>
+    <button class="fondo-btn" onclick="verFaltantes()" type="button">⚠️ Faltantes hoy</button>
+
+    <form method="post" id="formulario">
+      <div class="card">
+        <label><strong>Sucursal:</strong></label>
+        <select name="sucursal" id="sucursal" required>
+          {% for suc in sucursales %}
+            <option value="{{ suc }}">{{ suc }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="card">
+        <label><strong>Fecha:</strong></label>
+        <input type="date" name="fecha" required id="fecha" value="{{ fecha_actual }}">
+      </div>
+
+      {% for d in [1, 2, 5, 10, 20, 50, 100] %}
+        {% set obj = 40 if d in [1,2,5] else 20 if d in [10,20] else 10 if d == 50 else 5 %}
+        <div class="card" data-denom="{{ d }}" data-objetivo="{{ obj }}">
+          <h2>${{ d }} pesos</h2>
+          <div class="inputs">
+            <label>
+              Cant. Objetiva (monedas):
+              <input type="number" name="objetivo_{{ d }}" value="{{ obj }}" readonly>
+            </label>
+            <label>
+              Cant. Actual (monedas):
+              <input type="number" name="actual_{{ d }}" class="actual" min="0" required value="{{ actuales[d] if actuales and d in actuales else 0 }}">
+            </label>
+            <label>
+              Cant. Repuesta (monedas):
+              <input type="number" name="repuesto_{{ d }}" class="repuesto" min="0" value="0">
+            </label>
+          </div>
+
+          <div class="resumen">
+            <p>V. Objetivo: <strong class="v_objetivo">${{ obj * d }}</strong></p>
+            <p>V. Actual: <strong class="v_actual">$0</strong></p>
+            <p class="resultado faltan">Faltan (neto): {{ obj }} monedas (${{ obj * d }}) - Repuesto: 0 monedas</p>
+          </div>
+        </div>
+      {% endfor %}
+
+      <div class="actions">
+        <button type="submit">Calcular diferencia</button>
+      </div>
+    </form>
+
+    {% if error %}
+      <div style="margin: 1rem 0; padding: 1rem; background-color: #ffe0e0; border: 1px solid #cc0000; color: #cc0000; border-radius: 6px;">
+        ⚠️ {{ error }}
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- JS -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const tarjetas = document.querySelectorAll(".card[data-denom]");
+      const sucursalInput = document.getElementById("sucursal");
+      const fechaInput = document.getElementById("fecha");
+      const formulario = document.getElementById("formulario");
+
+      tarjetas.forEach(card => {
+        const denom = parseInt(card.dataset.denom);
+        const objetivo = parseInt(card.dataset.objetivo);
+        const inputActual = card.querySelector(".actual");
+        const inputRepuesto = card.querySelector(".repuesto");
+        const vActualEl = card.querySelector(".v_actual");
+        const resultadoEl = card.querySelector(".resultado");
+
+        function actualizar() {
+          const actual = parseInt(inputActual.value) || 0;
+          const repuesto = parseInt(inputRepuesto.value) || 0;
+          const diferencia = objetivo - actual;
+          const vActual = actual * denom;
+
+          vActualEl.textContent = `$${vActual}`;
+
+          if (diferencia > 0) {
+            if (repuesto === diferencia) {
+              resultadoEl.innerHTML = `✅ Repuesto correcto: <strong>${repuesto} monedas</strong> por cubrir ${diferencia} faltantes`;
+              resultadoEl.className = "resultado sobran";
+            } else {
+              resultadoEl.innerHTML = `Faltan (neto): <strong>${diferencia} monedas ($${diferencia * denom})</strong> - Repuesto: ${repuesto} monedas`;
+              resultadoEl.className = "resultado faltan";
+            }
+          } else if (diferencia < 0) {
+            resultadoEl.innerHTML = `Sobran (neto): <strong>${Math.abs(diferencia)} monedas ($${Math.abs(diferencia * denom)})</strong>`;
+            resultadoEl.className = "resultado sobran";
+          } else {
+            resultadoEl.innerHTML = `✅ Cantidad correcta`;
+            resultadoEl.className = "resultado sobran";
+          }
+        }
+
+        inputActual.addEventListener("input", actualizar);
+        inputRepuesto.addEventListener("input", actualizar);
+        actualizar();
+      });
+
+      if (!fechaInput.value || fechaInput.value === "Invalid Date") {
+        const hoy = new Date();
+        const offset = hoy.getTimezoneOffset();
+        hoy.setMinutes(hoy.getMinutes() - offset);
+        fechaInput.value = hoy.toISOString().split('T')[0];
+      }
+
+      sucursalInput.addEventListener("change", revisarSiYaExiste);
+      fechaInput.addEventListener("change", revisarSiYaExiste);
+
+      function revisarSiYaExiste() {
+        const sucursal = sucursalInput.value;
+        const fecha = fechaInput.value;
+        if (!sucursal || !fecha) return;
+
+        fetch(`/faltantes?fecha=${fecha}`)
+          .then(res => res.json())
+          .then(data => {
+            if (!data.faltantes.includes(sucursal)) {
+              alert("⚠️ Esta sucursal ya envió su feria. Será redirigido al resumen.");
+              formulario.submit();
+            }
+          })
+          .catch(() => {
+            alert("Error al validar si ya existe el ciclo.");
+          });
+      }
+    });
+
+    function verFaltantes() {
+      const fecha = document.querySelector('input[name="fecha"]').value;
+      if (!fecha) {
+        alert("Selecciona una fecha válida primero.");
+        return;
+      }
+
+      fetch(`/faltantes?fecha=${fecha}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.faltantes.length === 0) {
+            alert("✅ Todas las sucursales ya enviaron su feria.");
+          } else {
+            alert("⚠️ Faltan por enviar:\n\n" + data.faltantes.join("\n"));
+          }
+        })
+        .catch(() => {
+          alert("Error al consultar las sucursales faltantes.");
+        });
+    }
+  </script>
+
+</body>
+</html>

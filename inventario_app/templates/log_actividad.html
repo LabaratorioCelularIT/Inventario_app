@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Log de Actividad</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e6f0ff; /* Fondo celeste claro */
+      color: #2c3e50;
+      margin: 0;
+      padding: 0;
+    }
+
+    .navbar {
+      background-color: #003366; /* Azul marino */
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 999;
+    }
+
+    .navbar img {
+      height: 60px;
+    }
+
+    .navbar-center {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .btn-volver {
+      background-color: #00509d;
+      border: none;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .btn-volver:hover {
+      background-color: #0070d1;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 30px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    form {
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    select,
+    input[type="date"],
+    .btn {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .btn {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background-color: #2980b9;
+    }
+
+    .btn-danger {
+      background-color: #e74c3c;
+    }
+
+    .btn-danger:hover {
+      background-color: #c0392b;
+    }
+
+    .descargar {
+      background-color: #2ecc71;
+      margin-left: auto;
+    }
+
+    .descargar:hover {
+      background-color: #27ae60;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+
+    th {
+      background-color: #3498db;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    @media (max-width: 768px) {
+      form {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      table {
+        font-size: 12px;
+      }
+
+      th,
+      td {
+        padding: 6px;
+      }
+
+      .navbar-center {
+        font-size: 14px;
+      }
+
+      .btn-volver {
+        font-size: 13px;
+        padding: 6px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="navbar">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <div class="navbar-center">Celulares Crédito Fácil</div>
+    <a href="/dashboard" class="btn-volver">← Volver al panel</a>
+  </div>
+
+  <div class="container">
+    <h2>Log de Actividad</h2>
+
+    <form method="GET">
+      <label for="usuario">Usuario:</label>
+      <select name="usuario" id="usuario">
+        <option value="">Todos</option>
+        {% for u in usuarios %}
+        <option value="{{ u }}" {% if request.args.get('usuario') == u %}selected{% endif %}>{{ u }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="accion">Acción:</label>
+      <select name="accion" id="accion">
+        <option value="">Todas</option>
+        <option value="Inicio de sesión" {% if request.args.get('accion') == "Inicio de sesión" %}selected{% endif %}>Inicio de sesión</option>
+        <option value="Cierre de sesión" {% if request.args.get('accion') == "Cierre de sesión" %}selected{% endif %}>Cierre de sesión</option>
+        <option value="Registro" {% if request.args.get('accion') == "Registro" %}selected{% endif %}>Registro</option>
+        <option value="Eliminación" {% if request.args.get('accion') == "Eliminación" %}selected{% endif %}>Eliminación</option>
+        <option value="Transferencia" {% if request.args.get('accion') == "Transferencia" %}selected{% endif %}>Transferencia</option>
+        <option value="Restauración" {% if request.args.get('accion') == "Restauración" %}selected{% endif %}>Restauración</option>
+      </select>
+
+      <label for="origen">Origen:</label>
+      <select name="origen" id="origen">
+        <option value="">Todos</option>
+        {% for o in origenes %}
+        <option value="{{ o }}" {% if origen_actual == o %}selected{% endif %}>{{ o }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="desde">Desde:</label>
+      <input type="date" name="desde" value="{{ request.args.get('desde', '') }}">
+
+      <label for="hasta">Hasta:</label>
+      <input type="date" name="hasta" value="{{ request.args.get('hasta', '') }}">
+
+      <button type="submit" class="btn">Filtrar</button>
+      <a href="/descargar-log" class="btn descargar">📥 Descargar CSV</a>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Usuario</th>
+          <th>Tipo</th>
+          <th>Descripción</th>
+          <th>Fecha</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in registros %}
+        <tr>
+          <td>{{ r[0] }}</td>
+          <td>{{ r[1] }}</td>
+          <td>{{ r[2] }}</td>
+          <td>{{ r[3] }}</td>
+          <td>{{ r[4] }}</td>
+          <td>
+            <form action="/eliminar-log/{{ r[0] }}" method="POST" style="display:inline;" onsubmit="return confirm('¿Seguro que deseas eliminar este registro?');">
+              <button type="submit" class="btn btn-danger">🗑️ Eliminar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>

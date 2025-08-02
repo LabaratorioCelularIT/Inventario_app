@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Detalle del Fondo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .fondo-box {
+      max-width: 400px;
+      margin: 2rem auto;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    .fondo-box h2 {
+      text-align: center;
+      color: #663399;
+    }
+    .fondo-box ul {
+      list-style: none;
+      padding: 0;
+    }
+    .fondo-box li {
+      display: flex;
+      justify-content: space-between;
+      margin: 0.4rem 0;
+      font-size: 14px;
+      border-bottom: 1px dashed #ddd;
+      padding-bottom: 3px;
+    }
+    .btn {
+      display: block;
+      margin: 1rem auto 0;
+      text-align: center;
+      background: #2c7be5;
+      color: white;
+      padding: 0.5rem 1.2rem;
+      text-decoration: none;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="fondo-box">
+    <h2>🧾 Detalle del Fondo Principal</h2>
+    <ul>
+      {% for d in denom %}
+        <li>
+          <span>{{ "Monedas" if d < 20 else "Billetes" }} de ${{ d }}</span>
+          <span>{{ fondo[d] }} {{ "monedas" if d < 20 else "billetes" }} (${{ fondo[d]*d }})</span>
+        </li>
+      {% endfor %}
+    </ul>
+    <a href="/" class="btn">⬅️ Volver</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recibir Garantía</title>
+  <style>
+    :root {
+      --azul-rey: #003366;
+      --celeste: #e6f0ff;
+      --blanco: #ffffff;
+      --gris-suave: #f5f7fa;
+      --borde-boton: #001f3f;
+      --rojo: #c0392b;
+      --rojo-hover: #a93226;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--celeste);
+      color: #000;
+    }
+
+    .topbar {
+      background-color: var(--azul-rey);
+      padding: 15px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .logo-texto {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-texto img {
+      height: 60px;
+    }
+
+    .logo-texto span {
+      color: var(--blanco);
+      font-size: 36px;
+      font-weight: 600;
+    }
+
+    .container {
+      max-width: 1250px;
+      margin: 30px auto;
+      background: var(--blanco);
+      padding: 40px 35px;
+      border-radius: 14px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+      color: var(--azul-rey);
+      font-size: 28px;
+    }
+
+    .top-button {
+      margin-bottom: 25px;
+      background-color: var(--rojo);
+      border: 2px solid #922b21;
+      font-size: 15px;
+      padding: 12px 18px;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .top-button:hover {
+      background-color: var(--rojo-hover);
+    }
+
+    .mensaje {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 6px;
+      background-color: #e6f3ff;
+      border-left: 5px solid #007bff;
+      font-size: 15px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+
+    label {
+      display: block;
+      margin-top: 18px;
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 11px 9px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      background-color: var(--gris-suave);
+    }
+
+    input[type="file"] {
+      margin-top: 8px;
+      background-color: #eef1f6;
+      border: 1px dashed #999;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+
+    .btn {
+      margin-top: 25px;
+      padding: 14px;
+      background-color: var(--azul-rey);
+      color: white;
+      border: 2px solid var(--borde-boton);
+      border-radius: 8px;
+      font-size: 16px;
+      width: 100%;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background-color 0.3s;
+      grid-column: span 2;
+    }
+
+    .btn:hover {
+      background-color: #002147;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 25px 20px;
+        margin: 15px;
+      }
+
+      .btn {
+        grid-column: span 1;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .logo-texto {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .logo-texto img {
+        height: 55px;
+      }
+
+      .logo-texto span {
+        font-size: 22px;
+      }
+
+      h2 {
+        font-size: 20px;
+      }
+
+      .btn, .top-button {
+        font-size: 15px;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="logo-texto">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      <span>Celulares Crédito Fácil</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <button onclick="location.href='/dashboard'" class="top-button">🔙 Volver al Panel</button>
+    <h2>📦 Recibir Garantía / Seguro</h2>
+
+    {% if mensaje %}
+    <div class="mensaje">{{ mensaje }}</div>
+    {% endif %}
+
+<form method="POST" enctype="multipart/form-data" class="form-grid">
+  <div>
+    <label for="folio">Folio:</label>
+    <input type="text" id="folio" name="folio" required>
+
+    <label for="cliente">Nombre del Cliente:</label>
+    <input type="text" id="cliente" name="cliente" required>
+
+    <label for="imei">📱 IMEI del equipo:</label>
+    <input type="text" id="imei" name="imei" required>
+
+    <label for="marca_modelo">📱 Marca y Modelo:</label>
+    <input type="text" id="marca_modelo" name="marca_modelo" placeholder="Ej: Samsung A32" required>
+
+    <label for="opcion1">Opción 1:</label>
+    <select id="opcion1" name="opcion1">
+      <option value="">-- Seleccionar --</option>
+      {% for m in modelos %}
+      <option value="{{ m }}">{{ m }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="opcion2">Opción 2:</label>
+    <select id="opcion2" name="opcion2">
+      <option value="">-- Seleccionar --</option>
+      {% for m in modelos %}
+      <option value="{{ m }}">{{ m }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="opcion3">Opción 3:</label>
+    <select id="opcion3" name="opcion3">
+      <option value="">-- Seleccionar --</option>
+      {% for m in modelos %}
+      <option value="{{ m }}">{{ m }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="opcion4">Opción 4:</label>
+    <select id="opcion4" name="opcion4">
+      <option value="">-- Seleccionar --</option>
+      {% for m in modelos %}
+      <option value="{{ m }}">{{ m }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="opcion5">Opción 5:</label>
+    <select id="opcion5" name="opcion5">
+      <option value="">-- Seleccionar --</option>
+      {% for m in modelos %}
+      <option value="{{ m }}">{{ m }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="total">💵 Total:</label>
+    <input type="text" id="total" name="total" placeholder="Ej: 2000">
+
+    <label for="anticipo">🪙 Anticipo:</label>
+    <input type="text" id="anticipo" name="anticipo" placeholder="Ej: 500">
+
+    <label for="resta">💰 Resta (pendiente):</label>
+    <input type="text" id="resta" name="resta" placeholder="Ej: 1500">
+  </div>
+
+  <div>
+    <label for="fecha_recibido">📅 Fecha que se recibió:</label>
+    <input type="date" id="fecha_recibido" name="fecha_recibido" required>
+
+    <label for="telefono">Teléfono del Cliente:</label>
+    <input type="text" id="telefono" name="telefono" required>
+
+    <label for="tag">🏷️ Tag o Referencia:</label>
+    <input type="text" id="tag" name="tag" placeholder="Ej: Seguro1234">
+
+    <label for="motivo">Motivo (Garantía o Seguro):</label>
+    <select id="motivo" name="motivo" required>
+      <option value="">-- Seleccionar --</option>
+      <option value="garantia">Garantía</option>
+      <option value="seguro">Seguro</option>
+    </select>
+
+    <label for="sucursal">Sucursal que recibe:</label>
+    <select id="sucursal" name="sucursal" required>
+      <option value="">-- Seleccionar --</option>
+      <option value="Hidalgo">CCF#1 Hidalgo</option>
+      <option value="Colinas">CCF#2 Colinas</option>
+      <option value="Reservas">CCF#3 Reservas</option>
+      <option value="Voluntad">CCF#4 Voluntad</option>
+      <option value="Villas">CCF#5 Villas</option>
+    </select>
+
+    <label for="recibido_por">👤 ¿Quién recibió?:</label>
+    <input type="text" id="recibido_por" name="recibido_por" required>
+
+    <label for="descripcion">📝 Descripción del estado del equipo:</label>
+    <textarea id="descripcion" name="descripcion" rows="4" required></textarea>
+
+    <label for="fotos_equipo">📸 Fotos del equipo:</label>
+    <input type="file" id="fotos_equipo" name="fotos_equipo" multiple accept="image/*" required>
+
+    <label for="foto_grupo">🧾 Captura del grupo de WhatsApp:</label>
+    <input type="file" id="foto_grupo" name="foto_grupo" accept="image/*" required>
+
+    <label for="fecha_entrega">📅 Fecha que se entregó:</label>
+    <input type="date" id="fecha_entrega" name="fecha_entrega">
+
+    <label for="entregado_por">👤 ¿Quién entrego?:</label>
+    <input type="text" id="entregado_por" name="entregado_por" required>
+  </div>
+
+  <div style="grid-column: span 2;">
+    <button type="submit" class="btn">✅ Registrar Garantía o Seguro</button>
+  </div>
+</form>
+</div>
+
+<script>
+document.getElementById("imei").addEventListener("blur", function () {
+  const imei = this.value.trim();
+  const marcaModeloInput = document.getElementById("marca_modelo");
+
+  if (imei !== "") {
+    fetch(`/buscar-marca-modelo?imei=${imei}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.encontrado) {
+          marcaModeloInput.value = data.marca_modelo;
+        } else {
+          marcaModeloInput.value = "";
+          alert("IMEI no encontrado en el sistema.");
+        }
+      })
+      .catch(err => {
+        marcaModeloInput.value = "";
+        alert("Error al buscar el IMEI.");
+        console.error(err);
+      });
+  }
+});
+</script>
+
+</body>
+</html>

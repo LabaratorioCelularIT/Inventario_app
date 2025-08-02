@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestión de Tipos de Producto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #e6f0ff;
+      color: #2c3e50;
+    }
+
+    .header {
+      background-color: #003366;
+      color: white;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-left img {
+      height: 50px;
+    }
+
+    .header-left span {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .btn-volver {
+      background-color: #e74c3c;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 14px;
+      border: none;
+    }
+
+    .btn-volver:hover {
+      background-color: #c0392b;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .container h2 {
+      text-align: center;
+      color: #003366;
+      margin-top: 0;
+      margin-bottom: 25px;
+    }
+
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+
+    button[type="submit"] {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    button[type="submit"]:hover {
+      background-color: #2980b9;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: #f9f9f9;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 15px;
+    }
+
+    li a {
+      color: #e74c3c;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    li a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+      .header {
+        flex-direction: column;
+        text-align: center;
+        padding: 20px 10px;
+      }
+
+      .header-left {
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .btn-volver {
+        margin-top: 10px;
+        width: 100%;
+      }
+
+      form {
+        flex-direction: column;
+      }
+
+      input[type="text"], button[type="submit"] {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-left">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      <span>Celulares Crédito Fácil</span>
+    </div>
+    <a href="/dashboard" class="btn-volver">← Volver al Panel</a>
+  </div>
+
+  <div class="container">
+    <h2>📦 Tipos de Producto - {{ usuario }}</h2>
+
+    <form method="POST" action="/agregar-tipo">
+      <input type="text" name="nombre" placeholder="Nuevo tipo de producto" required>
+      <button type="submit">Agregar</button>
+    </form>
+
+    <ul>
+      {% for tipo in tipos %}
+      <li>
+        {{ tipo[1] }}
+        <a href="/eliminar-tipo/{{ tipo[0] }}">Eliminar</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+</body>
+</html>

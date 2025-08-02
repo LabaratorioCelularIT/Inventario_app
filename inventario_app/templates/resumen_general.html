@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Resumen General del Inventario</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --fg: #003366;
+      --card: white;
+      --accent: #3498db;
+      --accent-hover: #2980b9;
+      --danger: #e74c3c;
+      --danger-hover: #c0392b;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+    }
+
+    .topbar {
+      background-color: var(--fg);
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .topbar .title {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .topbar .title img {
+      height: 50px;
+    }
+
+    .topbar button {
+      background-color: var(--danger);
+      color: white;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .topbar button:hover {
+      background-color: var(--danger-hover);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 30px auto;
+      background: var(--card);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
+    }
+
+    h3 {
+      margin-top: 30px;
+      color: var(--fg);
+    }
+
+    select {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin-bottom: 15px;
+      background-color: white;
+      color: #333;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: center;
+    }
+
+    th {
+      background-color: var(--accent);
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+
+    label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      td {
+        position: relative;
+        padding-left: 50%;
+        border: none;
+        border-bottom: 1px solid #ccc;
+      }
+
+      td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 10px;
+        font-weight: bold;
+      }
+
+      th {
+        display: none;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .topbar button {
+        margin-top: 10px;
+      }
+    }
+  </style>
+  <script>
+    function filtrarTablaSucursal() {
+      const valor = document.getElementById("filtroSucursal").value.toLowerCase();
+      document.querySelectorAll("#tablaDetalle tbody tr").forEach(tr => {
+        const sucursal = tr.getAttribute("data-sucursal")?.toLowerCase() || "";
+        tr.style.display = (valor === "" || sucursal.includes(valor)) ? "" : "none";
+      });
+    }
+  </script>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      Celulares Crédito Fácil
+    </div>
+    <form method="get" action="/dashboard">
+      <button type="submit">← Volver</button>
+    </form>
+  </div>
+
+  <div class="container">
+
+    <h3>Equipos por Sucursal</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Sucursal</th>
+          <th>Total Equipos</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background-color: #e8f4ff; font-weight: bold;">
+          <td>General</td>
+          <td>{{ total_general }}</td>
+        </tr>
+        {% for sucursal, total in totales_sucursales.items() %}
+        <tr>
+          <td>{{ sucursal }}</td>
+          <td>{{ total }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>Totales por Tipo y Sucursal</h3>
+    <label>Filtrar por sucursal:</label>
+    <select id="filtroSucursal" onchange="filtrarTablaSucursal()">
+      <option value="">Todas</option>
+      {% for suc, _ in totales_sucursales.items() %}
+      <option value="{{ suc }}">{{ suc }}</option>
+      {% endfor %}
+    </select>
+
+    <table id="tablaDetalle">
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Sucursal</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tipo, registros in resumen_por_tipo.items() %}
+          {% for r in registros %}
+          <tr data-sucursal="{{ r[1] }}">
+            <td>{{ r[0] }}</td>
+            <td>{{ r[1] }}</td>
+            <td>{{ r[2] }}</td>
+          </tr>
+          {% endfor %}
+          <tr style="background-color:#e3f7e7; font-weight: bold;">
+            <td>🌟 {{ tipo }} (General)</td>
+            <td>—</td>
+            <td>{{ totales_modelo[tipo] }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>📦 Desglose por Tipo y Estado (por Sucursal)</h3>
+<div style="display: flex; flex-direction: column; gap: 30px;">
+  {% for sucursal, registros in desglose_estados.items() %}
+    <div style="background: #f9f9f9; padding: 20px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+      <h4 style="margin-bottom: 15px; color: #003366;">🏬 {{ sucursal }}</h4>
+      <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+        {% for tipo, estado, cantidad in registros %}
+        {% set color = '' %}
+        {% if estado == 'Nuevo' %}
+          {% set color = '#e3fce3' %}
+        {% elif estado == 'Reparación' %}
+          {% set color = '#e3f0fc' %}
+        {% elif estado == 'Liquidación' %}
+          {% set color = '#fff9da' %}
+        {% else %}
+          {% set color = '#f2f2f2' %}
+        {% endif %}
+        <div style="flex: 1 1 220px; background: {{ color }}; border: 1px solid #ddd; border-left: 6px solid #003366; padding: 12px 16px; border-radius: 8px;">
+          <div style="font-weight: bold;">{{ tipo }}</div>
+          <div style="color: #333;">{{ cantidad }} {{ estado }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+</body>
+</html>

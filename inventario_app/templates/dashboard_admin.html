@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Administrador - Celulares Crédito Fácil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --fg: #2c3e50;
+      --card: #ffffff;
+      --primary: #3498db;
+      --primary-dark: #2980b9;
+      --accent: #003366;
+      --danger: #e74c3c;
+      --danger-dark: #c0392b;
+      --shadow: rgba(0, 0, 0, 0.1);
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background-color: var(--bg);
+      color: var(--fg);
+    }
+
+    .header {
+      background-color: var(--accent);
+      color: white;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .logo-title {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      justify-content: center;
+      flex-grow: 1;
+    }
+
+    .logo-title img {
+      height: 45px;
+    }
+
+    .logo-title span {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .logout-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logout-container a,
+    .chat-btn {
+      background-color: var(--danger);
+      border: none;
+      color: white;
+      padding: 10px 14px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .logout-container a:hover {
+      background-color: var(--danger-dark);
+    }
+
+    .chat-btn {
+      background-color: var(--primary);
+      position: relative;
+    }
+
+    .chat-btn:hover {
+      background-color: var(--primary-dark);
+    }
+
+    .chat-notif {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background-color: red;
+      color: white;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 50%;
+    }
+
+    .content {
+      max-width: 1000px;
+      margin: 30px auto;
+      background-color: var(--card);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px var(--shadow);
+    }
+
+    .btn {
+      display: inline-block;
+      background-color: var(--primary);
+      color: white;
+      padding: 10px 15px;
+      margin: 8px 10px 8px 0;
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn:hover {
+      background-color: var(--primary-dark);
+    }
+
+    .btn-danger {
+      background-color: var(--danger);
+    }
+
+    .btn-danger:hover {
+      background-color: var(--danger-dark);
+    }
+
+    .section {
+      margin-top: 30px;
+    }
+
+    h2, h3 {
+      color: var(--fg);
+    }
+
+    @media (max-width: 768px) {
+      .content {
+        padding: 20px;
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        text-align: center;
+      }
+      .logout-container {
+        flex-direction: column;
+        align-items: flex-end;
+      }
+      .header {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Encabezado -->
+<div class="header">
+  <div class="logo-title">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <span>Celulares Crédito Fácil</span>
+  </div>
+  <div class="logout-container">
+    <a href="/chat" class="chat-btn">
+      💬 Chat
+      <span id="notif" class="chat-notif" style="display:none;">!</span>
+    </a>
+    <strong>{{ usuario }}</strong> (Administrador)
+    <a href="/" onclick="event.preventDefault(); window.location.href='/'">Cerrar sesión</a>
+  </div>
+</div>
+
+<!-- Contenido -->
+<div class="content">
+
+  <div class="section">
+    <h3>Resumen General del Inventario</h3>
+    <a href="/resumen_general" class="btn">📊 Ver Resumen General</a>
+    <a href="/listado_articulos" class="btn">🧾 Listado de productos</a>
+  </div>
+
+  <div class="section">
+    <h3>Acciones Rápidas</h3>
+    <a href="/transferencias" class="btn">🔄 Transferencia de Artículos</a>
+    <a href="/tipos-producto" class="btn">📁 Registrar Tipo de Producto</a>
+    <a href="/agregar-articulo" class="btn">➕ Añadir Artículo al Inventario</a>
+    <a href="/recibir-garantia" class="btn">📦🔁 Recibir Garantía</a>
+    <a href="/generar-inventario-panel" class="btn">📝 Generar Inventario por Sucursal</a>
+  </div>
+
+  <div class="section">
+    <h3>Reportes y Logs</h3>
+    <a href="/reportes-transferencias" class="btn">📋 Ver Reporte de Transferencias</a>
+    <a href="/ver-log" class="btn">🕓 Ver Log de Actividad</a>
+    <a href="/reporte-inventario" class="btn">🧾 Generar Reporte de Inventario</a>
+    <a href="/resultados-inventario" class="btn">✅ Resultados de Inventario</a>
+  </div>
+
+  <div class="section">
+    <h3>Backup y Restauración</h3>
+    <a href="/backup" class="btn">💾 Realizar Backup</a>
+    <a href="/restaurar" class="btn">♻️ Restaurar Backup</a>
+  </div>
+
+  <div class="section">
+    <h3>Información Adicional</h3>
+    <p>📌 Próximamente más funcionalidades aquí.</p>
+  </div>
+
+</div>
+
+<script>
+  async function revisarNotificaciones() {
+    const res = await fetch("/chat/notificaciones?modulo=Inventario");
+    const data = await res.json();
+    if (data.nuevos > 0) {
+      document.getElementById("notif").style.display = "inline-block";
+      document.getElementById("notif").textContent = data.nuevos;
+    }
+  }
+
+  setInterval(revisarNotificaciones, 5000);
+  revisarNotificaciones();
+</script>
+
+</body>
+</html>

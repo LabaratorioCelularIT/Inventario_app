@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Generar Inventario</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #e6f0ff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .header {
+      background-color: #003366;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 50px auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    select, button {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    button {
+      background-color: #003366;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #002244;
+    }
+
+    .danger-btn {
+      background-color: #e74c3c;
+    }
+
+    .danger-btn:hover {
+      background-color: #c0392b;
+    }
+
+    .back-btn {
+      background-color: #888;
+    }
+
+    .back-btn:hover {
+      background-color: #666;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">Celulares Crédito Fácil</div>
+
+  <div class="container">
+    <h2>📋 Generar Inventario por Sucursal</h2>
+    <form action="/generar-inventario" method="post">
+      <select name="sucursal" required>
+        <option value="">Selecciona una sucursal</option>
+        {% for s in sucursales %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">✅ Generar Inventario</button>
+    </form>
+
+    <hr>
+
+    <h3>❌ Cancelar Inventario Pendiente</h3>
+    <form action="/cancelar-inventario" method="post">
+      <select name="sucursal" required>
+        <option value="">Selecciona una sucursal</option>
+        {% for s in sucursales %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="danger-btn">❌ Cancelar Inventario</button>
+    </form>
+
+    <button class="back-btn" onclick="window.location.href='/panel-admin'">🔙 Volver al Panel</button>
+  </div>
+
+</body>
+</html>

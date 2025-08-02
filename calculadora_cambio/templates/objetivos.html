@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Objetivos por Sucursal</title>
+  <style>
+    body { font-family: sans-serif; background: #f0f0f0; padding: 2rem; }
+    .sucursal { margin-bottom: 2rem; background: white; padding: 1rem; border-radius: 10px; box-shadow: 0 0 5px #ccc; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid #ccc; padding: 0.4rem; text-align: center; }
+    input[type="number"] { width: 60px; }
+  </style>
+</head>
+<body>
+  <h1>Editar Objetivos por Sucursal</h1>
+  {% for suc, objetivos in data.items() %}
+    <div class="sucursal">
+      <h2>{{ suc }}</h2>
+      <form method="post">
+        <input type="hidden" name="sucursal" value="{{ suc }}">
+        <table>
+          <tr><th>Denominación</th><th>Objetivo</th></tr>
+          {% for d in denom %}
+            <tr>
+              <td>{{ d }}</td>
+              <td><input type="number" name="obj_{{ d }}" value="{{ objetivos[d] }}"></td>
+            </tr>
+          {% endfor %}
+        </table>
+        <button type="submit">Guardar</button>
+      </form>
+    </div>
+  {% endfor %}
+</body>
+</html>

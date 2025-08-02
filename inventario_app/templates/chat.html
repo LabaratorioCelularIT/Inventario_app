@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Celulares Crédito Fácil - Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#003366">
+  <style>
+  :root {
+    --azul: #003366;
+    --celeste: #e6f0ff;
+    --blanco: #ffffff;
+    --gris: #f5f5f5;
+    --resaltado: #d0e6ff;
+    --sombra: rgba(0, 0, 0, 0.1);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: var(--celeste);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background-color: var(--azul);
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  header .left {
+    display: flex;
+    align-items: center;
+  }
+
+  header img {
+    height: 50px;
+    margin-right: 10px;
+  }
+
+  header .title {
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .volver {
+    background-color: #e74c3c;
+    color: white;
+    padding: 10px 16px;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+
+  .chat-wrapper {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    width: 280px;
+    background-color: white;
+    border-right: 1px solid #ccc;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nuevo-chat, .crear-grupo, .volver-lista {
+    padding: 15px;
+    border-bottom: 1px solid #ccc;
+    background-color: #f9f9f9;
+    cursor: pointer;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  .contacto {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+  }
+
+  .contacto:hover { background-color: #f0f0f0; }
+  .contacto.active { background-color: var(--resaltado); }
+
+  .mensajes {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--celeste);
+  }
+
+  .chat-box {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mensaje {
+    max-width: 70%;
+    margin-bottom: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    word-wrap: break-word;
+    box-shadow: 0 2px 5px var(--sombra);
+  }
+
+  .yo {
+    align-self: flex-end;
+    background-color: var(--resaltado);
+  }
+
+  .otro {
+    align-self: flex-start;
+    background-color: white;
+  }
+
+  .mensaje img {
+    max-width: 120px;
+    max-height: 120px;
+    margin-top: 5px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  .mensaje img:hover {
+    transform: scale(1.05);
+  }
+
+  .mensaje video {
+    margin-top: 5px;
+    border-radius: 8px;
+    width: 250px;
+  }
+
+  .mensaje .sticker-img {
+    max-width: 100px;
+    max-height: 100px;
+    margin-top: 5px;
+  }
+
+  form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+    background-color: white;
+    border-top: 1px solid #ccc;
+  }
+
+  form input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+
+  form input[type="file"] {
+    flex-basis: 100%;
+  }
+
+  form button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  #notificacion-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--azul);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: none;
+    z-index: 9999;
+  }
+
+  @media screen and (max-width: 768px) {
+    .chat-wrapper {
+      flex-direction: column;
+    }
+
+    .sidebar {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid #ccc;
+      flex-shrink: 0;
+      height: auto;
+    }
+
+    .mensajes {
+      height: 100%;
+    }
+
+    .chat-box {
+      padding: 10px;
+    }
+
+    header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .volver {
+      align-self: flex-end;
+      margin-top: 10px;
+    }
+
+    .sticker-panel {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      width: 280px;
+      max-height: 350px;
+      background: white;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 10000;
+    }
+
+    .sticker-header {
+      font-weight: bold;
+      text-align: center;
+      padding: 10px;
+      background: #003366;
+      color: white;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .sticker-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .sticker-list img {
+      width: 60px;
+      height: 60px;
+      margin: 5px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: transform 0.2s;
+    }
+
+    .sticker-list img:hover {
+      transform: scale(1.1);
+    }
+
+    .mensaje-burbuja {
+      background-color: #f0f8ff;
+      margin: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      max-width: 300px;
+      word-wrap: break-word;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .sticker-img {
+      max-width: 140px;
+      max-height: 140px;
+      display: block;
+      margin-top: 8px;
+      border-radius: 10px;
+    }
+  }
+
+  /* 🔵 NUEVO: Estilo para imágenes y stickers (.media) en mensajes */
+  .mensaje img.media {
+    max-width: 160px;
+    max-height: 160px;
+    border-radius: 10px;
+    margin-top: 6px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+  }
+
+  .mensaje img.media:hover {
+    transform: scale(1.05);
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <img src="{{ url_for('static', filename='logo.png') }}">
+      <span class="title">Celulares Crédito Fácil - Chat</span>
+    </div>
+    <a href="/dashboard" class="volver">Volver al panel</a>
+  </header>
+
+  <div class="chat-wrapper">
+    <div class="sidebar" id="lista-contactos">
+      <div class="nuevo-chat" onclick="abrirNuevoChat()">➕ Nuevo Chat</div>
+      <div class="crear-grupo" onclick="abrirCrearGrupo()">👥 Crear Grupo</div>
+      <!-- Aquí se insertan los contactos por historial -->
+    </div>
+
+    <div class="mensajes">
+      <div class="chat-box" id="chat-box">
+  {% for m in mensajes %}
+    <div class="mensaje">
+      <p><strong>{{ m['remitente'] }}</strong> <span style="font-size: 12px; color: gray;">{{ m['fecha'] }}</span></p>
+
+      {% if m['archivo'] %}
+        {% set ext = m['archivo'].split('.')[-1].lower() %}
+
+        {% if ext in ['jpg', 'jpeg', 'png', 'gif'] %}
+          <a href="{{ url_for('static', filename='chat/' ~ m['archivo']) }}" target="_blank">
+            <img src="{{ url_for('static', filename='chat/' ~ m['archivo']) }}" alt="imagen" style="max-width: 200px; border-radius: 10px;">
+          </a>
+
+        {% elif ext == 'webp' %}
+          <a href="{{ url_for('static', filename='stickers/' ~ m['archivo']) }}" target="_blank">
+            <img src="{{ url_for('static', filename='stickers/' ~ m['archivo']) }}" alt="sticker" style="width: 100px; height: 100px; border-radius: 12px;">
+          </a>
+
+        {% elif ext in ['mp4', 'webm'] %}
+          <video controls style="max-width: 240px; border-radius: 10px;">
+            <source src="{{ url_for('static', filename='chat/' ~ m['archivo']) }}" type="video/{{ ext }}">
+            Tu navegador no soporta el video.
+          </video>
+
+        {% else %}
+          <a href="{{ url_for('static', filename='chat/' ~ m['archivo']) }}" target="_blank">Archivo: {{ m['archivo'] }}</a>
+        {% endif %}
+      {% endif %}
+
+      {% if m['mensaje'] %}
+        <p>{{ m['mensaje'] }}</p>
+      {% endif %}
+      <hr>
+    </div>
+  {% endfor %}
+</div>
+      <form onsubmit="enviarMensaje(event)">
+  <input type="text" id="mensaje" placeholder="Escribe tu mensaje..." required>
+  <button type="button" id="abrirStickers" title="Tus stickers">🧃</button>
+  <input type="file" id="archivo">
+  <button type="submit">Enviar</button>
+
+      <div style="background:white; border-top:1px solid #ccc; padding:10px; display:flex; flex-wrap:wrap; gap:10px;">
+  {% for s in stickers_propios %}
+    <img src="{{ url_for('static', filename='stickers/' + s['archivo']) }}"
+         style="width:60px; height:60px; cursor:pointer; border-radius:6px;"
+         onclick="enviarSticker('{{ s['archivo'] }}')">
+  {% endfor %}
+</div>
+      </form>
+    </div>
+  </div>
+
+  <div id="notificacion-toast"></div>
+
+<div id="panelStickers" class="sticker-panel" style="display:none;">
+  <div class="sticker-header">Tus stickers</div>
+  <div class="sticker-list" id="listaStickers"></div>
+</div>
+
+  <script>
+    const usuarioActual = "{{ session.get('usuario', '') }}";
+    const tipoUsuario = "{{ session.get('tipo', '') }}";
+    let contactoActivo = "";
+    let historial = {{ historial_usuarios|tojson }};
+    let usuarios = {{ usuarios|tojson }};
+
+    function mostrarNotificacion(mensaje) {
+      const toast = document.getElementById("notificacion-toast");
+      toast.textContent = mensaje;
+      toast.style.display = "block";
+      setTimeout(() => toast.style.display = "none", 8000);
+    }
+
+    function cargarContactos() {
+      const lista = document.getElementById("lista-contactos");
+      lista.innerHTML = `
+        <div class="nuevo-chat" onclick="abrirNuevoChat()">➕ Nuevo Chat</div>
+        <div class="crear-grupo" onclick="abrirCrearGrupo()">👥 Crear Grupo</div>
+      `;
+      historial.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "contacto";
+        div.textContent = c.nombre;
+        div.onclick = () => {
+          document.querySelectorAll(".contacto").forEach(e => e.classList.remove("active"));
+          div.classList.add("active");
+          contactoActivo = c.usuario;
+          cargarMensajes();
+        };
+        lista.appendChild(div);
+      });
+    }
+
+    function abrirNuevoChat() {
+      const lista = document.getElementById("lista-contactos");
+      lista.innerHTML = `
+        <div class="volver-lista" onclick="cargarContactos()">🔙 Volver a mis chats</div>
+      `;
+      usuarios.forEach(c => {
+        if (c.usuario !== usuarioActual) {
+          const div = document.createElement("div");
+          div.className = "contacto";
+          div.textContent = c.nombre;
+          div.onclick = () => {
+            document.querySelectorAll(".contacto").forEach(e => e.classList.remove("active"));
+            div.classList.add("active");
+            contactoActivo = c.usuario;
+            cargarMensajes();
+          };
+          lista.appendChild(div);
+        }
+      });
+    }
+
+    function abrirCrearGrupo() {
+      const lista = document.getElementById("lista-contactos");
+      lista.innerHTML = `
+        <div class="volver-lista" onclick="cargarContactos()">🔙 Volver a mis chats</div>
+        <div class="contacto"><strong>Selecciona integrantes del grupo:</strong></div>
+      `;
+
+      usuarios.forEach(c => {
+        if (c.usuario !== usuarioActual) {
+          const label = document.createElement("label");
+          label.style.display = "block";
+          label.style.padding = "10px 15px";
+          label.style.cursor = "pointer";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = c.usuario;
+          checkbox.style.marginRight = "10px";
+
+          label.appendChild(checkbox);
+          label.appendChild(document.createTextNode(c.nombre));
+          lista.appendChild(label);
+        }
+      });
+
+      const btn = document.createElement("button");
+btn.textContent = "Crear Grupo";
+btn.style.margin = "10px auto";
+btn.style.padding = "10px 16px";
+btn.style.display = "block";
+btn.style.backgroundColor = "#3498db";
+btn.style.color = "white";
+btn.style.border = "none";
+btn.style.borderRadius = "6px";
+
+btn.onclick = async () => {
+  const seleccionados = Array.from(lista.querySelectorAll("input[type=checkbox]:checked"))
+    .map(cb => cb.value);
+  if (seleccionados.length < 2) {
+    alert("Selecciona al menos 2 usuarios para crear un grupo.");
+    return;
+  }
+
+  const nombreGrupo = prompt("¿Nombre del grupo?");
+  if (!nombreGrupo) return;
+
+  try {
+    const res = await fetch("/chat/crear_grupo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre: nombreGrupo, miembros: seleccionados })
+    });
+
+    const data = await res.json();
+    if (data.ok) {
+      alert("Grupo creado correctamente");
+      cargarContactos();  // Vuelve a cargar la lista de chats
+    } else {
+      alert("Error al crear grupo: " + data.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Error de conexión con el servidor.");
+  }
+};
+
+lista.appendChild(btn);
+    }
+
+    async function cargarMensajes() {
+  if (!contactoActivo) return;
+  const res = await fetch(`/chat/recibir_usuario?usuario=${contactoActivo}`);
+  const data = await res.json();
+  const box = document.getElementById("chat-box");
+  box.innerHTML = "";
+
+  data.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "mensaje " + (m.remitente === usuarioActual ? "yo" : "otro");
+
+    // Mostrar remitente
+    const remitente = document.createElement("strong");
+    remitente.textContent = `${m.remitente}: `;
+    div.appendChild(remitente);
+
+    // Mostrar mensaje de texto si existe
+    if (m.mensaje) {
+      const texto = document.createElement("p");
+      texto.textContent = m.mensaje;
+      div.appendChild(texto);
+    }
+
+    // Mostrar archivos si existen
+    if (m.archivo) {
+      const nombre = m.archivo.toLowerCase();
+
+      if (nombre.endsWith(".webp") && nombre.startsWith("sticker_")) {
+        const img = document.createElement("img");
+        img.src = `/static/stickers/${m.archivo}`;
+        img.alt = "sticker";
+        img.className = "media";
+        div.appendChild(img);
+
+      } else if (nombre.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+        const img = document.createElement("img");
+        img.src = `/static/chat/${m.archivo}`;
+        img.alt = "imagen";
+        img.className = "media";
+        img.style.cursor = "pointer";
+        img.onclick = () => verImagenGrande(`/static/chat/${m.archivo}`);
+        div.appendChild(img);
+
+      } else if (nombre.endsWith(".mp4") || nombre.endsWith(".webm") || nombre.endsWith(".ogg")) {
+        const video = document.createElement("video");
+        video.controls = true;
+        video.className = "media";
+        video.innerHTML = `<source src="/static/chat/${m.archivo}" type="video/mp4">Tu navegador no soporta el video.`;
+        div.appendChild(video);
+
+      } else {
+        const link = document.createElement("a");
+        link.href = `/static/chat/${m.archivo}`;
+        link.textContent = "Archivo";
+        link.target = "_blank";
+        div.appendChild(link);
+      }
+    }
+
+    box.appendChild(div);
+  });
+
+  box.scrollTop = box.scrollHeight;
+}
+
+       async function enviarMensaje(e) {
+  e.preventDefault();
+  const mensaje = document.getElementById("mensaje").value.trim();
+  const archivoInput = document.getElementById("archivo");
+
+  if (!contactoActivo || (!mensaje && archivoInput.files.length === 0)) return;
+
+  let archivoNombre = "";
+  if (archivoInput.files.length > 0) {
+    const archivo = archivoInput.files[0];
+
+    // Validar si es un archivo .webp y verificar tamaño
+    const esSticker = archivo.type === "image/webp" && archivo.size <= 100 * 1024;
+
+    if (archivo.type === "image/webp" && !esSticker) {
+      alert("El archivo .webp supera los 100 KB y no se puede usar como sticker.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("archivo", archivo);
+
+    const res = await fetch("/subir_archivo_chat", { method: "POST", body: formData });
+    const result = await res.json();
+    if (result.ok) {
+      archivoNombre = result.nombre;
+    } else {
+      alert("Error al subir el archivo.");
+      return;
+    }
+  }
+
+async function cargarMisStickers() {
+  const res = await fetch(`/mis-stickers?usuario=${usuarioActual}`);
+  const stickers = await res.json();
+
+  const contenedor = document.getElementById("mis-stickers");
+  contenedor.innerHTML = "";
+
+  stickers.forEach(nombreArchivo => {
+    const img = document.createElement("img");
+    img.src = `/static/stickers/${nombreArchivo}`;
+    img.style.maxWidth = "120px";
+    img.style.margin = "5px";
+    contenedor.appendChild(img);
+  });
+}
+
+  await fetch("/chat/enviar_usuario", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ destinatario: contactoActivo, mensaje, archivo: archivoNombre })
+  });
+
+  document.getElementById("mensaje").value = "";
+  document.getElementById("archivo").value = "";
+  await cargarMensajes();
+}
+
+    async function enviarSticker(nombreSticker) {
+  if (!contactoActivo) return;
+
+  const formData = new FormData();
+  formData.append("destinatario", contactoActivo);
+  formData.append("mensaje", "");
+  formData.append("archivo_nombre", nombreSticker); // <== clave para que el backend lo copie
+
+  await fetch("/chat/enviar_usuario", {
+    method: "POST",
+    body: formData
+  });
+
+  await cargarMensajes();
+}
+
+    setInterval(() => {
+      if (contactoActivo) cargarMensajes();
+    }, 5000);
+
+    if (tipoUsuario === "consulta") {
+      mostrarNotificacion("Recuerda hacer tus publicaciones");
+      setInterval(() => mostrarNotificacion("Recuerda hacer tus publicaciones"), 3600000);
+    }
+
+    window.onload = () => cargarContactos();
+
+function verImagenGrande(src) {
+  const modal = document.createElement("div");
+  modal.style.position = "fixed";
+  modal.style.top = 0;
+  modal.style.left = 0;
+  modal.style.width = "100%";
+  modal.style.height = "100%";
+  modal.style.backgroundColor = "rgba(0,0,0,0.85)";
+  modal.style.display = "flex";
+  modal.style.flexDirection = "column";
+  modal.style.justifyContent = "center";
+  modal.style.alignItems = "center";
+  modal.style.zIndex = 9999;
+
+  const imagen = document.createElement("img");
+  imagen.src = src;
+  imagen.id = "imagenModal";
+  imagen.style.maxWidth = "90%";
+  imagen.style.maxHeight = "80%";
+  imagen.style.borderRadius = "12px";
+  imagen.style.boxShadow = "0 0 20px rgba(255,255,255,0.5)";
+  imagen.style.cursor = "pointer";
+  imagen.title = "Haz clic para cerrar";
+
+  const boton = document.createElement("button");
+  boton.textContent = "Guardar como sticker";
+  boton.style.marginTop = "15px";
+  boton.style.padding = "10px 16px";
+  boton.style.border = "none";
+  boton.style.borderRadius = "6px";
+  boton.style.backgroundColor = "#2ecc71";
+  boton.style.color = "white";
+  boton.style.cursor = "pointer";
+
+  boton.onclick = async () => {
+    const nombreArchivo = src.split("/").pop();
+    const res = await fetch("/chat/guardar_como_sticker", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archivo: nombreArchivo })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert("¡Guardado como sticker!");
+      modal.remove();
+    } else {
+      alert("Error al guardar: " + data.error);
+    }
+  };
+
+  modal.onclick = (e) => {
+    if (e.target === modal || e.target === imagen) modal.remove();
+  };
+
+  modal.appendChild(imagen);
+  modal.appendChild(boton);
+  document.body.appendChild(modal);
+}
+
+document.getElementById("abrirStickers").onclick = async () => {
+  const panel = document.getElementById("panelStickers");
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+
+  if (panel.style.display === "block") {
+    const res = await fetch("/chat/stickers_usuario");
+    const data = await res.json();
+    const contenedor = document.getElementById("listaStickers");
+    contenedor.innerHTML = "";
+
+    data.stickers.forEach(nombre => {
+  const img = document.createElement("img");
+  img.src = `/static/stickers/${nombre}`;
+  img.style.width = "110px";
+  img.style.height = "110px";
+  img.style.margin = "6px";
+  img.style.cursor = "pointer";
+  img.style.borderRadius = "10px";
+  img.style.objectFit = "contain";
+  img.onclick = () => {
+    enviarSticker(nombre);
+    panel.style.display = "none";
+  };
+  contenedor.appendChild(img);
+});
+  }
+};
+
+function renderizarMensajes(mensajes) {
+  const contenedor = document.getElementById("mensajes");
+  contenedor.innerHTML = "";
+
+  mensajes.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "mensaje-burbuja";
+
+    let contenido = `<strong>${m.remitente}:</strong> `;
+
+    if (m.archivo) {
+      const nombre = m.archivo.toLowerCase();
+
+      if (nombre.endsWith(".webp") && nombre.startsWith("sticker_")) {
+        contenido += `<img src="/static/stickers/${m.archivo}" class="sticker-img">`;
+      } else if (nombre.endsWith(".jpg") || nombre.endsWith(".jpeg") || nombre.endsWith(".png")) {
+        contenido += `<img src="/static/chat/${m.archivo}" class="sticker-img">`;
+      } else if (nombre.endsWith(".mp4")) {
+        contenido += `<video controls class="sticker-img"><source src="/static/chat/${m.archivo}" type="video/mp4"></video>`;
+      } else {
+        contenido += `<a href="/static/chat/${m.archivo}" target="_blank">${m.archivo}</a>`;
+      }
+    }
+
+    if (m.mensaje) {
+      contenido += `<p>${m.mensaje}</p>`;
+    }
+
+    div.innerHTML = contenido;
+    contenedor.appendChild(div);
+  });
+
+  contenedor.scrollTop = contenedor.scrollHeight;
+}
+  </script>
+</body>
+</html>

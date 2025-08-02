@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Backup y Restauración</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #e6f0ff;
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .navbar {
+            background-color: #003366;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-grow: 1;
+        }
+
+        .navbar-left img {
+            height: 45px;
+        }
+
+        .navbar-left span {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .navbar form {
+            margin-right: 10px;
+        }
+
+        .navbar button {
+            background-color: #e74c3c;
+            border: none;
+            color: white;
+            padding: 10px 18px;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h3 {
+            margin-bottom: 15px;
+            color: #34495e;
+        }
+
+        button, input[type="submit"] {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover, input[type="submit"]:hover {
+            background-color: #2980b9;
+        }
+
+        input[type="file"] {
+            margin-top: 10px;
+        }
+
+        .btn-secondary {
+            display: block;
+            text-align: center;
+            background-color: #2980b9;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            margin-top: 20px;
+        }
+
+        .btn-secondary:hover {
+            background-color: #2471a3;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+
+            .navbar {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .navbar form {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <div class="navbar-left">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+        <span>Celulares Crédito Fácil</span>
+    </div>
+    <form method="post" action="/logout">
+        <button type="submit">Cerrar sesión</button>
+    </form>
+</div>
+
+<div class="container">
+    <h2>Backup y Restauración</h2>
+
+    <div class="section">
+        <h3>📥 Descargar respaldo</h3>
+        <a href="{{ url_for('descargar_backup') }}">
+            <button>Descargar Base de Datos</button>
+        </a>
+    </div>
+
+    <div class="section">
+        <h3>📤 Restaurar respaldo</h3>
+        <form action="{{ url_for('restaurar_backup') }}" method="POST" enctype="multipart/form-data">
+            <input type="file" name="backup_file" accept=".sqlite3" required>
+            <br><br>
+            <input type="submit" value="Restaurar Base de Datos">
+        </form>
+    </div>
+
+    <a href="/dashboard" class="btn-secondary">← Volver al panel</a>
+</div>
+
+</body>
+</html>

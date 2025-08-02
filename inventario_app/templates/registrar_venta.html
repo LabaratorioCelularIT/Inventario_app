@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Registrar Venta</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --azul-rey: #003366;
+      --celeste: #e6f0ff;
+      --blanco: #ffffff;
+      --rojo: #e74c3c;
+      --rojo-hover: #c0392b;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--celeste);
+      margin: 0;
+      padding: 0;
+      color: #2c3e50;
+    }
+
+    .topbar {
+      background-color: var(--azul-rey);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .topbar img {
+      height: 60px;
+      margin-right: 15px;
+    }
+
+    .topbar .title {
+      color: white;
+      font-size: 26px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+    }
+
+    .volver-btn {
+      position: absolute;
+      left: 20px;
+      top: 20px;
+      background-color: var(--rojo);
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .volver-btn:hover {
+      background-color: var(--rojo-hover);
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: var(--blanco);
+      padding: 30px;
+      border-radius: 14px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 24px;
+      color: var(--azul-rey);
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin: 16px 0 6px;
+      font-weight: bold;
+    }
+
+    input[type="text"],
+    input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+    }
+
+    button[type="submit"] {
+      margin-top: 25px;
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background-color: var(--azul-rey);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button[type="submit"]:hover {
+      background-color: #002244;
+    }
+
+    @media (max-width: 600px) {
+      .topbar {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .topbar img {
+        margin: 0 0 10px 0;
+      }
+
+      .volver-btn {
+        position: static;
+        margin-bottom: 10px;
+      }
+
+      .container {
+        margin: 20px;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a href="/dashboard" class="volver-btn">🔙 Volver al Panel</a>
+    <div class="title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      Registrar Venta
+    </div>
+  </div>
+
+  <div class="container">
+    <form method="POST" enctype="multipart/form-data">
+      <h2>Registrar Venta</h2>
+
+      <label for="usuario">Nombre del vendedor:</label>
+      <input type="text" name="usuario" id="usuario" required>
+
+      <label for="contrato">Contrato (PDF):</label>
+      <input type="file" name="contrato" id="contrato" accept=".pdf" required>
+
+      <label for="foto1">Foto 1:</label>
+      <input type="file" name="foto1" id="foto1" accept="image/*" required>
+      <label for="foto2">Foto 2:</label>
+      <input type="file" name="foto2" id="foto2" accept="image/*" required>
+      <label for="foto3">Foto 3:</label>
+      <input type="file" name="foto3" id="foto3" accept="image/*" required>
+      <label for="foto4">Foto 4:</label>
+      <input type="file" name="foto4" id="foto4" accept="image/*" required>
+
+      <label for="audio">Audio (MP3):</label>
+      <input type="file" name="audio" id="audio" accept="audio/*" required>
+
+      <button type="submit">Guardar Venta</button>
+    </form>
+  </div>
+
+</body>
+</html>

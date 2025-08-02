@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5001:5001"
+    volumes:
+      - ../inventario.sqlite3:/app/inventario.sqlite3  # ✅ montar la base desde fuera
+      - .:/app
+    restart: unless-stopped

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestionar Tipos de Producto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --fg: #003366;
+      --card: white;
+      --accent: #3498db;
+      --accent-hover: #2980b9;
+      --danger: #e74c3c;
+      --danger-hover: #c0392b;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+    }
+
+    .topbar {
+      background-color: var(--fg);
+      color: white;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    .topbar img {
+      height: 60px;
+    }
+
+    .topbar span {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 950px;
+      margin: 30px auto;
+      background: var(--card);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.08);
+    }
+
+    h2, h4 {
+      text-align: center;
+      margin-bottom: 25px;
+      color: var(--fg);
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background-color: #fff;
+      color: #333;
+      font-size: 15px;
+    }
+
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-azul {
+      background-color: var(--accent);
+      color: white;
+    }
+
+    .btn-azul:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .btn-rojo {
+      background-color: var(--danger);
+      color: white;
+    }
+
+    .btn-rojo:hover {
+      background-color: var(--danger-hover);
+    }
+
+    .btn-volver {
+      margin-bottom: 20px;
+      background-color: var(--danger);
+      color: white;
+    }
+
+    .btn-volver:hover {
+      background-color: var(--danger-hover);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #ccc;
+    }
+
+    th {
+      background-color: #ecf0f1;
+    }
+
+    .mensaje {
+      text-align: center;
+      margin-bottom: 15px;
+      color: green;
+      font-weight: bold;
+    }
+
+    .volver {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .volver a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .volver a:hover {
+      text-decoration: underline;
+    }
+
+    .form-editar input {
+      width: auto;
+      padding: 6px;
+    }
+
+    .form-editar {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .form-editar {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      input, textarea {
+        width: 100%;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <span>Celulares Crédito Fácil</span>
+  </div>
+
+  <div class="container">
+    <button onclick="location.href='/dashboard'" class="btn-volver">🔙 Volver al Panel</button>
+
+    <h2>Gestionar Tipos de Producto</h2>
+
+    {% if mensaje %}
+      <div class="mensaje">{{ mensaje }}</div>
+    {% endif %}
+
+    <form method="POST">
+      <input type="hidden" name="accion" value="añadir">
+      <label>Marca</label>
+      <input type="text" name="marca" required>
+      <label>Modelo</label>
+      <input type="text" name="modelo" required>
+      <label>Stock Mínimo (opcional)</label>
+      <input type="number" name="stock_minimo" min="0">
+      <button class="btn-azul">➕ Añadir Tipo de Producto</button>
+    </form>
+
+    <hr>
+
+    <h4>Añadir en Lote</h4>
+    <form method="POST">
+      <input type="hidden" name="accion" value="lote">
+      <textarea name="lote" rows="5" placeholder="Ejemplo:
+Samsung,Galaxy A03,5
+Motorola,Moto G9,3"></textarea>
+      <button class="btn-azul">📋 Procesar Lote</button>
+    </form>
+
+    <hr>
+
+    <h4>Listado de Tipos Registrados</h4>
+    {% if tipos %}
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Marca y Modelo</th>
+          <th>Stock Mínimo</th>
+          <th>Editar</th>
+          <th>Eliminar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tipo in tipos %}
+        <tr>
+          <td>{{ tipo[0] }}</td>
+          <td>{{ tipo[1] }}</td>
+          <td>{{ tipo[2] }}</td>
+          <td>
+            <form method="POST" class="form-editar">
+              <input type="hidden" name="accion" value="editar">
+              <input type="hidden" name="tipo_id" value="{{ tipo[0] }}">
+              <input type="text" name="marca" placeholder="Marca" required>
+              <input type="text" name="modelo" placeholder="Modelo" required>
+              <input type="number" name="stock_minimo" placeholder="Stock" value="{{ tipo[2] }}">
+              <button class="btn-azul">Guardar</button>
+            </form>
+          </td>
+          <td>
+            <form method="POST" onsubmit="return confirm('¿Seguro que quieres eliminar este tipo?')">
+              <input type="hidden" name="accion" value="eliminar">
+              <input type="hidden" name="tipo_id" value="{{ tipo[0] }}">
+              <button class="btn-rojo">🗑 Eliminar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p style="text-align:center;">No hay tipos registrados aún.</p>
+    {% endif %}
+
+    <div class="volver">
+      <a href="/dashboard">← Volver al panel principal</a>
+    </div>
+  </div>
+
+</body>
+</html>

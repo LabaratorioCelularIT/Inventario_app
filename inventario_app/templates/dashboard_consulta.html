@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de Consulta</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --azul-rey: #003366;
+      --celeste: #e6f0ff;
+      --rojo: #e74c3c;
+      --rojo-hover: #c0392b;
+      --boton-borde: #001f3f;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--celeste);
+      color: #2c3e50;
+    }
+
+    .navbar {
+      background-color: var(--azul-rey);
+      padding: 25px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      color: white;
+    }
+
+    .navbar-center {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-grow: 1;
+      justify-content: center;
+    }
+
+    .navbar-center img {
+      height: 65px;
+    }
+
+    .navbar-center span {
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .navbar-right {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .navbar button {
+      background-color: var(--rojo);
+      border: 2px solid var(--boton-borde);
+      color: white;
+      padding: 10px 16px;
+      font-size: 15px;
+      cursor: pointer;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+
+    .navbar button:hover {
+      background-color: var(--rojo-hover);
+    }
+
+    .chat-btn {
+      position: relative;
+      background-color: #3498db;
+      padding: 10px 16px;
+      border: 2px solid #1c5e8c;
+      font-weight: bold;
+    }
+
+    .chat-btn:hover {
+      background-color: #2980b9;
+    }
+
+    .chat-notif {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background-color: red;
+      color: white;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 50%;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 40px auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 24px;
+      color: var(--azul-rey);
+    }
+
+    .alert-box {
+      background-color: #ecf0f1;
+      border-left: 5px solid #3498db;
+      padding: 15px;
+      text-align: left;
+      margin-bottom: 25px;
+      border-radius: 6px;
+    }
+
+    .alert-box strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-top: 20px;
+      justify-content: center;
+    }
+
+    .btn {
+      display: inline-block;
+      background-color: #3498db;
+      color: white;
+      padding: 12px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: bold;
+      border: 2px solid #1c5e8c;
+    }
+
+    .btn:hover {
+      background-color: #2980b9;
+    }
+
+    @media (max-width: 600px) {
+      .btn-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .navbar {
+        flex-direction: column;
+        align-items: center;
+        padding: 20px 10px;
+      }
+
+      .navbar-center {
+        margin-bottom: 10px;
+        flex-direction: column;
+      }
+
+      .navbar-right {
+        margin-top: 10px;
+      }
+
+      .container {
+        margin: 20px;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-center">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <span>Celulares Crédito Fácil</span>
+  </div>
+  <div class="navbar-right">
+    <a href="/chat" class="btn chat-btn">
+      💬 Chat
+      <span id="notif" class="chat-notif" style="display:none;">!</span>
+    </a>
+    <form action="/logout" method="get">
+      <button type="submit">Cerrar sesión</button>
+    </form>
+  </div>
+</div>
+
+<div class="container">
+  <h2>Bienvenido {{ session['usuario'] }} - Consulta</h2>
+
+  <div class="alert-box">
+    <strong>Modo consulta activado</strong>
+    Estás visualizando información solo de la sucursal: <b>{{ session['sucursal'] }}</b><br>
+    Puedes consultar el inventario y confirmar transferencias si es necesario.
+  </div>
+
+  <div class="btn-grid">
+    <a href="/inventario-sucursal" class="btn">📦 Ver inventario</a>
+    <a href="/confirmar-transferencias" class="btn">✅ Confirmar transferencias</a>
+    <a href="/recibir-garantia" class="btn">📦🔁 Recibir Garantía</a>
+  </div>
+
+  <p style="margin-top: 30px; color: #7f8c8d;">🔧 Próximamente se habilitarán más funciones para tu rol.</p>
+</div>
+
+<script>
+  async function revisarNotificaciones() {
+    const res = await fetch("/chat/notificaciones?modulo=Inventario");
+    const data = await res.json();
+    if (data.nuevos > 0) {
+      document.getElementById("notif").style.display = "inline-block";
+      document.getElementById("notif").textContent = data.nuevos;
+    }
+  }
+
+  setInterval(revisarNotificaciones, 5000);
+  revisarNotificaciones();
+</script>
+
+</body>
+</html>
