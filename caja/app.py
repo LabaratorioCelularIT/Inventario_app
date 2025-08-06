@@ -15,6 +15,8 @@ from flask import request
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from utils import enviar_codigo_verificacion
+import random
 
 # Configuración inicial
 app = Flask(__name__)
@@ -72,6 +74,9 @@ def fecha_hoy():
 
 def fecha_hora_actual():
     return datetime.now(TZ).strftime("%d-%m-%Y %H:%M:%S")
+
+def validar_contrasena_segura(contrasena):
+    return bool(re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$', contrasena))
 
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
@@ -168,7 +173,14 @@ def login():
 def panel_admin():
     if "usuario" not in session or session.get("tipo") != "admin":
         return redirect("/")
-    return render_template("panel-admin.html", sucursales=SUCURSALES)
+
+    bloqueos_pendientes = 0
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM bloqueos_feria WHERE autorizado = 0")
+        bloqueos_pendientes = cur.fetchone()[0]
+
+    return render_template("panel-admin.html", sucursales=SUCURSALES, bloqueos_pendientes=bloqueos_pendientes)
 
 @app.route("/panel-consulta")
 def panel_consulta():
@@ -184,6 +196,146 @@ def panel_consulta():
         tipo=session.get("tipo", ""),
         nombre_real=nombre_real
     )
+
+@app.route("/registro", methods=["GET", "POST"])
+def registro():
+    if request.method == "POST":
+        correo = request.form["correo"]
+        nombre = request.form["nombre"]
+        contrasena = request.form["contrasena"]
+        confirmar = request.form["confirmar"]
+        telefono = request.form["telefono"]
+        tipo = request.form["tipo"]
+
+        if contrasena != confirmar:
+            return render_template("registro.html", error="Las contraseñas no coinciden.")
+
+        patron = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=?<>.,]).{6,}$"
+        if not re.match(patron, contrasena):
+            return render_template("registro.html", error="La contraseña no cumple con los requisitos.")
+
+        nombre_base = nombre.split()[0].lower()
+        codigo = random.randint(1000, 9999)
+        usuario_generado = f"{tipo}_{nombre_base}_{codigo}"
+
+        conn = sqlite3.connect("inventario.sqlite3")
+        cur = conn.cursor()
+
+        cur.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario_generado,))
+        while cur.fetchone():
+            codigo = random.randint(1000, 9999)
+            usuario_generado = f"{tipo}_{nombre_base}_{codigo}"
+            cur.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario_generado,))
+
+        cur.execute("INSERT INTO usuarios (usuario, contrasena, tipo, correo, telefono) VALUES (?, ?, ?, ?, ?)", 
+                    (usuario_generado, contrasena, tipo, correo, telefono))
+        conn.commit()
+        conn.close()
+
+        return render_template("registro.html", success=f"Usuario registrado con éxito: {usuario_generado}")
+
+    return render_template("registro.html")
+
+@app.route("/recuperar", methods=["GET", "POST"])
+def recuperar():
+    mensaje = ""
+    error = ""
+    if request.method == "POST":
+        contacto = request.form.get("contacto", "").strip()
+
+        if not contacto:
+            error = "Debes ingresar tu correo o número de teléfono."
+            return render_template("recuperar.html", error=error)
+
+        codigo = ''.join(random.choices(string.digits, k=6))
+        fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+
+            cur.execute("SELECT usuario FROM usuarios WHERE correo = ? OR telefono = ?", (contacto, contacto))
+            resultado = cur.fetchone()
+
+            if resultado:
+                usuario = resultado[0]
+
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS codigos_recuperacion (
+                        usuario TEXT,
+                        codigo TEXT,
+                        contacto TEXT,
+                        fecha TEXT
+                    )
+                """)
+                cur.execute("DELETE FROM codigos_recuperacion WHERE usuario = ?", (usuario,))
+                cur.execute("INSERT INTO codigos_recuperacion (usuario, codigo, contacto, fecha) VALUES (?, ?, ?, ?)",
+                            (usuario, codigo, contacto, fecha))
+                conn.commit()
+
+                mensaje = f"Tu código de recuperación es: {codigo} (Solo visible para pruebas, luego se enviará por correo o SMS)"
+            else:
+                error = "No se encontró ninguna cuenta asociada a ese correo o número."
+
+    return render_template("recuperar.html", mensaje=mensaje, error=error)
+
+@app.route("/verificar-codigo", methods=["GET", "POST"])
+def verificar_codigo():
+    if request.method == "POST":
+        usuario = request.form["usuario"]
+        codigo_ingresado = request.form["codigo"]
+        nueva_contrasena = request.form["nueva_contrasena"]
+
+        conn = sqlite3.connect("inventario.sqlite3")
+        cur = conn.cursor()
+        cur.execute("SELECT codigo FROM codigos_verificacion WHERE usuario = ?", (usuario,))
+        fila = cur.fetchone()
+        conn.close()
+
+        if fila and fila[0] == codigo_ingresado:
+            # validar nueva contraseña
+            if not validar_contrasena_segura(nueva_contrasena):
+                return render_template("verificar_codigo.html", usuario=usuario, error="La contraseña no cumple los requisitos de seguridad.")
+
+            conn = sqlite3.connect("inventario.sqlite3")
+            cur = conn.cursor()
+            cur.execute("UPDATE usuarios SET contrasena = ? WHERE usuario = ?", (nueva_contrasena, usuario))
+            cur.execute("DELETE FROM codigos_verificacion WHERE usuario = ?", (usuario,))
+            conn.commit()
+            conn.close()
+            return redirect("/login")
+        else:
+            return render_template("verificar_codigo.html", usuario=usuario, error="Código incorrecto.")
+    
+    usuario = request.args.get("usuario", "")
+    return render_template("verificar_codigo.html", usuario=usuario)
+
+@app.route('/enviar-codigo', methods=['POST'])
+def enviar_codigo():
+    dato = request.form.get("dato")
+    codigo = str(random.randint(100000, 999999))
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT correo, telefono FROM usuarios WHERE correo = ? OR telefono = ?", (dato, dato))
+        usuario = cur.fetchone()
+
+        if not usuario:
+            return render_template("enviar_codigo.html", error="❌ No se encontró ninguna cuenta con ese dato.")
+
+        correo, telefono = usuario
+
+        # Guardar código en sesión
+        session["codigo_verificacion"] = codigo
+        session["dato_verificado"] = dato
+
+        if correo:
+            enviado = enviar_codigo_verificacion(correo, codigo)
+            if enviado:
+                return redirect("/verificar-codigo")
+            else:
+                return render_template("enviar_codigo.html", error="❌ Falló el envío del correo.")
+        else:
+            return render_template("enviar_codigo.html", error="❌ Este usuario no tiene correo registrado.")
 
 @app.route('/firmar', methods=['POST'])
 def firmar():
@@ -459,6 +611,7 @@ def cobrar():
     tipo_usuario = session.get("tipo", "")
     sucursal = session.get("sucursal", "")
     fecha = datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y %H:%M:%S")
+    fecha_dia = fecha.split(" ")[0]
 
     efectivo = float(request.form.get("efectivo", 0))
     tarjeta = float(request.form.get("tarjeta", 0))
@@ -476,6 +629,39 @@ def cobrar():
 
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM ventas WHERE fecha LIKE ? AND sucursal = ?", (f"{fecha_dia}%", sucursal))
+        ventas_hoy = cur.fetchone()[0]
+
+        if ventas_hoy == 0:
+            descripcion_primera = carrito[0].get("descripcion", "").strip().upper()
+            if descripcion_primera != "FERIA":
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS bloqueos_feria (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sucursal TEXT,
+                        fecha TEXT,
+                        motivo TEXT,
+                        autorizado INTEGER DEFAULT 0
+                    )
+                """)
+                cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)", (sucursal, fecha_dia, "Primera venta no fue FERIA"))
+                conn.commit()
+                return render_template("venta_bloqueada.html", mensaje="❌ La primera venta del día debe ser FERIA. Espera autorización de un administrador.")
+
+            cur.execute("SELECT autorizado FROM bloqueos_feria WHERE fecha = ? AND sucursal = ?", (fecha_dia, sucursal))
+            bloqueo = cur.fetchone()
+            if bloqueo and bloqueo[0] == 1:
+                pass
+            else:
+                monto_venta_feria = carrito[0].get("precio", 0)
+                ayer = (datetime.now(ZoneInfo("America/Monterrey")) - timedelta(days=1)).strftime("%d-%m-%Y")
+                cur.execute("SELECT monto FROM gastos WHERE fecha = ? AND sucursal = ? AND motivo = 'FERIA'", (ayer, sucursal))
+                resultado = cur.fetchone()
+                if resultado is None or float(resultado[0]) != float(monto_venta_feria):
+                    cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)", (sucursal, fecha_dia, "Feria no coincide con la salida de ayer"))
+                    conn.commit()
+                    return render_template("venta_bloqueada.html", mensaje="❌ El monto de la FERIA no coincide con la salida registrada ayer. Espera autorización de un administrador.")
+
         for item in carrito:
             cur.execute("""
                 INSERT INTO ventas (usuario, sucursal, descripcion, tipo, concepto, referencia, precio, tipo_pago, fecha)
@@ -495,7 +681,6 @@ def cobrar():
                 cur.execute("UPDATE articulos SET estado = 'Vendido' WHERE imei = ?", (imei,))
         conn.commit()
 
-    
     NOMBRES_USUARIOS = {
         "Litzi": "Litzi",
         "Brayan": "Brayan",
@@ -520,7 +705,7 @@ def cobrar():
         "consulta_ajnd_7204": "Alejandrina (consulta)",
         "admin_dvcd_6497": "David",
         "admin_vctr_9051": "Victoria",
-        "admin_ajnd_7204": "Alejandrina",
+        "admin_ajnd_7204": "Alejandrina"
     }
 
     nombre_usuario = NOMBRES_USUARIOS.get(usuario, usuario)
@@ -542,6 +727,35 @@ def cobrar():
         return redirect("/ventas")
 
     return redirect("/abrir-ticket")
+
+@app.route("/autorizar-bloqueo/<int:id>")
+def autorizar_bloqueo(id):
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return redirect("/login")
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE bloqueos_feria SET autorizado = 1 WHERE id = ?", (id,))
+        conn.commit()
+
+    flash("✅ Bloqueo autorizado correctamente. Ya pueden continuar las ventas.")
+    return redirect("/panel-admin")
+
+@app.route("/ver-bloqueos")
+def ver_bloqueos():
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return redirect("/")
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT id, sucursal, fecha, motivo, autorizado 
+            FROM bloqueos_feria 
+            ORDER BY fecha DESC
+        """)
+        bloqueos = cur.fetchall()
+
+    return render_template("ver_bloqueos.html", bloqueos=bloqueos)
 
 @app.route("/abrir-ticket")
 def abrir_ticket():

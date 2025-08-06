@@ -61,12 +61,13 @@ Cambio:  ${{ '%.2f'|format(cambio) }}
     async function imprimirTicket() {
       try {
         const contenido = document.getElementById("contenido-ticket").innerText;
-        const respuesta = await fetch("http://localhost:5500/imprimir", {
-          method: "POST",
-          headers: { "Content-Type": "text/plain" },
-          body: contenido
-        });
-        if (!respuesta.ok) throw new Error("Código " + respuesta.status);
+
+         const respuesta = await fetch("http://localhost:5500/imprimir", {
+           method: "POST",
+           headers: { "Content-Type": "text/plain" },
+           body: contenido
+         });
+         if (!respuesta.ok) throw new Error("Código " + respuesta.status);
         setTimeout(() => window.close(), 1000);
       } catch (err) {
         alert("Error al imprimir: " + err.message);

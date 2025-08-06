@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro de Usuario - Celulares Crédito Fácil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #e6f0ff, #ffffff);
+      margin: 0;
+      padding: 0;
+    }
+
+    .registro-card {
+      max-width: 400px;
+      margin: 40px auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .registro-card img {
+      width: 80px;
+      height: 80px;
+      border-radius: 10px;
+    }
+
+    h2 {
+      color: #003366;
+      margin-top: 10px;
+    }
+
+    label {
+      display: block;
+      text-align: left;
+      margin: 12px 0 4px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    button {
+      background-color: #003366;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      width: 100%;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .volver {
+      display: block;
+      margin-top: 20px;
+      color: #003366;
+      text-decoration: none;
+    }
+
+    .error-msg {
+      color: red;
+      margin-bottom: 10px;
+    }
+
+    .success-msg {
+      color: green;
+      margin-bottom: 10px;
+    }
+
+    .password-info {
+      font-size: 12px;
+      text-align: left;
+      margin-top: -6px;
+      margin-bottom: 10px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="registro-card">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" onerror="this.src='https://via.placeholder.com/80x80?text=Logo';">
+    <h2>Registro de Usuario</h2>
+
+    {% if error %}
+      <div class="error-msg">{{ error }}</div>
+    {% elif success %}
+      <div class="success-msg">{{ success }}</div>
+    {% endif %}
+
+    <form method="POST">
+      <label for="correo">Correo:</label>
+      <input type="email" name="correo" required>
+
+      <label for="nombre">Nombre completo:</label>
+      <input type="text" name="nombre" required>
+
+      <label for="contrasena">Contraseña:</label>
+      <input type="password" name="contrasena" id="contrasena" required>
+      <div class="password-info">Debe contener mínimo una mayúscula, una minúscula, un número y un caracter especial.</div>
+
+      <label for="confirmar">Confirmar contraseña:</label>
+      <input type="password" name="confirmar" id="confirmar" required>
+
+      <label for="telefono">Número de teléfono:</label>
+      <input type="tel" name="telefono" required pattern="[0-9]{10}" placeholder="10 dígitos">
+
+      <label for="tipo">Tipo de usuario:</label>
+      <select name="tipo" required>
+        <option value="">Selecciona tipo</option>
+        <option value="consulta">Consulta</option>
+        <option value="reparto">Reparto</option>
+      </select>
+
+      <button type="submit">Registrarse</button>
+    </form>
+
+    <a href="/" class="volver">⬅ Volver al inicio de sesión</a>
+  </div>
+
+  <script>
+    const form = document.querySelector("form");
+    form.addEventListener("submit", function(e) {
+      const pass = document.getElementById("contrasena").value;
+      const confirm = document.getElementById("confirmar").value;
+      const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=?<>.,]).{6,}$/;
+
+      if (!pattern.test(pass)) {
+        alert("La contraseña no cumple con los requisitos.");
+        e.preventDefault();
+        return;
+      }
+
+      if (pass !== confirm) {
+        alert("Las contraseñas no coinciden.");
+        e.preventDefault();
+        return;
+      }
+    });
+  </script>
+
+</body>
+</html>

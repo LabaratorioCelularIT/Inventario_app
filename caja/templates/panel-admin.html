@@ -151,42 +151,48 @@
   <div class="container">
     <h2>Acciones disponibles</h2>
     <div class="panel-grid">
-      <div class="card"><a href="/corte-del-dia">📋 Ver Corte del Día</a></div>
-      <div class="card"><a href="/ventas">🛒 Registrar Venta</a></div>
-      <div class="card"><a href="/gastos">📤 Registrar Salidas</a></div>
-      <div class="card"><a href="/notas">📝 Agregar Nota</a></div>
-      <div class="card"><a href="/fondo-caja">💰 Actualizar Fondo de Caja</a></div>
-      <div class="card"><a href="/ver-ciclos">📄 Ver Ciclos</a></div>
-      <div class="card"><a href="/ver-fondo">💰 Ver Fondo Actual</a></div>
-            <div class="card">
-        <button onclick="mostrarFaltantes()" style="background: none; border: none; font-size: 18px; font-weight: bold; color: #337ab7; cursor: pointer;">
-          🧮 Faltantes de Hoy
-        </button>
-      </div>
-
-      <div class="card"><a href="/caja-actual">📦 Ver Caja Actual</a></div>
-
-      <div class="card" style="padding: 10px 5px;">
-        <form action="/reporte-excel" method="get" style="display: flex; flex-direction: column; gap: 10px;">
-          <strong style="font-size: 18px;">⬇️ Generar Reporte de Excel</strong>
-          <label for="sucursal">Sucursal:</label>
-          <select name="sucursal" id="sucursal" required>
-            {% for s in sucursales %}
-              <option value="{{ s }}">{{ s }}</option>
-            {% endfor %}
-          </select>
-          <label for="fecha">Fecha:</label>
-          <input type="date" name="fecha" required>
-          <button type="submit" style="background-color: #337ab7; color: white; padding: 8px 10px; border: none; border-radius: 6px; font-weight: bold;">
-            Descargar Excel
-          </button>
-        </form>
-      </div>
-
-      <div class="card"><a href="/ver-reporte-excel">📄 Ver Reporte Excel</a></div>
-      <div class="card"><a href="/log-actividad">📚 Ver Log de Actividad</a></div>
-    </div>
+  <div class="card"><a href="/corte-del-dia">📋 Ver Corte del Día</a></div>
+  <div class="card"><a href="/ventas">🛒 Registrar Venta</a></div>
+  <div class="card"><a href="/gastos">📤 Registrar Salidas</a></div>
+  <div class="card"><a href="/notas">📝 Agregar Nota</a></div>
+  <div class="card"><a href="/fondo-caja">💰 Actualizar Fondo de Caja</a></div>
+  <div class="card"><a href="/ver-ciclos">📄 Ver Ciclos</a></div>
+  <div class="card"><a href="/ver-fondo">💰 Ver Fondo Actual</a></div>
+  <div class="card">
+    <button onclick="mostrarFaltantes()" style="background: none; border: none; font-size: 18px; font-weight: bold; color: #337ab7; cursor: pointer;">
+      🧮 Faltantes de Hoy
+    </button>
   </div>
+  <div class="card"><a href="/caja-actual">📦 Ver Caja Actual</a></div>
+
+  <div class="card" style="padding: 10px 5px;">
+    <form action="/reporte-excel" method="get" style="display: flex; flex-direction: column; gap: 10px;">
+      <strong style="font-size: 18px;">⬇️ Generar Reporte de Excel</strong>
+      <label for="sucursal">Sucursal:</label>
+      <select name="sucursal" id="sucursal" required>
+        {% for s in sucursales %}
+          <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+      <label for="fecha">Fecha:</label>
+      <input type="date" name="fecha" required>
+      <button type="submit" style="background-color: #337ab7; color: white; padding: 8px 10px; border: none; border-radius: 6px; font-weight: bold;">
+        Descargar Excel
+      </button>
+    </form>
+  </div>
+
+  <div class="card"><a href="/ver-reporte-excel">📄 Ver Reporte Excel</a></div>
+  <div class="card"><a href="/log-actividad">📚 Ver Log de Actividad</a></div>
+
+  {% if bloqueos_pendientes > 0 %}
+  <div class="card" style="background-color: #ffe5e5;">
+    <a href="/ver-bloqueos" style="color: #c9302c;">
+      ❌ Autorizaciones Pendientes ({{ bloqueos_pendientes }})
+    </a>
+  </div>
+  {% endif %}
+</div>
 
   <div id="modalFaltantes" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.4); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:20px; border-radius:10px; max-width:500px; width:90%; box-shadow:0 4px 10px rgba(0,0,0,0.3);">

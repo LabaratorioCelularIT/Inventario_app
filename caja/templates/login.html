@@ -244,19 +244,23 @@
         </select>
       </div>
 
-      <button type="submit">Iniciar Sesión</button>
+            <button type="submit">Iniciar Sesión</button>
     </form>
-  </div>
 
-  <!-- Modal de confirmación -->
-<div id="modal-overlay" class="modal-overlay">
-  <div class="modal">
-    <h3 id="modal-text">¿Seguro que quieres entrar a esta sucursal?</h3>
-    <div class="modal-buttons">
-      <button class="btn-confirm" onclick="aceptarModal()">Aceptar</button>
-      <button class="btn-cancel" onclick="cancelarModal()">Cancelar</button>
+    <div style="margin-top: 15px; text-align: center;">
+      <a href="/registro" style="color: #003366; font-weight: bold; text-decoration: none;">📋 Registrarse como nuevo usuario</a><br>
+      <a href="/recuperar" style="color: #003366; font-weight: bold; text-decoration: none; margin-top: 10px; display: inline-block;">🔐 ¿Olvidaste tu contraseña?</a>
     </div>
   </div>
-</div>
+
+  <div id="modal-overlay" class="modal-overlay">
+    <div class="modal">
+      <h3 id="modal-text">¿Seguro que quieres entrar a esta sucursal?</h3>
+      <div class="modal-buttons">
+        <button class="btn-confirm" onclick="aceptarModal()">Aceptar</button>
+        <button class="btn-cancel" onclick="cancelarModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

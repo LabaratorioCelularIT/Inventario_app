@@ -300,28 +300,39 @@
     <h2>Ventas registradas hoy</h2>
     <table>
       <thead>
-        <tr>
-          <th>Descripción</th>
-          <th>Concepto</th>
-          <th>Tipo</th>
-          <th>Referencia</th>
-          <th>Precio</th>
-          {% if tipo == 'admin' %}<th>Eliminar</th>{% endif %}
-        </tr>
-      </thead>
+        <thead>
+  <tr>
+    <th>Descripción</th>
+    <th>Concepto</th>
+    <th>Tipo</th>
+    <th>Referencia</th>
+    <th>Precio</th>
+    <th>Imprimir</th>
+    {% if tipo == 'admin' %}<th>Eliminar</th>{% endif %}
+  </tr>
+</thead>
       <tbody>
         {% for venta in ventas %}
-        <tr id="venta-{{ venta.id }}">
-          <td>{{ venta.descripcion }}</td>
-          <td>{{ venta.concepto }}</td>
-          <td>{{ venta.tipo }}</td>
-          <td>{{ venta.referencia }}</td>
-          <td>${{ '%.2f'|format(venta.precio) }}</td>
-          {% if tipo == 'admin' %}
-          <td><button class="btn btn-red" onclick="eliminarVentaAdmin({{ venta.id }})">X</button></td>
-          {% endif %}
-        </tr>
-        {% endfor %}
+<tr id="venta-{{ venta.id }}">
+  <td>{{ venta.descripcion }}</td>
+  <td>{{ venta.concepto }}</td>
+  <td>{{ venta.tipo }}</td>
+  <td>{{ venta.referencia }}</td>
+  <td>${{ '%.2f'|format(venta.precio) }}</td>
+  <td>
+    <button onclick="imprimirTicketDesdeFila(
+      '{{ venta.descripcion }}',
+      '{{ venta.concepto }}',
+      '{{ venta.tipo }}',
+      '{{ venta.referencia }}',
+      '{{ '%.2f'|format(venta.precio) }}'
+    )">🖨️</button>
+  </td>
+  {% if tipo == 'admin' %}
+  <td><button class="btn btn-red" onclick="eliminarVentaAdmin({{ venta.id }})">X</button></td>
+  {% endif %}
+</tr>
+{% endfor %}
       </tbody>
     </table>
   </div>
@@ -390,6 +401,39 @@
       input.addEventListener("input", calcularCambio);
     }
   });
+</script>
+
+<script>
+  function imprimirTicketDesdeFila(descripcion, concepto, financiera, referencia, precio) {
+    const contenido = `
+Celulares Crédito Fácil
+Sucursal: {{ sucursal }}
+Fecha: {{ fecha }}
+Atendió: {{ nombre_usuario }}
+
+Producto: ${descripcion}
+Concepto: ${concepto}
+Financiera: ${financiera}
+Ref: ${referencia}
+Precio: $${precio}
+
+Total: $${precio}
+Pagado: $${precio}
+Cambio: $0.00
+
+¡Gracias por su compra!
+`;
+
+    fetch("http://localhost:5500/imprimir", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: contenido
+    }).then(response => {
+      if (!response.ok) throw new Error("Error en la impresión");
+    }).catch(error => {
+      alert("Error al imprimir: " + error.message);
+    });
+  }
 </script>
 </body>
 </html>
