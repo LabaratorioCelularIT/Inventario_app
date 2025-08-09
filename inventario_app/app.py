@@ -8,7 +8,7 @@ import shutil
 
 app = Flask(__name__)
 app.secret_key = "inventario_secret_key"
-DB_PATH = "/app/inventario.sqlite3"
+DB_PATH = os.path.join(os.path.dirname(__file__), "inventario.sqlite3")
 
 REDES_LOCALES = [
     '138.84.61.202',  # Villas

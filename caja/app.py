@@ -18,10 +18,9 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from utils import enviar_codigo_verificacion
 import random
 
-# Configuración inicial
 app = Flask(__name__)
 app.secret_key = 'clave-secreta-caja'
-DB_PATH = "/app/inventario.sqlite3"
+DB_PATH = os.path.join(os.path.dirname(__file__), "inventario.sqlite3")
 
 SUCURSALES = ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
 
@@ -212,7 +211,7 @@ def registro():
 
         patron = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=?<>.,]).{6,}$"
         if not re.match(patron, contrasena):
-            return render_template("registro.html", error="La contraseña no cumple con los requisitos.")
+            return render_template("registro.html", error="La contrasena no cumple con los requisitos.")
 
         nombre_base = nombre.split()[0].lower()
         codigo = random.randint(1000, 9999)
@@ -221,13 +220,13 @@ def registro():
         conn = sqlite3.connect("inventario.sqlite3")
         cur = conn.cursor()
 
-        cur.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario_generado,))
+        cur.execute("SELECT * FROM usuarios WHERE nombre = ?", (usuario_generado,))
         while cur.fetchone():
             codigo = random.randint(1000, 9999)
             usuario_generado = f"{tipo}_{nombre_base}_{codigo}"
-            cur.execute("SELECT * FROM usuarios WHERE usuario = ?", (usuario_generado,))
+            cur.execute("SELECT * FROM usuarios WHERE nombre = ?", (usuario_generado,))
 
-        cur.execute("INSERT INTO usuarios (usuario, contrasena, tipo, correo, telefono) VALUES (?, ?, ?, ?, ?)", 
+        cur.execute("INSERT INTO usuarios (nombre, contraseña, tipo, correo, telefono) VALUES (?, ?, ?, ?, ?)", 
                     (usuario_generado, contrasena, tipo, correo, telefono))
         conn.commit()
         conn.close()
@@ -253,11 +252,11 @@ def recuperar():
         with sqlite3.connect(DB_PATH) as conn:
             cur = conn.cursor()
 
-            cur.execute("SELECT usuario FROM usuarios WHERE correo = ? OR telefono = ?", (contacto, contacto))
+            cur.execute("SELECT usuarios FROM usuarios WHERE correo = ? OR telefono = ?", (contacto, contacto))
             resultado = cur.fetchone()
 
             if resultado:
-                usuario = resultado[0]
+                usuarios = resultado[0]
 
                 cur.execute("""
                     CREATE TABLE IF NOT EXISTS codigos_recuperacion (
@@ -267,9 +266,9 @@ def recuperar():
                         fecha TEXT
                     )
                 """)
-                cur.execute("DELETE FROM codigos_recuperacion WHERE usuario = ?", (usuario,))
-                cur.execute("INSERT INTO codigos_recuperacion (usuario, codigo, contacto, fecha) VALUES (?, ?, ?, ?)",
-                            (usuario, codigo, contacto, fecha))
+                cur.execute("DELETE FROM codigos_recuperacion WHERE usuarios = ?", (usuarios,))
+                cur.execute("INSERT INTO codigos_recuperacion (usuarios, codigo, contacto, fecha) VALUES (?, ?, ?, ?)",
+                            (usuarios, codigo, contacto, fecha))
                 conn.commit()
 
                 mensaje = f"Tu código de recuperación es: {codigo} (Solo visible para pruebas, luego se enviará por correo o SMS)"
@@ -417,12 +416,10 @@ def gastos():
     sucursal_filtro = request.args.get("sucursal", sucursal_sesion)
     fecha_filtro = request.args.get("fecha", fecha_hoy_str)
 
-    # Si no es admin, forzamos sucursal y fecha
     if tipo_usuario != "admin":
         sucursal_filtro = sucursal_sesion
         fecha_filtro = fecha_hoy_str
 
-        # Guardar gasto
     if request.method == "POST":
         motivo = request.form["motivo"]
         monto = float(request.form["monto"])
@@ -620,47 +617,70 @@ def cobrar():
     referencia_general = request.form.get("referencia", "")
 
     total_pago = efectivo + tarjeta + (dolares * tipo_cambio)
-    total_venta = sum(item.get("precio", 0) for item in carrito)
+    total_venta = sum(float(item.get("precio", 0) or 0) for item in carrito)
     cambio = total_pago - total_venta
 
     if cambio < 0:
         flash(f"❌ Aún faltan ${abs(cambio):.2f} para completar el pago.")
         return redirect("/ventas")
 
+    def a_centavos(x):
+        return int(round(float(x) * 100))
+
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
+
         cur.execute("SELECT COUNT(*) FROM ventas WHERE fecha LIKE ? AND sucursal = ?", (f"{fecha_dia}%", sucursal))
         ventas_hoy = cur.fetchone()[0]
 
         if ventas_hoy == 0:
-            descripcion_primera = carrito[0].get("descripcion", "").strip().upper()
-            if descripcion_primera != "FERIA":
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS bloqueos_feria (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        sucursal TEXT,
-                        fecha TEXT,
-                        motivo TEXT,
-                        autorizado INTEGER DEFAULT 0
-                    )
-                """)
-                cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)", (sucursal, fecha_dia, "Primera venta no fue FERIA"))
-                conn.commit()
+            if not carrito:
+                flash("No hay productos en el carrito.")
+                return redirect("/ventas")
+
+            descripcion_primera = " ".join(str(carrito[0].get("descripcion", "")).split()).strip().upper()
+            concepto_primera = " ".join(str(carrito[0].get("concepto", "")).split()).strip().upper()
+            es_feria = (descripcion_primera == "FERIA" or concepto_primera == "FERIA")
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS bloqueos_feria (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sucursal TEXT,
+                    fecha TEXT,
+                    motivo TEXT,
+                    autorizado INTEGER DEFAULT 0
+                )
+            """)
+
+            cur.execute("SELECT autorizado FROM bloqueos_feria WHERE fecha = ? AND sucursal = ? ORDER BY id DESC LIMIT 1", (fecha_dia, sucursal))
+            fila_bloqueo = cur.fetchone()
+            autorizado_hoy = (fila_bloqueo and int(fila_bloqueo[0]) == 1)
+
+            if not es_feria and not autorizado_hoy:
+                cur.execute("SELECT id FROM bloqueos_feria WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0 ORDER BY id DESC LIMIT 1", (fecha_dia, sucursal, "Primera venta no fue FERIA"))
+                ya = cur.fetchone()
+                if not ya:
+                    cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)", (sucursal, fecha_dia, "Primera venta no fue FERIA"))
+                    conn.commit()
                 return render_template("venta_bloqueada.html", mensaje="❌ La primera venta del día debe ser FERIA. Espera autorización de un administrador.")
 
-            cur.execute("SELECT autorizado FROM bloqueos_feria WHERE fecha = ? AND sucursal = ?", (fecha_dia, sucursal))
-            bloqueo = cur.fetchone()
-            if bloqueo and bloqueo[0] == 1:
-                pass
-            else:
-                monto_venta_feria = carrito[0].get("precio", 0)
+            if es_feria and not autorizado_hoy:
+                monto_venta_feria = float(carrito[0].get("precio", 0) or 0)
                 ayer = (datetime.now(ZoneInfo("America/Monterrey")) - timedelta(days=1)).strftime("%d-%m-%Y")
-                cur.execute("SELECT monto FROM gastos WHERE fecha = ? AND sucursal = ? AND motivo = 'FERIA'", (ayer, sucursal))
-                resultado = cur.fetchone()
-                if resultado is None or float(resultado[0]) != float(monto_venta_feria):
-                    cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)", (sucursal, fecha_dia, "Feria no coincide con la salida de ayer"))
-                    conn.commit()
+                cur.execute("SELECT COALESCE(SUM(monto), 0) FROM gastos WHERE fecha = ? AND sucursal = ? AND UPPER(motivo) = 'FERIA'", (ayer, sucursal))
+                total_feria_ayer = float(cur.fetchone()[0] or 0.0)
+
+                if a_centavos(monto_venta_feria) != a_centavos(total_feria_ayer):
+                    cur.execute("SELECT id FROM bloqueos_feria WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0 ORDER BY id DESC LIMIT 1", (fecha_dia, sucursal, "Feria no coincide con la salida de ayer"))
+                    ya = cur.fetchone()
+                    if not ya:
+                        cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)", (sucursal, fecha_dia, "Feria no coincide con la salida de ayer"))
+                        conn.commit()
                     return render_template("venta_bloqueada.html", mensaje="❌ El monto de la FERIA no coincide con la salida registrada ayer. Espera autorización de un administrador.")
+                else:
+                    carrito[0]["precio"] = round(total_feria_ayer, 2)
+                    total_venta = sum(float(item.get("precio", 0) or 0) for item in carrito)
+                    cambio = total_pago - total_venta
 
         for item in carrito:
             cur.execute("""
@@ -672,7 +692,7 @@ def cobrar():
                 item.get("tipo", ""),
                 item.get("concepto", ""),
                 item.get("referencia", referencia_general),
-                item.get("precio", 0),
+                float(item.get("precio", 0) or 0),
                 item.get("tipo_pago", ""),
                 fecha
             ))
@@ -756,6 +776,20 @@ def ver_bloqueos():
         bloqueos = cur.fetchall()
 
     return render_template("ver_bloqueos.html", bloqueos=bloqueos)
+
+from zoneinfo import ZoneInfo
+
+@app.route("/bloqueos-pendientes-json")
+def bloqueos_pendientes_json():
+    fecha_hoy = datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y")
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM bloqueos_feria WHERE autorizado=0 AND fecha LIKE ?", (fecha_hoy + '%',))
+    count = cur.fetchone()[0] or 0
+    cur.execute("SELECT DISTINCT sucursal FROM bloqueos_feria WHERE autorizado=0 AND fecha LIKE ? ORDER BY sucursal", (fecha_hoy + '%',))
+    sucursales = [r[0] for r in cur.fetchall()]
+    conn.close()
+    return jsonify({"bloqueos_pendientes": int(count), "sucursales": sucursales})
 
 @app.route("/abrir-ticket")
 def abrir_ticket():
