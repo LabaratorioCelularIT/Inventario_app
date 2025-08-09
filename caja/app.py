@@ -610,14 +610,25 @@ def cobrar():
     fecha = datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y %H:%M:%S")
     fecha_dia = fecha.split(" ")[0]
 
-    efectivo = float(request.form.get("efectivo", 0))
-    tarjeta = float(request.form.get("tarjeta", 0))
-    dolares = float(request.form.get("dolares", 0))
-    tipo_cambio = float(request.form.get("dolar", 0))
-    referencia_general = request.form.get("referencia", "")
+    def safe_float(v):
+        if v is None:
+            return 0.0
+        v = str(v).strip().replace(",", "")
+        if v == "":
+            return 0.0
+        try:
+            return float(v)
+        except ValueError:
+            return 0.0
+
+    efectivo = safe_float(request.form.get("efectivo"))
+    tarjeta = safe_float(request.form.get("tarjeta"))
+    dolares = safe_float(request.form.get("dolares"))
+    tipo_cambio = safe_float(request.form.get("dolar"))
+    referencia_general = request.form.get("referencia", "").strip()
 
     total_pago = efectivo + tarjeta + (dolares * tipo_cambio)
-    total_venta = sum(float(item.get("precio", 0) or 0) for item in carrito)
+    total_venta = sum(safe_float(item.get("precio", 0)) for item in carrito)
     cambio = total_pago - total_venta
 
     if cambio < 0:
@@ -625,7 +636,7 @@ def cobrar():
         return redirect("/ventas")
 
     def a_centavos(x):
-        return int(round(float(x) * 100))
+        return int(round(safe_float(x) * 100))
 
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
@@ -665,10 +676,10 @@ def cobrar():
                 return render_template("venta_bloqueada.html", mensaje="❌ La primera venta del día debe ser FERIA. Espera autorización de un administrador.")
 
             if es_feria and not autorizado_hoy:
-                monto_venta_feria = float(carrito[0].get("precio", 0) or 0)
+                monto_venta_feria = safe_float(carrito[0].get("precio", 0))
                 ayer = (datetime.now(ZoneInfo("America/Monterrey")) - timedelta(days=1)).strftime("%d-%m-%Y")
                 cur.execute("SELECT COALESCE(SUM(monto), 0) FROM gastos WHERE fecha = ? AND sucursal = ? AND UPPER(motivo) = 'FERIA'", (ayer, sucursal))
-                total_feria_ayer = float(cur.fetchone()[0] or 0.0)
+                total_feria_ayer = safe_float(cur.fetchone()[0])
 
                 if a_centavos(monto_venta_feria) != a_centavos(total_feria_ayer):
                     cur.execute("SELECT id FROM bloqueos_feria WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0 ORDER BY id DESC LIMIT 1", (fecha_dia, sucursal, "Feria no coincide con la salida de ayer"))
@@ -679,7 +690,7 @@ def cobrar():
                     return render_template("venta_bloqueada.html", mensaje="❌ El monto de la FERIA no coincide con la salida registrada ayer. Espera autorización de un administrador.")
                 else:
                     carrito[0]["precio"] = round(total_feria_ayer, 2)
-                    total_venta = sum(float(item.get("precio", 0) or 0) for item in carrito)
+                    total_venta = sum(safe_float(item.get("precio", 0)) for item in carrito)
                     cambio = total_pago - total_venta
 
         for item in carrito:
@@ -692,7 +703,7 @@ def cobrar():
                 item.get("tipo", ""),
                 item.get("concepto", ""),
                 item.get("referencia", referencia_general),
-                float(item.get("precio", 0) or 0),
+                safe_float(item.get("precio", 0)),
                 item.get("tipo_pago", ""),
                 fecha
             ))
@@ -737,9 +748,9 @@ def cobrar():
         "fecha": fecha,
         "nombre_usuario": nombre_usuario,
         "productos": productos,
-        "total": total_venta,
-        "total_pagado": total_pago,
-        "cambio": cambio
+        "total": round(total_venta, 2),
+        "total_pagado": round(total_pago, 2),
+        "cambio": round(cambio, 2)
     }
 
     if tipo_usuario == "admin":
