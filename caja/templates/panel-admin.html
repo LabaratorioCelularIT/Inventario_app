@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -184,6 +184,7 @@
       <div class="card"><a href="/ventas">🛒 Registrar Venta</a></div>
       <div class="card"><a href="/gastos">📤 Registrar Salidas</a></div>
       <div class="card"><a href="/notas">📝 Agregar Nota</a></div>
+      <div class="card"><a href="/feria-admin">🪙 Registrar Feria (Admin)</a></div>
       <div class="card"><a href="/fondo-caja">💰 Actualizar Fondo de Caja</a></div>
       <div class="card"><a href="/ver-ciclos">📄 Ver Ciclos</a></div>
       <div class="card"><a href="/ver-fondo">💰 Ver Fondo Actual</a></div>
@@ -211,14 +212,6 @@
 
       <div class="card"><a href="/ver-reporte-excel">📄 Ver Reporte Excel</a></div>
       <div class="card"><a href="/log-actividad">📚 Ver Log de Actividad</a></div>
-
-      {% if bloqueos_pendientes > 0 %}
-      <div class="card" style="background-color: #ffe5e5;">
-        <a href="/ver-bloqueos" style="color: #c9302c;">
-          ❌ Autorizaciones Pendientes ({{ bloqueos_pendientes }})
-        </a>
-      </div>
-      {% endif %}
     </div>
   </div>
 
@@ -247,7 +240,6 @@
   </div>
 
   <script>
-    // ------- Modal Faltantes -------
     function mostrarFaltantes() {
       fetch('/faltantes-json')
         .then(r => r.json())
@@ -273,27 +265,23 @@
     }
   </script>
 
-  {% if bloqueos_pendientes|default(0) > 0 %}
   <script>
-    // ------- Alerta de bloqueos pendientes -------
-    const START_DELAY_MS = 15 * 60 * 1000; // 15 minutos
-    const CHECK_EVERY_MS = 60 * 1000; // 1 minuto
+    const START_DELAY_MS = 15 * 60 * 1000;
+    const POLL_MS = 30 * 1000;
 
-    const audio   = document.getElementById('alerta-audio');
-    const banner  = document.getElementById('banner-bloqueos');
+    const audio = document.getElementById('alerta-audio');
+    const banner = document.getElementById('banner-bloqueos');
     const btnToggle = document.getElementById('btn-toggle-audio');
 
-    let alertaActiva = false;
     let alertaProgramada = null;
-    let intervaloEspera = null; // antes de que suene
-    let intervaloActivo = null; // después de que suene
+    let alertaActiva = false;
 
     function requestNotifPermission() {
       if ("Notification" in window && Notification.permission !== "granted") {
         Notification.requestPermission().catch(() => {});
       }
     }
-    function showNotif() {
+    function notify() {
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification("Autorizaciones pendientes", {
           body: "Hay sucursales bloqueadas sin acceso desde hace 15 minutos.",
@@ -304,22 +292,15 @@
     function showBanner() { banner.style.display = 'flex'; }
     function hideBanner() { banner.style.display = 'none'; }
     function playAudioIfAllowed() {
-      const silenciado = localStorage.getItem('bloqueos_silenciado') === '1';
-      if (silenciado) return;
+      if (localStorage.getItem('bloqueos_silenciado') === '1') return;
       audio.currentTime = 0;
-      audio.play().catch(() => {
-        alert("⚠️ Hay sucursales bloqueadas sin acceso desde hace 15 minutos.");
-      });
+      audio.play().catch(() => alert("⚠️ Hay sucursales bloqueadas desde hace 15 minutos."));
     }
-    function stopAudio() {
-      audio.pause();
-      audio.currentTime = 0;
-    }
+    function stopAudio() { audio.pause(); audio.currentTime = 0; }
 
-    // Botón silenciar/reactivar
-    btnToggle.addEventListener('click', () => {
-      const silenciado = localStorage.getItem('bloqueos_silenciado') === '1';
-      if (silenciado) {
+    btnToggle?.addEventListener('click', () => {
+      const sil = localStorage.getItem('bloqueos_silenciado') === '1';
+      if (sil) {
         localStorage.setItem('bloqueos_silenciado', '0');
         btnToggle.textContent = 'Silenciar';
         if (alertaActiva) playAudioIfAllowed();
@@ -329,57 +310,57 @@
         stopAudio();
       }
     });
-    if (localStorage.getItem('bloqueos_silenciado') === '1') {
+    if (localStorage.getItem('bloqueos_silenciado') === '1' && btnToggle) {
       btnToggle.textContent = 'Reactivar';
     }
 
     requestNotifPermission();
 
-    // Programa el disparo en 15 minutos
-    alertaProgramada = setTimeout(() => {
-      alertaActiva = true;
-      showBanner();
-      showNotif();
-      playAudioIfAllowed();
+    function programarAlerta() {
+      if (alertaProgramada !== null || alertaActiva) return;
+      alertaProgramada = setTimeout(() => {
+        alertaActiva = true;
+        alertaProgramada = null;
+        showBanner();
+        notify();
+        playAudioIfAllowed();
+      }, START_DELAY_MS);
+    }
 
-      // Ya sonando: verificar cada minuto para detener si llega a 0
-      intervaloActivo = setInterval(verificarBloqueosYDetenerSiCero, CHECK_EVERY_MS);
-    }, START_DELAY_MS);
+    function cancelarAlerta() {
+      if (alertaProgramada !== null) {
+        clearTimeout(alertaProgramada);
+        alertaProgramada = null;
+      }
+      if (alertaActiva) {
+        alertaActiva = false;
+        stopAudio();
+      }
+      hideBanner();
+    }
 
-    // Mientras esperamos los 15 minutos, verificar cada minuto y cancelar si ya no hay bloqueos
-    intervaloEspera = setInterval(() => {
+    function actualizarEstado(count) {
+      if ((Number(count) || 0) > 0) {
+        programarAlerta();
+      } else {
+        cancelarAlerta();
+      }
+    }
+
+    function poll() {
       fetch('/bloqueos-pendientes-json')
         .then(r => r.json())
-        .then(data => {
-          if (!data || typeof data.bloqueos_pendientes !== 'number') return;
-          if (data.bloqueos_pendientes <= 0) {
-            clearTimeout(alertaProgramada);
-            clearInterval(intervaloEspera);
-          }
-        })
-        .catch(() => {});
-    }, CHECK_EVERY_MS);
-
-    function verificarBloqueosYDetenerSiCero() {
-      fetch('/bloqueos-pendientes-json')
-        .then(r => r.json())
-        .then(data => {
-          if (!data || typeof data.bloqueos_pendientes !== 'number') return;
-          if (data.bloqueos_pendientes <= 0) {
-            alertaActiva = false;
-            stopAudio();
-            hideBanner();
-            clearInterval(intervaloActivo);
-          }
-        })
+        .then(d => actualizarEstado(d.bloqueos_pendientes))
         .catch(() => {});
     }
+
+    poll();
+    setInterval(poll, POLL_MS);
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) requestNotifPermission();
     });
   </script>
-  {% endif %}
 
 </body>
 </html>

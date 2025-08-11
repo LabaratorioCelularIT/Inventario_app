@@ -17,6 +17,11 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from utils import enviar_codigo_verificacion
 import random
+from zoneinfo import ZoneInfo
+import pytz
+from flask import request, session, redirect, render_template, flash
+from flask import render_template, session, redirect
+from flask import jsonify
 
 app = Flask(__name__)
 app.secret_key = 'clave-secreta-caja'
@@ -114,6 +119,18 @@ def ya_envio_feria(sucursal, fecha):
         cur.execute("SELECT COUNT(*) FROM ciclos WHERE sucursal = ? AND fecha = ?", (sucursal, fecha))
         count = cur.fetchone()[0]
         return count > 0
+
+def obtener_sucursales():
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT DISTINCT sucursal FROM usuarios WHERE sucursal IS NOT NULL AND sucursal<>'' ORDER BY sucursal")
+            rows = cur.fetchall()
+            if rows:
+                return [r[0] for r in rows]
+        except:
+            pass
+    return ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
 
 @app.before_request
 def forzar_logout_por_turno():
@@ -362,9 +379,6 @@ def limpiar_carrito():
     session.pop("total", None)
     return '', 204
 
-from datetime import datetime
-import pytz
-
 @app.route("/log-actividad", methods=["GET"])
 def log_actividad():
     if "usuario" not in session or session.get("tipo") != "admin":
@@ -553,7 +567,6 @@ def ventas():
                            sucursal_filtro=sucursal_filtro,
                            fecha=fecha_input_str)
 
-
 @app.route('/eliminar-venta-admin/<int:id>', methods=['POST'])
 def eliminar_venta_admin(id):
     if "usuario" not in session or session.get("tipo") != "admin":
@@ -592,11 +605,6 @@ TZ = pytz.timezone("America/Monterrey")
 
 def fecha_hoy():
     return datetime.now(TZ).strftime("%d-%m-%Y")
-
-from flask import request, session, redirect, render_template, flash
-from datetime import datetime
-from zoneinfo import ZoneInfo
-import sqlite3
 
 @app.route("/cobrar", methods=["POST"])
 def cobrar():
@@ -788,19 +796,25 @@ def ver_bloqueos():
 
     return render_template("ver_bloqueos.html", bloqueos=bloqueos)
 
-from zoneinfo import ZoneInfo
-
 @app.route("/bloqueos-pendientes-json")
 def bloqueos_pendientes_json():
-    fecha_hoy = datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y")
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute("SELECT COUNT(*) FROM bloqueos_feria WHERE autorizado=0 AND fecha LIKE ?", (fecha_hoy + '%',))
-    count = cur.fetchone()[0] or 0
-    cur.execute("SELECT DISTINCT sucursal FROM bloqueos_feria WHERE autorizado=0 AND fecha LIKE ? ORDER BY sucursal", (fecha_hoy + '%',))
-    sucursales = [r[0] for r in cur.fetchall()]
-    conn.close()
-    return jsonify({"bloqueos_pendientes": int(count), "sucursales": sucursales})
+    try:
+        fecha_hoy = datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y")
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT COUNT(*) FROM bloqueos_feria WHERE autorizado=0 AND fecha LIKE ?",
+                (fecha_hoy + "%",)
+            )
+            total = int(cur.fetchone()[0] or 0)
+            cur.execute(
+                "SELECT DISTINCT sucursal FROM bloqueos_feria WHERE autorizado=0 AND fecha LIKE ? ORDER BY sucursal",
+                (fecha_hoy + "%",)
+            )
+            sucursales = [r[0] for r in cur.fetchall()]
+        return jsonify({"bloqueos_pendientes": total, "sucursales": sucursales})
+    except Exception:
+        return jsonify({"bloqueos_pendientes": 0, "sucursales": []})
 
 @app.route("/abrir-ticket")
 def abrir_ticket():
@@ -810,10 +824,6 @@ def abrir_ticket():
       window.location.href = '/ventas';
     </script>
     """
-
-from flask import render_template, session, redirect
-from datetime import datetime
-from zoneinfo import ZoneInfo  # Requiere Python 3.9+
 
 @app.route("/ticket")
 def ticket():
@@ -1129,49 +1139,87 @@ def ver_ciclos():
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        cur.execute("SELECT id, sucursal, fecha, datos FROM ciclos ORDER BY fecha DESC")
+        cur.execute("SELECT id, sucursal, fecha, datos FROM ciclos ORDER BY date(fecha) DESC, id DESC")
         rows = cur.fetchall()
 
     ciclos = []
     for row in rows:
+        datos_raw = row["datos"]
+        datos = {}
         try:
-            datos_raw = row["datos"]
             if isinstance(datos_raw, dict):
                 datos = datos_raw
-            elif datos_raw.strip().startswith("{'"):
-                datos = ast.literal_eval(datos_raw)  # Maneja comillas simples
             else:
-                datos = json.loads(datos_raw)  # Maneja JSON válido con comillas dobles
-        except Exception as e:
-            print(f"❌ Error al procesar ciclo ID {row['id']}: {e}")
-            continue  # Saltar este ciclo si tiene formato inválido
+                try:
+                    datos = json.loads(datos_raw)
+                except Exception:
+                    datos = ast.literal_eval(datos_raw)
+        except Exception:
+            datos = {}
+
+        objetivos = datos.get("objetivos", {})
+        objetivos = {int(k) if isinstance(k, str) else k: int(v or 0) for k, v in objetivos.items()}
+
+        diferencias = datos.get("diferencias", {})
+        dif_norm = {}
+        for k, v in diferencias.items():
+            kk = int(k) if isinstance(k, str) else k
+            if isinstance(v, dict):
+                dif_norm[kk] = v
+            else:
+                try:
+                    dif_norm[kk] = int(v or 0)
+                except Exception:
+                    dif_norm[kk] = 0
+
+        actuales = datos.get("actuales") or {}
+        if not actuales:
+            tmp = {}
+            for k, obj in objetivos.items():
+                dv = dif_norm.get(k, dif_norm.get(str(k), 0))
+                if isinstance(dv, dict):
+                    act = int(dv.get("actual", obj) or 0)
+                else:
+                    act = int(obj + (dv or 0))
+                tmp[k] = act
+            actuales = tmp
+        else:
+            actuales = {int(k) if isinstance(k, str) else k: int(v or 0) for k, v in actuales.items()}
+
+        repuesto = datos.get("repuesto", {})
+        repuesto = {int(k) if isinstance(k, str) else k: int(v or 0) for k, v in repuesto.items()}
 
         desglosado = []
-        for denom in datos["objetivos"]:
-            obj = datos["objetivos"][denom]
-            act = datos["actuales"].get(denom, 0)
-            rep = datos["repuesto"].get(denom, 0)
-            dif = datos["diferencias"].get(denom, 0)
-            total = int(act) * int(denom)
+        for denom in sorted(objetivos.keys()):
+            obj = int(objetivos.get(denom, 0))
+            act = int(actuales.get(denom, 0))
+            rep = int(repuesto.get(denom, 0))
+            dif = dif_norm.get(denom, 0)
+            if isinstance(dif, dict):
+                dif_val = int(dif.get("diferencia", act - obj))
+            else:
+                dif_val = int(dif or (act - obj))
+            total = act * int(denom)
             desglosado.append({
                 "denom": denom,
                 "objetivo": obj,
                 "actual": act,
                 "repuesto": rep,
                 "total": total,
-                "diferencia": dif
+                "diferencia": dif_val
             })
 
         ciclos.append({
             "id": row["id"],
             "sucursal": row["sucursal"],
             "fecha": row["fecha"],
-            "total_dado": datos.get("dar", 0),
-            "total_recibido": datos.get("recibir", 0),
+            "total_dado": int(datos.get("dar", datos.get("total_dar", 0)) or 0),
+            "total_recibido": int(datos.get("recibir", datos.get("total_recibir", 0)) or 0),
             "desglosado": desglosado
         })
 
     return render_template("ver_ciclos.html", ciclos=ciclos)
+
 
 @app.route("/ver-fondo")
 def ver_fondo():
@@ -1238,7 +1286,7 @@ def faltantes_json():
 
     sucursales = ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
     TZ = pytz.timezone("America/Monterrey")
-    hoy = datetime.now(TZ).strftime("%Y-%m-%d")
+    hoy = datetime.now(TZ).strftime("%d-%m-%Y")
 
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
@@ -1453,21 +1501,161 @@ def guardar_feria():
     else:
         return redirect("/panel-consulta")
 
-@app.route("/eliminar-ciclo", methods=["POST"])
-def eliminar_ciclo():
+@app.route("/eliminar-ciclo/<int:ciclo_id>", methods=["GET", "POST"])
+def eliminar_ciclo(ciclo_id=None):
     if "usuario" not in session or session.get("tipo") != "admin":
         return redirect("/")
 
-    ciclo_id = request.form.get("id")
-    if not ciclo_id:
+    if request.method == "POST":
+        _id = ciclo_id or request.form.get("id")
+    else:
+        _id = ciclo_id
+
+    try:
+        _id = int(_id)
+    except (TypeError, ValueError):
         return "ID no válido", 400
+
+    suc = request.values.get("sucursal", "")
+    fec = request.values.get("fecha", "")
 
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
-        cur.execute("DELETE FROM ciclos WHERE id = ?", (ciclo_id,))
+        cur.execute("DELETE FROM ciclos WHERE id = ?", (_id,))
         conn.commit()
 
-    return redirect("/ver-ciclos")
+    return redirect(f"/ver-ciclos?sucursal={suc}&fecha={fec}" if (suc or fec) else "/ver-ciclos")
+
+@app.route("/feria-admin", methods=["GET","POST"])
+def feria_admin():
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return redirect("/")
+
+    sucursales = obtener_sucursales()
+    sucursal_sel = request.values.get("sucursal") or (session.get("sucursal") if session.get("sucursal") in sucursales else sucursales[0])
+    fecha_sel = request.values.get("fecha") or datetime.now(TZ).strftime("%Y-%m-%d")
+
+    if request.method == "POST" and request.form.get("fase") == "calcular":
+        denominaciones = [1,2,5,10,20,50,100]
+        objetivos = {1:40,2:40,5:40,10:20,20:20,50:10,100:5}
+        cantidades_actual = {}
+        cantidades_reponer = {}
+        diferencias = {}
+        total_objetivo = 0
+        total_actual = 0
+        total_entregar = 0
+        total_reponer = 0
+        total_sobrante = 0
+
+        for denom in denominaciones:
+            actual = int(request.form.get(f"actual_{denom}", "0") or "0")
+            rep = int(request.form.get(f"reponer_{denom}", "0") or "0")
+            objetivo = objetivos[denom]
+            dif = actual - objetivo
+            val_dif = dif * denom
+            if dif > 0:
+                total_sobrante += val_dif
+            cantidades_actual[denom] = actual
+            cantidades_reponer[denom] = rep
+            diferencias[denom] = {"objetivo":objetivo,"actual":actual,"diferencia":dif,"valor_diferencia":val_dif}
+            total_objetivo += objetivo * denom
+            total_actual += actual * denom
+            total_entregar += rep * denom
+            if actual < objetivo:
+                total_reponer += (objetivo - actual) * denom
+
+        data = {
+            "sucursal": sucursal_sel,
+            "fecha": fecha_sel,
+            "diferencias": diferencias,
+            "repuesto": cantidades_reponer,
+            "total_objetivo": total_objetivo,
+            "total_actual": total_actual,
+            "total_entregar": total_entregar,
+            "total_reponer": total_reponer,
+            "total_sobrante": total_sobrante,
+            "modo_admin": True
+        }
+        return render_template("confirmar-feria.html", data=data, denom=denominaciones)
+
+    actuales = {d:0 for d in [1,2,5,10,20,50,100]}
+    return render_template("feria.html",
+                           objetivos={1:40,2:40,5:40,10:20,20:20,50:10,100:5},
+                           actuales=actuales,
+                           denom=[1,2,5,10,20,50,100],
+                           sucursal=sucursal_sel,
+                           fecha=datetime.strptime(fecha_sel,"%Y-%m-%d").strftime("%d-%m-%Y"),
+                           modo_admin=True,
+                           sucursales=sucursales)
+
+@app.route("/guardar-feria-admin", methods=["POST"])
+def guardar_feria_admin():
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return redirect("/login")
+
+    def _norm_fecha(s):
+        s = (s or "").strip()
+        if not s:
+            return datetime.now(TZ).strftime("%Y-%m-%d")
+        for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(s, fmt).strftime("%Y-%m-%d")
+            except Exception:
+                pass
+        try:
+            return datetime.fromisoformat(s).strftime("%Y-%m-%d")
+        except Exception:
+            return datetime.now(TZ).strftime("%Y-%m-%d")
+
+    sucursal = request.form.get("sucursal") or session.get("sucursal")
+    fecha = _norm_fecha(request.form.get("fecha"))
+
+    if ya_envio_feria(sucursal, fecha):
+        return "Ya se envió la feria para esa fecha."
+
+    objetivos = {1:40,2:40,5:40,10:20,20:20,50:10,100:5}
+    diferencias = {}
+    repuesto = {}
+    total_dar = 0
+    total_recibir = 0
+
+    for val in objetivos.keys():
+        actual_str = (request.form.get(f"actual_{val}", "") or "").strip()
+        try:
+            actual = int(actual_str) if actual_str else 0
+        except ValueError:
+            actual = 0
+        dif = actual - objetivos[val]
+        diferencias[val] = dif
+        if dif < 0:
+            rep = -dif
+            repuesto[val] = rep
+            total_dar += val * rep
+        else:
+            repuesto[val] = 0
+            total_recibir += val * dif
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        for val, dif in diferencias.items():
+            cur.execute("SELECT cantidad FROM caja WHERE denom = ?", (val,))
+            row = cur.fetchone()
+            actual_caja = row[0] if row else 0
+            nuevo = actual_caja + (dif if dif > 0 else -abs(dif))
+            cur.execute("UPDATE caja SET cantidad = ? WHERE denom = ?", (nuevo, val))
+        datos = {
+            "sucursal": sucursal,
+            "fecha": fecha,
+            "objetivos": objetivos,
+            "diferencias": diferencias,
+            "repuesto": repuesto,
+            "dar": total_dar,
+            "recibir": total_recibir
+        }
+        cur.execute("INSERT INTO ciclos (sucursal, fecha, datos) VALUES (?, ?, ?)", (sucursal, fecha, json.dumps(datos)))
+        conn.commit()
+
+    return redirect("/panel-admin")
 
 @app.route("/nota", methods=["GET", "POST"])
 def nota():
@@ -1673,7 +1861,7 @@ def reporte_excel():
 
     tipo_usuario = session.get("tipo")
     sucursal = request.args.get("sucursal", session.get("sucursal", ""))
-    fecha = request.args.get("fecha", fecha_hoy())  # puede venir como YYYY-MM-DD
+    fecha = request.args.get("fecha", fecha_hoy())  # puede venir como DD-MM-YYYY
 
     
     try:
@@ -1681,7 +1869,6 @@ def reporte_excel():
     except:
         pass  # ya está en formato correcto
 
-    
     if tipo_usuario != "admin":
         sucursal = session.get("sucursal", "")
         fecha = fecha_hoy()

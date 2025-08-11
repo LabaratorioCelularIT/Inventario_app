@@ -14,7 +14,6 @@
       --verde: #4CAF50;
       --rojo: #e74c3c;
     }
-
     body {
       font-family: 'Segoe UI', sans-serif;
       background-color: var(--celeste);
@@ -22,7 +21,6 @@
       padding: 0;
       color: #333;
     }
-
     .topbar {
       background-color: var(--azul);
       color: var(--blanco);
@@ -33,7 +31,6 @@
       font-size: 24px;
       font-weight: bold;
     }
-
     .container {
       max-width: 800px;
       margin: 30px auto;
@@ -42,11 +39,7 @@
       border-radius: 12px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-
-    .section {
-      margin-bottom: 30px;
-    }
-
+    .section { margin-bottom: 30px; }
     .section-title {
       font-size: 20px;
       font-weight: bold;
@@ -54,33 +47,23 @@
       border-bottom: 2px solid var(--azul);
       padding-bottom: 5px;
     }
-
-    .info-line {
-      margin: 10px 0;
-    }
-
+    .info-line { margin: 10px 0; }
     ul.resumen-claro {
       list-style: none;
       padding: 0;
       font-size: 16px;
     }
-
-    ul.resumen-claro li {
-      margin: 5px 0;
-    }
-
+    ul.resumen-claro li { margin: 5px 0; }
     .resumen {
       background-color: var(--gris);
       padding: 15px;
       border-radius: 8px;
     }
-
     .botones {
       display: flex;
       justify-content: space-between;
       margin-top: 30px;
     }
-
     .btn {
       padding: 12px 20px;
       font-size: 16px;
@@ -88,12 +71,7 @@
       border-radius: 6px;
       cursor: pointer;
     }
-
-    .btn-confirmar {
-      background-color: var(--verde);
-      color: white;
-    }
-
+    .btn-confirmar { background-color: var(--verde); color: white; }
     .btn-cancelar {
       background-color: var(--rojo);
       color: white;
@@ -104,7 +82,8 @@
   </style>
 </head>
 <body>
- <div class="topbar">Confirmar Feria</div>
+{% set es_admin = data.modo_admin|default(False) %}
+<div class="topbar">Confirmar Feria{% if es_admin %} — Admin{% endif %}</div>
 
 <div class="container">
   <div class="section">
@@ -139,7 +118,7 @@
     <p><strong>Total de Sobrante:</strong> ${{ data.total_sobrante }}</p>
   </div>
 
-  <form method="POST" action="/guardar-feria">
+  <form method="POST" action="{{ '/guardar-feria-admin' if es_admin else '/guardar-feria' }}">
     <input type="hidden" name="clave" value="262293">
     <input type="hidden" name="sucursal" value="{{ data.sucursal }}">
     <input type="hidden" name="fecha" value="{{ data.fecha }}">
@@ -151,7 +130,7 @@
     {% endfor %}
 
     <div class="botones">
-      <a href="/feria" class="btn btn-cancelar">Cancelar</a>
+      <a href="{{ '/feria-admin' if es_admin else '/feria' }}" class="btn btn-cancelar">Cancelar</a>
       <button type="submit" class="btn btn-confirmar">Guardar Feria</button>
     </div>
   </form>

@@ -14,95 +14,32 @@
       --rojo: #e74c3c;
       --verde: #2ecc71;
     }
-
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--celeste);
-    }
-
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: var(--celeste); }
     header {
-      background-color: var(--azul-rey);
-      color: white;
-      padding: 20px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-      box-shadow: 0 2px 5px var(--sombra);
+      background-color: var(--azul-rey); color: white; padding: 20px; text-align: center;
+      font-size: 22px; font-weight: bold; box-shadow: 0 2px 5px var(--sombra);
     }
-
     .contenedor {
-      max-width: 900px;
-      margin: 2rem auto;
-      background-color: var(--blanco);
-      border-radius: 12px;
-      box-shadow: 0 2px 8px var(--sombra);
-      padding: 2rem;
+      max-width: 900px; margin: 2rem auto; background-color: var(--blanco);
+      border-radius: 12px; box-shadow: 0 2px 8px var(--sombra); padding: 2rem;
     }
-
-    h2 {
-      margin-top: 0;
-      color: var(--azul-rey);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-      font-size: 14px;
-    }
-
-    th, td {
-      padding: 10px;
-      border: 1px solid #ccc;
-      text-align: center;
-    }
-
-    th {
-      background-color: var(--gris);
-    }
-
-    .acciones {
-      margin-top: 1rem;
-      text-align: right;
-    }
-
+    h2 { margin-top: 0; color: var(--azul-rey); }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 14px; }
+    th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+    th { background-color: var(--gris); }
+    .acciones { margin-top: 1rem; text-align: right; }
     .btn-eliminar {
-      background-color: var(--rojo);
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-left: 10px;
+      background-color: var(--rojo); color: white; border: none; padding: 8px 12px;
+      border-radius: 6px; cursor: pointer; margin-left: 10px;
     }
-
     .btn-volver {
-      display: block;
-      width: fit-content;
-      margin: 1rem auto 2rem auto;
-      background-color: var(--azul-rey);
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-      text-decoration: none;
+      display: block; width: fit-content; margin: 1rem auto 2rem auto; background-color: var(--azul-rey);
+      color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px;
+      cursor: pointer; text-decoration: none;
     }
-
-    .resumen {
-      margin-top: 1rem;
-      font-weight: bold;
-    }
-
-    .separador {
-      border-top: 2px solid var(--celeste);
-      margin: 2rem 0;
-    }
-
-    .verde { color: var(--verde); }
-    .rojo { color: var(--rojo); }
+    .resumen { margin-top: 1rem; font-weight: bold; }
+    .separador { border-top: 2px solid var(--celeste); margin: 2rem 0; }
+    .verde { color: var(--verde); } .rojo { color: var(--rojo); }
   </style>
 </head>
 <body>
@@ -146,8 +83,11 @@
         Total a recibir: <span class="verde">${{ ciclo.total_recibido }}</span>
       </div>
 
-      <form method="POST" action="/eliminar-ciclo/{{ ciclo.id }}" class="acciones">
-        <button class="btn-eliminar" onclick="return confirm('¿Seguro que deseas eliminar este ciclo?')">Eliminar</button>
+      <form method="POST" action="/eliminar-ciclo/{{ ciclo.id }}" class="acciones"
+            onsubmit="return confirm('¿Eliminar ciclo {{ ciclo.sucursal }} - {{ ciclo.fecha }}?');">
+        <input type="hidden" name="sucursal" value="{{ ciclo.sucursal }}">
+        <input type="hidden" name="fecha" value="{{ ciclo.fecha }}">
+        <button class="btn-eliminar">Eliminar</button>
       </form>
 
       <div class="separador"></div>
