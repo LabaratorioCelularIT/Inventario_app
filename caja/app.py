@@ -614,9 +614,27 @@ def cobrar():
     carrito = session["carrito"]
     usuario = session["usuario"]
     tipo_usuario = session.get("tipo", "")
-    sucursal = session.get("sucursal", "")
-    fecha = datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y %H:%M:%S")
-    fecha_dia = fecha.split(" ")[0]
+
+    tz = ZoneInfo("America/Monterrey")
+    ahora = datetime.now(tz)
+
+    if tipo_usuario == "admin":
+        sucursal = (request.form.get("sucursal_manual") or session.get("sucursal", "")).strip()
+        fecha_manual = (request.form.get("fecha_manual") or "").strip()
+        if fecha_manual:
+            try:
+                fecha_dt = datetime.strptime(fecha_manual, "%Y-%m-%d").replace(tzinfo=tz)
+                fecha_dt = fecha_dt.replace(hour=ahora.hour, minute=ahora.minute, second=ahora.second)
+            except ValueError:
+                fecha_dt = ahora
+        else:
+            fecha_dt = ahora
+    else:
+        sucursal = session.get("sucursal", "")
+        fecha_dt = ahora
+
+    fecha = fecha_dt.strftime("%d-%m-%Y %H:%M:%S")
+    fecha_dia = fecha_dt.strftime("%d-%m-%Y")
 
     def safe_float(v):
         if v is None:
@@ -685,7 +703,7 @@ def cobrar():
 
             if es_feria and not autorizado_hoy:
                 monto_venta_feria = safe_float(carrito[0].get("precio", 0))
-                ayer = (datetime.now(ZoneInfo("America/Monterrey")) - timedelta(days=1)).strftime("%d-%m-%Y")
+                ayer = (fecha_dt - timedelta(days=1)).strftime("%d-%m-%Y")
                 cur.execute("SELECT COALESCE(SUM(monto), 0) FROM gastos WHERE fecha = ? AND sucursal = ? AND UPPER(motivo) = 'FERIA'", (ayer, sucursal))
                 total_feria_ayer = safe_float(cur.fetchone()[0])
 
