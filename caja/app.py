@@ -2006,21 +2006,33 @@ def corte_del_dia():
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT SUM(precio) FROM ventas 
-        WHERE fecha LIKE ? AND sucursal = ? AND tipo_pago = 'Efectivo'
+        SELECT IFNULL(SUM(precio),0) FROM ventas
+        WHERE fecha LIKE ? AND sucursal = ?
+        AND (
+            tipo_pago IN ('Efectivo','Dólar')
+            OR metodo_pago IN ('Efectivo','Dólar')
+        )
     """, (f"{fecha_str}%", sucursal))
     ventas_efectivo = cur.fetchone()[0] or 0
 
     cur.execute("""
-        SELECT SUM(precio) FROM ventas 
-        WHERE fecha LIKE ? AND sucursal = ? AND tipo_pago = 'Tarjeta'
+        SELECT IFNULL(SUM(precio),0) FROM ventas
+        WHERE fecha LIKE ? AND sucursal = ?
+        AND (
+            tipo_pago = 'Tarjeta'
+            OR metodo_pago = 'Tarjeta'
+        )
     """, (f"{fecha_str}%", sucursal))
     ventas_tarjeta = cur.fetchone()[0] or 0
 
-    cur.execute("SELECT SUM(monto) FROM gastos WHERE fecha = ? AND sucursal = ?", (fecha_str, sucursal))
+    cur.execute("SELECT IFNULL(SUM(monto),0) FROM gastos WHERE fecha = ? AND sucursal = ?", (fecha_str, sucursal))
     gastos = cur.fetchone()[0] or 0
 
-    cur.execute("SELECT monto FROM fondo_caja WHERE fecha = ? AND sucursal = ? ORDER BY id DESC LIMIT 1", (fecha_str, sucursal))
+    cur.execute("""
+        SELECT monto FROM fondo_caja
+        WHERE fecha = ? AND sucursal = ?
+        ORDER BY id DESC LIMIT 1
+    """, (fecha_str, sucursal))
     fondo = cur.fetchone()
     fondo_inicial = fondo[0] if fondo else 0
 
@@ -2028,7 +2040,8 @@ def corte_del_dia():
 
     registrar_log(session["usuario"], tipo, f"Consultó corte del día ({sucursal} - {fecha_str})")
 
-    return render_template("corte-del-dia.html",
+    return render_template(
+        "corte-del-dia.html",
         fecha=fecha_str,
         sucursal=sucursal,
         ventas_efectivo=ventas_efectivo,
@@ -2037,7 +2050,7 @@ def corte_del_dia():
         fondo_inicial=fondo_inicial,
         total_caja=total_caja,
         tipo=tipo,
-        sucursales=SUCURSALES  # para el select de sucursales si es admin
+        sucursales=SUCURSALES
     )
 
 if not os.path.exists(DB_PATH):
