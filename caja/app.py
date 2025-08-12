@@ -2005,27 +2005,62 @@ def corte_del_dia():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT IFNULL(SUM(precio),0) FROM ventas
-        WHERE fecha LIKE ? AND sucursal = ?
-        AND (
-            tipo_pago IN ('Efectivo','Dólar')
-            OR metodo_pago IN ('Efectivo','Dólar')
-        )
-    """, (f"{fecha_str}%", sucursal))
-    ventas_efectivo = cur.fetchone()[0] or 0
+    cur.execute("PRAGMA table_info(ventas)")
+    cols = {r[1] for r in cur.fetchall()}
+    tiene_desglose = {"efectivo", "tarjeta", "dolares", "dolar"}.issubset(cols)
+
+    if tiene_desglose:
+        cur.execute("""
+            SELECT
+              IFNULL(SUM(COALESCE(efectivo,0)),0),
+              IFNULL(SUM(COALESCE(dolares,0) * COALESCE(dolar,0)),0)
+            FROM ventas
+            WHERE fecha LIKE ? AND sucursal = ?
+        """, (f"{fecha_str}%", sucursal))
+        s_efe, s_dol_mxn = cur.fetchone()
+        s_efe = s_efe or 0
+        s_dol_mxn = s_dol_mxn or 0
+
+        cur.execute("""
+            SELECT IFNULL(SUM(COALESCE(tarjeta,0)),0)
+            FROM ventas
+            WHERE fecha LIKE ? AND sucursal = ?
+        """, (f"{fecha_str}%", sucursal))
+        ventas_tarjeta = cur.fetchone()[0] or 0
+
+        ventas_efectivo = s_efe + s_dol_mxn
+    else:
+        cur.execute("""
+            SELECT IFNULL(SUM(precio),0)
+            FROM ventas
+            WHERE fecha LIKE ? AND sucursal = ?
+              AND (tipo_pago IN ('Efectivo','Dólar') OR metodo_pago IN ('Efectivo','Dólar'))
+        """, (f"{fecha_str}%", sucursal))
+        ventas_efectivo = cur.fetchone()[0] or 0
+
+        cur.execute("""
+            SELECT IFNULL(SUM(precio),0)
+            FROM ventas
+            WHERE fecha LIKE ? AND sucursal = ?
+              AND (tipo_pago='Tarjeta' OR metodo_pago='Tarjeta')
+        """, (f"{fecha_str}%", sucursal))
+        ventas_tarjeta = cur.fetchone()[0] or 0
+
+        cur.execute("""
+            SELECT IFNULL(SUM(precio),0)
+            FROM ventas
+            WHERE fecha LIKE ? AND sucursal = ?
+              AND (tipo_pago='Mixto' OR metodo_pago='Mixto')
+        """, (f"{fecha_str}%", sucursal))
+        mixto_total = cur.fetchone()[0] or 0
+        ventas_efectivo += (mixto_total / 2.0)
+        ventas_tarjeta  += (mixto_total / 2.0)
 
     cur.execute("""
-        SELECT IFNULL(SUM(precio),0) FROM ventas
-        WHERE fecha LIKE ? AND sucursal = ?
-        AND (
-            tipo_pago = 'Tarjeta'
-            OR metodo_pago = 'Tarjeta'
-        )
-    """, (f"{fecha_str}%", sucursal))
-    ventas_tarjeta = cur.fetchone()[0] or 0
-
-    cur.execute("SELECT IFNULL(SUM(monto),0) FROM gastos WHERE fecha = ? AND sucursal = ?", (fecha_str, sucursal))
+        SELECT IFNULL(SUM(monto),0)
+        FROM gastos
+        WHERE fecha = ? AND sucursal = ?
+    """, (fecha_str, sucursal))
     gastos = cur.fetchone()[0] or 0
 
     cur.execute("""
@@ -2036,7 +2071,11 @@ def corte_del_dia():
     fondo = cur.fetchone()
     fondo_inicial = fondo[0] if fondo else 0
 
-    total_caja = fondo_inicial + ventas_efectivo - gastos
+    total_entradas_efectivo = fondo_inicial + ventas_efectivo
+    total_caja = total_entradas_efectivo - gastos
+    ventas_total_dia = ventas_efectivo + ventas_tarjeta
+
+    conn.close()
 
     registrar_log(session["usuario"], tipo, f"Consultó corte del día ({sucursal} - {fecha_str})")
 
@@ -2046,8 +2085,10 @@ def corte_del_dia():
         sucursal=sucursal,
         ventas_efectivo=ventas_efectivo,
         ventas_tarjeta=ventas_tarjeta,
+        ventas_total_dia=ventas_total_dia,
         gastos=gastos,
         fondo_inicial=fondo_inicial,
+        total_entradas_efectivo=total_entradas_efectivo,
         total_caja=total_caja,
         tipo=tipo,
         sucursales=SUCURSALES

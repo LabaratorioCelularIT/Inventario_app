@@ -14,156 +14,33 @@
       --accent-hover: #286090;
       --danger: #c0392b;
     }
-
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-      background-color: var(--bg);
-      color: var(--fg);
-    }
-
-    .topbar {
-      background-color: var(--fg);
-      color: white;
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .topbar img {
-      height: 70px;
-      margin-right: 15px;
-    }
-
-    .topbar .title {
-      font-size: 26px;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-    }
-
-    .container {
-      max-width: 1000px;
-      margin: 30px auto;
-      padding: 20px;
-    }
-
-    .filtros {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    .filtros input,
-    .filtros select {
-      padding: 8px;
-      margin: 10px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-
-    .filtros button {
-      background-color: orange;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .corte-contenido {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 20px;
-    }
-
-    .card {
-      background-color: var(--card);
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
-      width: 45%;
-      min-width: 280px;
-      transition: transform 0.2s ease;
-    }
-
-    .card:hover {
-      transform: translateY(-5px);
-    }
-
-    .card h3 {
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 8px;
-      margin-bottom: 15px;
-      font-size: 20px;
-      color: var(--fg);
-      text-align: center;
-    }
-
-    .card p {
-      font-size: 16px;
-      margin: 8px 0;
-    }
-
-    .total {
-      font-weight: bold;
-      font-size: 18px;
-      color: green;
-    }
-
-    .btn-volver {
-      text-align: center;
-      margin-top: 40px;
-    }
-
-    .btn-volver a {
-      text-decoration: none;
-      background-color: var(--accent);
-      color: white;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-weight: bold;
-      font-size: 16px;
-      display: inline-block;
-      transition: background-color 0.3s ease;
-    }
-
-    .btn-volver a:hover {
-      background-color: var(--accent-hover);
-    }
-
-    @media (max-width: 600px) {
-      .topbar {
-        flex-direction: column;
-        text-align: center;
-      }
-
-      .topbar .title {
-        font-size: 20px;
-        flex-direction: column;
-      }
-
-      .topbar img {
-        height: 60px;
-        margin-bottom: 10px;
-      }
-
-      .card {
-        width: 100%;
-      }
-
-      .btn-volver a {
-        font-size: 14px;
-        padding: 10px 16px;
-      }
+    body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg); color: var(--fg); }
+    .topbar { background-color: var(--fg); color: white; padding: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+    .topbar img { height: 70px; margin-right: 15px; }
+    .topbar .title { font-size: 26px; font-weight: bold; display: flex; align-items: center; }
+    .container { max-width: 1000px; margin: 30px auto; padding: 20px; }
+    .filtros { text-align: center; margin-bottom: 20px; }
+    .filtros input, .filtros select { padding: 8px; margin: 10px; border-radius: 6px; border: 1px solid #ccc; }
+    .filtros button { background-color: orange; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .corte-contenido { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+    .card { background-color: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,.08); width: 45%; min-width: 280px; transition: transform .2s ease; }
+    .card:hover { transform: translateY(-5px); }
+    .card h3 { border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 15px; font-size: 20px; color: var(--fg); text-align: center; }
+    .card p { font-size: 16px; margin: 8px 0; }
+    .total { font-weight: bold; font-size: 18px; color: green; }
+    .btn-volver { text-align: center; margin-top: 40px; }
+    .btn-volver a { text-decoration: none; background-color: var(--accent); color: white; padding: 12px 20px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; transition: background-color .3s ease; }
+    .btn-volver a:hover { background-color: var(--accent-hover); }
+    @media (max-width: 600px){
+      .topbar{ flex-direction: column; text-align: center; }
+      .topbar .title{ font-size: 20px; flex-direction: column; }
+      .topbar img{ height: 60px; margin-bottom: 10px; }
+      .card{ width: 100%; }
+      .btn-volver a{ font-size: 14px; padding: 10px 16px; }
     }
   </style>
 </head>
 <body>
-
   <div class="topbar">
     <div class="title">
       <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
@@ -172,7 +49,6 @@
   </div>
 
   <div class="container">
-
     {% if tipo == 'admin' %}
     <form method="get" class="filtros">
       <input type="date" name="fecha" value="{{ fecha }}">
@@ -190,14 +66,18 @@
         <h3>Entradas de Efectivo</h3>
         <p>Dinero Inicial en Caja: ${{ "{:,.2f}".format(fondo_inicial) }}</p>
         <p>Ventas en efectivo: ${{ "{:,.2f}".format(ventas_efectivo) }}</p>
-        <p class="total">Total: ${{ "{:,.2f}".format(fondo_inicial + ventas_efectivo + ventas_tarjeta) }}</p>
+        <p>Ventas del día (efectivo + tarjeta): ${{ "{:,.2f}".format(ventas_total_dia) }}</p>
+        <p class="total">Total: ${{ "{:,.2f}".format(total_entradas_efectivo) }}</p>
       </div>
 
       <div class="card">
         <h3>Pagos y Gastos</h3>
         <p>Gastos del día: ${{ "{:,.2f}".format(gastos) }}</p>
         <p>Pagos con Tarjeta: ${{ "{:,.2f}".format(ventas_tarjeta) }}</p>
-        <p class="total">Dinero en caja actual: ${{ "{:,.2f}".format(total_caja) }}</p>
+        <p class="total">
+          Dinero en caja actual:
+          ${{ "{:,.2f}".format(total_entradas_efectivo - gastos - ventas_tarjeta) }}
+        </p>
       </div>
     </div>
 
