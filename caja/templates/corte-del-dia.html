@@ -71,14 +71,14 @@
       </div>
 
       <div class="card">
-        <h3>Pagos y Gastos</h3>
-        <p>Gastos del día: ${{ "{:,.2f}".format(gastos) }}</p>
-        <p>Pagos con Tarjeta: ${{ "{:,.2f}".format(ventas_tarjeta) }}</p>
-        <p class="total">
-          Dinero en caja actual:
-          ${{ "{:,.2f}".format(total_entradas_efectivo - gastos - ventas_tarjeta) }}
-        </p>
-      </div>
+  <h3>Pagos y Gastos</h3>
+  <p>Gastos del día: ${{ "{:,.2f}".format(gastos) }}</p>
+  <p>Pagos con Tarjeta: ${{ "{:,.2f}".format(ventas_tarjeta) }}</p>
+  <p class="total">
+    Dinero en caja actual:
+    ${{ "{:,.2f}".format(ventas_total_dia - gastos - ventas_tarjeta) }}
+  </p>
+</div>
     </div>
 
     <div class="btn-volver">
