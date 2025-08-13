@@ -1,31 +1,28 @@
 from flask import Flask, render_template, request, redirect, session, send_file, jsonify, flash, url_for
-import sqlite3
-import os
-from datetime import datetime
+import os, sqlite3, re, json, time, random, string
+from datetime import datetime, timedelta
 from pytz import timezone
+from zoneinfo import ZoneInfo
 from openpyxl import load_workbook
 from io import BytesIO
-import re
-import requests
-import ast
-import json
-from datetime import datetime, timedelta
-import base64
-from flask import request
+import smtplib, ssl
+from email.message import EmailMessage
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from utils import enviar_codigo_verificacion
-import random
-from zoneinfo import ZoneInfo
-import pytz
-from flask import request, session, redirect, render_template, flash
-from flask import render_template, session, redirect
-from flask import jsonify
 
 app = Flask(__name__)
 app.secret_key = 'clave-secreta-caja'
-DB_PATH = os.path.join(os.path.dirname(__file__), "inventario.sqlite3")
+BASE_DIR = os.path.dirname(__file__)
+DB_PATH = os.path.join(BASE_DIR, "inventario.sqlite3")
+
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "sistemasccfnld@laboratoriocelular.net")
+SMTP_PASS = os.getenv("SMTP_PASS", "qvdhlnigelqevtnm")
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Celulares Crédito Fácil")
+
+TZ = timezone("America/Monterrey")
 
 SUCURSALES = ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
 
@@ -56,7 +53,6 @@ NOMBRES_REALES = {
     "consulta_ajnd_7204": "Alejandrina (consulta)",
 }
 
-# Zona horaria
 TZ = timezone("America/Monterrey")
 
 DENOM = [1, 2, 5, 10, 20, 50, 100]
@@ -72,7 +68,6 @@ OBJETIVOS_DEFAULT = {
 }
 
 
-# Funciones de utilidad
 def fecha_hoy():
     return datetime.now(TZ).strftime("%d-%m-%Y")
 
@@ -131,6 +126,27 @@ def obtener_sucursales():
         except:
             pass
     return ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
+
+def enviar_codigo_verificacion(destino: str, codigo: str):
+    msg = EmailMessage()
+    msg["Subject"] = "Código de verificación"
+    msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_USER}>"
+    msg["To"] = destino
+    msg.set_content(f"Tu código de verificación es: {codigo}\nExpira en 15 minutos.")
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=25) as s:
+            s.starttls(context=ssl.create_default_context())
+            s.login(SMTP_USER, SMTP_PASS)
+            s.send_message(msg)
+        return True, ""
+    except Exception as e1:
+        try:
+            with smtplib.SMTP_SSL(SMTP_HOST, 465, context=ssl.create_default_context(), timeout=25) as s:
+                s.login(SMTP_USER, SMTP_PASS)
+                s.send_message(msg)
+            return True, ""
+        except Exception as e2:
+            return False, f"{type(e2).__name__}: {e2}"
 
 @app.before_request
 def forzar_logout_por_turno():
@@ -254,104 +270,118 @@ def registro():
 
 @app.route("/recuperar", methods=["GET", "POST"])
 def recuperar():
-    mensaje = ""
-    error = ""
     if request.method == "POST":
         contacto = request.form.get("contacto", "").strip()
-
         if not contacto:
-            error = "Debes ingresar tu correo o número de teléfono."
-            return render_template("recuperar.html", error=error)
-
-        codigo = ''.join(random.choices(string.digits, k=6))
-        fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+            return render_template("recuperar.html", error="Debes ingresar tu correo, teléfono o nombre de usuario.")
+        codigo = "".join(random.choices(string.digits, k=6))
+        expira = int(time.time()) + 15*60
         with sqlite3.connect(DB_PATH) as conn:
             cur = conn.cursor()
-
-            cur.execute("SELECT usuarios FROM usuarios WHERE correo = ? OR telefono = ?", (contacto, contacto))
-            resultado = cur.fetchone()
-
-            if resultado:
-                usuarios = resultado[0]
-
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS codigos_recuperacion (
-                        usuario TEXT,
-                        codigo TEXT,
-                        contacto TEXT,
-                        fecha TEXT
-                    )
-                """)
-                cur.execute("DELETE FROM codigos_recuperacion WHERE usuarios = ?", (usuarios,))
-                cur.execute("INSERT INTO codigos_recuperacion (usuarios, codigo, contacto, fecha) VALUES (?, ?, ?, ?)",
-                            (usuarios, codigo, contacto, fecha))
-                conn.commit()
-
-                mensaje = f"Tu código de recuperación es: {codigo} (Solo visible para pruebas, luego se enviará por correo o SMS)"
-            else:
-                error = "No se encontró ninguna cuenta asociada a ese correo o número."
-
-    return render_template("recuperar.html", mensaje=mensaje, error=error)
+            cur.execute("""
+                SELECT nombre, correo, telefono
+                FROM usuarios
+                WHERE correo = ? OR telefono = ? OR nombre = ?
+                LIMIT 1
+            """, (contacto, contacto, contacto))
+            row = cur.fetchone()
+            if not row:
+                return render_template("recuperar.html", error="No se encontró ninguna cuenta con ese dato.")
+            usuario, correo, telefono = row
+            if not correo:
+                return render_template("recuperar.html", error="Tu cuenta no tiene un correo registrado.")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS codigos_verificacion(
+                    usuario TEXT,
+                    codigo TEXT,
+                    contacto TEXT,
+                    expira INTEGER
+                )
+            """)
+            cur.execute("DELETE FROM codigos_verificacion WHERE usuario = ?", (usuario,))
+            cur.execute("""
+                INSERT INTO codigos_verificacion(usuario, codigo, contacto, expira)
+                VALUES (?, ?, ?, ?)
+            """, (usuario, codigo, correo, expira))
+            conn.commit()
+        session["usuario_recuperacion"] = usuario
+        ok, err = enviar_codigo_verificacion(correo, codigo)
+        if ok:
+            return redirect(url_for("verificar_codigo", usuario=usuario))
+        else:
+            return render_template("recuperar.html", error=f"Error enviando el correo: {err}")
+    return render_template("recuperar.html")
 
 @app.route("/verificar-codigo", methods=["GET", "POST"])
 def verificar_codigo():
     if request.method == "POST":
-        usuario = request.form["usuario"]
-        codigo_ingresado = request.form["codigo"]
-        nueva_contrasena = request.form["nueva_contrasena"]
-
-        conn = sqlite3.connect("inventario.sqlite3")
-        cur = conn.cursor()
-        cur.execute("SELECT codigo FROM codigos_verificacion WHERE usuario = ?", (usuario,))
-        fila = cur.fetchone()
-        conn.close()
-
-        if fila and fila[0] == codigo_ingresado:
-            # validar nueva contraseña
-            if not validar_contrasena_segura(nueva_contrasena):
-                return render_template("verificar_codigo.html", usuario=usuario, error="La contraseña no cumple los requisitos de seguridad.")
-
-            conn = sqlite3.connect("inventario.sqlite3")
+        usuario = request.form.get("usuario","").strip()
+        codigo_ingresado = request.form.get("codigo","").strip()
+        nueva_contrasena = request.form.get("nueva_contrasena","")
+        if not usuario or not codigo_ingresado or not nueva_contrasena:
+            return render_template("verificar_codigo.html", usuario=usuario, error="Faltan datos.")
+        with sqlite3.connect(DB_PATH) as conn:
             cur = conn.cursor()
-            cur.execute("UPDATE usuarios SET contrasena = ? WHERE usuario = ?", (nueva_contrasena, usuario))
+            cur.execute("SELECT codigo, expira FROM codigos_verificacion WHERE usuario = ? LIMIT 1", (usuario,))
+            row = cur.fetchone()
+        if not row:
+            return render_template("verificar_codigo.html", usuario=usuario, error="No hay un código activo. Vuelve a solicitarlo.")
+        codigo_guardado, expira = row
+        if int(time.time()) > int(expira):
+            return render_template("verificar_codigo.html", usuario=usuario, error="El código ha expirado.")
+        if codigo_ingresado != str(codigo_guardado):
+            return render_template("verificar_codigo.html", usuario=usuario, error="Código incorrecto.")
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+            cur.execute("UPDATE usuarios SET contraseña = ? WHERE nombre = ?", (nueva_contrasena, usuario))
             cur.execute("DELETE FROM codigos_verificacion WHERE usuario = ?", (usuario,))
             conn.commit()
-            conn.close()
-            return redirect("/login")
-        else:
-            return render_template("verificar_codigo.html", usuario=usuario, error="Código incorrecto.")
-    
-    usuario = request.args.get("usuario", "")
+        session.pop("usuario_recuperacion", None)
+        return redirect("/")
+    usuario = request.args.get("usuario") or session.get("usuario_recuperacion","")
     return render_template("verificar_codigo.html", usuario=usuario)
 
-@app.route('/enviar-codigo', methods=['POST'])
+@app.route("/enviar-codigo", methods=["POST"])
 def enviar_codigo():
-    dato = request.form.get("dato")
-    codigo = str(random.randint(100000, 999999))
-
+    dato = request.form.get("dato","").strip()
+    if not dato:
+        return render_template("enviar_codigo.html", error="Ingresa un correo, teléfono o nombre.")
+    codigo = "".join(random.choices(string.digits, k=6))
+    expira = int(time.time()) + 15*60
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
-        cur.execute("SELECT correo, telefono FROM usuarios WHERE correo = ? OR telefono = ?", (dato, dato))
-        usuario = cur.fetchone()
-
-        if not usuario:
-            return render_template("enviar_codigo.html", error="❌ No se encontró ninguna cuenta con ese dato.")
-
-        correo, telefono = usuario
-
-        # Guardar código en sesión
-        session["codigo_verificacion"] = codigo
-        session["dato_verificado"] = dato
-
-        if correo:
-            enviado = enviar_codigo_verificacion(correo, codigo)
-            if enviado:
-                return redirect("/verificar-codigo")
-            else:
-                return render_template("enviar_codigo.html", error="❌ Falló el envío del correo.")
-        else:
-            return render_template("enviar_codigo.html", error="❌ Este usuario no tiene correo registrado.")
+        cur.execute("""
+            SELECT nombre, correo, telefono
+            FROM usuarios
+            WHERE correo = ? OR telefono = ? OR nombre = ?
+            LIMIT 1
+        """, (dato, dato, dato))
+        row = cur.fetchone()
+        if not row:
+            return render_template("enviar_codigo.html", error="No se encontró ninguna cuenta con ese dato.")
+        usuario, correo, telefono = row
+        if not correo:
+            return render_template("enviar_codigo.html", error="Tu cuenta no tiene un correo registrado.")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS codigos_verificacion(
+                usuario TEXT,
+                codigo TEXT,
+                contacto TEXT,
+                expira INTEGER
+            )
+        """)
+        cur.execute("DELETE FROM codigos_verificacion WHERE usuario = ?", (usuario,))
+        cur.execute("""
+            INSERT INTO codigos_verificacion(usuario, codigo, contacto, expira)
+            VALUES (?, ?, ?, ?)
+        """, (usuario, codigo, correo, expira))
+        conn.commit()
+    session["usuario_recuperacion"] = usuario
+    ok, err = enviar_codigo_verificacion(correo, codigo)
+    if ok:
+        return redirect(url_for("verificar_codigo", usuario=usuario))
+    else:
+        return render_template("enviar_codigo.html", error=f"No se pudo enviar el correo: {err}")
 
 @app.route('/firmar', methods=['POST'])
 def firmar():

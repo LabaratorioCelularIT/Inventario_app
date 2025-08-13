@@ -7,8 +7,17 @@ services:
     ports:
       - "5003:5003"
     volumes:
-      - .:/app                    # código fuente
-      - ../inventario.sqlite3:/app/inventario.sqlite3  # base de datos central
+      - .:/app
+      - ../inventario.sqlite3:/app/inventario.sqlite3
     restart: always
     environment:
-      - FLASK_ENV=development
+      FLASK_ENV: development
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: "587"
+      SMTP_USER: sistemasccfnld@laboratoriocelular.net
+      SMTP_PASS: "qvdhlnigelqevtnm"
+      SMTP_FROM_NAME: "Celulares Crédito Fácil"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+
