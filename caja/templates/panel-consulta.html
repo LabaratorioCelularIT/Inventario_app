@@ -93,17 +93,23 @@
       margin: 14px;
       padding: 16px 28px;
       background-color: var(--accent);
-      color: white;
+      color: white !important;
       text-decoration: none;
       border-radius: 10px;
       font-size: 18px;
-      transition: background-color 0.3s ease;
+      transition: background-color 0.3s ease, transform .1s ease;
       font-weight: bold;
       min-width: 240px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
     }
 
     .btn:hover {
       background-color: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
     }
 
     @media (max-width: 600px) {
@@ -143,9 +149,10 @@
       <a href="/ventas" class="btn">🛒 Registrar venta</a>
       <a href="/gastos" class="btn">📤 Registrar salida</a>
       <a href="/nota" class="btn">📝 Agregar nota</a>
-      <a href="/corte-del-dia" class="btn">📋 Corte del día</a>
+      <a href="/corte-del-dia" class="btn">💵 Corte del día</a>
       <a href="/reporte-excel" class="btn">⬇️ Descargar Excel</a>
       <a href="/feria" class="btn">💰 Feria</a>
+      <a href="/ir-inventario" class="btn">📋 Ir a Inventario</a>
     </div>
   </div>
 

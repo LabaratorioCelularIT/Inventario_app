@@ -108,6 +108,24 @@
     }
     .card a:hover { color: var(--accent-hover); }
 
+    /* Botón uniforme */
+    .btn-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff !important;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-weight: bold;
+      text-decoration: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      transition: background-color .2s ease, transform .1s ease;
+    }
+    .btn-link:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-link:active { transform: translateY(0); }
+
     /* Banner de alerta */
     #banner-bloqueos {
       display: none;
@@ -212,6 +230,7 @@
 
       <div class="card"><a href="/ver-reporte-excel">📄 Ver Reporte Excel</a></div>
       <div class="card"><a href="/log-actividad">📚 Ver Log de Actividad</a></div>
+      <div class="card"><a href="/ir-inventario" class="btn-link">📋 Ir a Inventario</a></div>
     </div>
   </div>
 

@@ -10,14 +10,19 @@
       --celeste: #e6f0ff;
       --rojo: #e74c3c;
       --rojo-hover: #c0392b;
-      --boton-borde: #001f3f;
+      --boton-borde: #1c5e8c;
+      --azul: #3498db;
+      --azul-hover: #2980b9;
+      --gris-oscuro: #2c3e50;
+      --gris-borde: #bdc3c7;
+      --azul-royal: #001f3f;
     }
 
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background-color: var(--celeste);
-      color: #2c3e50;
+      color: var(--gris-oscuro);
     }
 
     .navbar {
@@ -54,31 +59,40 @@
       flex-shrink: 0;
     }
 
-    .navbar button {
-      background-color: var(--rojo);
-      border: 2px solid var(--boton-borde);
-      color: white;
-      padding: 10px 16px;
+    /* Botón base uniforme */
+    .btn {
+      display: inline-block;
+      background-color: var(--azul);
+      color: #fff !important;
+      padding: 12px 14px;
+      text-decoration: none;
+      border-radius: 8px;
       font-size: 15px;
-      cursor: pointer;
-      border-radius: 6px;
       font-weight: bold;
+      border: 2px solid var(--boton-borde);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      transition: background-color .2s ease, transform .1s ease, filter .2s ease;
+      text-align: center;
     }
+    .btn:hover { background-color: var(--azul-hover); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
 
-    .navbar button:hover {
-      background-color: var(--rojo-hover);
+    /* Variantes */
+    .btn-secondary {
+      background-color: #6c8ebf;
+      border-color: #3d5f91;
     }
+    .btn-secondary:hover { filter: brightness(0.95); }
 
+    .btn-danger {
+      background-color: var(--rojo);
+      border-color: var(--azul-royal);
+    }
+    .btn-danger:hover { background-color: var(--rojo-hover); }
+
+    /* Botón de la barra (Chat) usa el mismo sistema */
     .chat-btn {
       position: relative;
-      background-color: #3498db;
-      padding: 10px 16px;
-      border: 2px solid #1c5e8c;
-      font-weight: bold;
-    }
-
-    .chat-btn:hover {
-      background-color: #2980b9;
     }
 
     .chat-notif {
@@ -110,7 +124,7 @@
 
     .alert-box {
       background-color: #ecf0f1;
-      border-left: 5px solid #3498db;
+      border-left: 5px solid var(--azul);
       padding: 15px;
       text-align: left;
       margin-bottom: 25px;
@@ -130,26 +144,8 @@
       justify-content: center;
     }
 
-    .btn {
-      display: inline-block;
-      background-color: #3498db;
-      color: white;
-      padding: 12px;
-      text-decoration: none;
-      border-radius: 6px;
-      font-size: 15px;
-      font-weight: bold;
-      border: 2px solid #1c5e8c;
-    }
-
-    .btn:hover {
-      background-color: #2980b9;
-    }
-
     @media (max-width: 600px) {
-      .btn-grid {
-        grid-template-columns: 1fr;
-      }
+      .btn-grid { grid-template-columns: 1fr; }
 
       .navbar {
         flex-direction: column;
@@ -162,9 +158,7 @@
         flex-direction: column;
       }
 
-      .navbar-right {
-        margin-top: 10px;
-      }
+      .navbar-right { margin-top: 10px; }
 
       .container {
         margin: 20px;
@@ -185,8 +179,8 @@
       💬 Chat
       <span id="notif" class="chat-notif" style="display:none;">!</span>
     </a>
-    <form action="/logout" method="get">
-      <button type="submit">Cerrar sesión</button>
+    <form action="/logout" method="get" style="margin:0;">
+      <button type="submit" class="btn btn-danger">Cerrar sesión</button>
     </form>
   </div>
 </div>
@@ -204,6 +198,13 @@
     <a href="/inventario-sucursal" class="btn">📦 Ver inventario</a>
     <a href="/confirmar-transferencias" class="btn">✅ Confirmar transferencias</a>
     <a href="/recibir-garantia" class="btn">📦🔁 Recibir Garantía</a>
+
+    <!-- Nuevo: botón uniforme para Ir a Inventario (misma estética, misma ruta) -->
+    <a href="/ir-inventario" class="btn">📋 Ir a Inventario</a>
+
+    <!-- Botones especiales uniformados conservando rutas -->
+    <a href="/ir-caja" class="btn btn-secondary">↩ Volver a Caja</a>
+    <a href="/logout-global" class="btn btn-danger">Cerrar sesión (ambas)</a>
   </div>
 
   <p style="margin-top: 30px; color: #7f8c8d;">🔧 Próximamente se habilitarán más funciones para tu rol.</p>
@@ -211,12 +212,15 @@
 
 <script>
   async function revisarNotificaciones() {
-    const res = await fetch("/chat/notificaciones?modulo=Inventario");
-    const data = await res.json();
-    if (data.nuevos > 0) {
-      document.getElementById("notif").style.display = "inline-block";
-      document.getElementById("notif").textContent = data.nuevos;
-    }
+    try {
+      const res = await fetch("/chat/notificaciones?modulo=Inventario");
+      const data = await res.json();
+      if (data.nuevos > 0) {
+        const n = document.getElementById("notif");
+        n.style.display = "inline-block";
+        n.textContent = data.nuevos;
+      }
+    } catch (e) {}
   }
 
   setInterval(revisarNotificaciones, 5000);

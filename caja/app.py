@@ -10,6 +10,9 @@ from email.message import EmailMessage
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from itsdangerous import URLSafeTimedSerializer
+from urllib.parse import urlencode
+import time
 
 app = Flask(__name__)
 app.secret_key = 'clave-secreta-caja'
@@ -21,6 +24,8 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "sistemasccfnld@laboratoriocelular.net")
 SMTP_PASS = os.getenv("SMTP_PASS", "qvdhlnigelqevtnm")
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Celulares Crédito Fácil")
+SSO_SHARED_SECRET = "cambia_esta_clave_32+caracteres"
+INV_URL_BASE = "http://100.92.172.109:5001"
 
 TZ = timezone("America/Monterrey")
 
@@ -67,6 +72,8 @@ OBJETIVOS_DEFAULT = {
     100: 5
 }
 
+def sso_serializer():
+    return URLSafeTimedSerializer(SSO_SHARED_SECRET, salt="sso-inv-5001")
 
 def fecha_hoy():
     return datetime.now(TZ).strftime("%d-%m-%Y")
@@ -176,6 +183,36 @@ def enviar_codigo_verificacion(destino: str, codigo: str):
             return True, ""
         except Exception as e2:
             return False, f"{type(e2).__name__}: {e2}"
+
+def _destino_panel_caja():
+    t = session.get("tipo","")
+    if t == "admin":
+        return "/panel-admin"
+    if t == "consulta":
+        return "/panel-consulta"
+    if t == "reparto":
+        return "/panel-reparto"
+    return "/"
+
+@app.route("/sso-login-caja")
+def sso_login_caja():
+    token = request.args.get("token","")
+    if not token:
+        return redirect("/")
+
+    try:
+        data = sso_serializer().loads(token, max_age=300)
+    except (SignatureExpired, BadSignature):
+        return redirect("/")
+
+    # Crea/renueva sesión en Caja
+    session["usuario"] = data.get("usuario","")
+    session["tipo"] = data.get("tipo","")
+    session["sucursal"] = data.get("sucursal","")
+    session["inicio_sesion"] = datetime.now().isoformat()
+
+    # Redirige a su panel
+    return redirect(_destino_panel_caja())
 
 @app.before_request
 def forzar_logout_por_turno():
@@ -431,6 +468,21 @@ def logout():
     registrar_log(session.get("usuario", "Desconocido"), session.get("tipo", "Desconocido"), "Cerró sesión")
     session.clear()
     return redirect("/")
+
+@app.route("/ir-inventario")
+def ir_inventario():
+    if "usuario" not in session:
+        return redirect("/login")
+    payload = {
+        "usuario": session.get("usuario", ""),
+        "tipo": session.get("tipo", ""),
+        "sucursal": session.get("sucursal", ""),
+        "ts": int(time.time())
+    }
+    token = sso_serializer().dumps(payload)
+    q = urlencode({"token": token, "next": "/dashboard"})
+    return redirect(f"{INV_URL_BASE}/sso-login?{q}")
+
 
 @app.route("/limpiar-carrito", methods=["POST"])
 def limpiar_carrito():

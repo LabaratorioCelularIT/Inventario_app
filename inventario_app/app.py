@@ -5,7 +5,12 @@ from datetime import datetime, timedelta
 import uuid
 from PIL import Image
 import shutil
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from urllib.parse import urlencode
+import time
 
+CAJA_URL_BASE = "http://100.92.172.109:5003"
+SSO_SHARED_SECRET = "cambia_esta_clave_32+caracteres"
 app = Flask(__name__)
 app.secret_key = "inventario_secret_key"
 DB_PATH = os.path.join(os.path.dirname(__file__), "inventario.sqlite3")
@@ -21,14 +26,12 @@ REDES_LOCALES = [
     '187.189.68.44', # Reservas2
 ]
 
-
 DISPOSITIVOS_ESPECIALES = [
     '189.145.88.123',  # Celular Jesús
     '189.150.77.88',   # Laptop Victoria
     '192.168.1.139',  # Laptop David
     '187.189.68.44',
 ]
-
 
 USUARIOS_CONSULTA = {
     "Litzy": "1234", "Lorena": "1234", "Abigail": "1234", "Fátima": "1234",
@@ -121,8 +124,19 @@ def registrar_log(usuario, tipo, descripcion):
     conn.commit()
     conn.close()
 
+def sso_serializer():
+    return URLSafeTimedSerializer(SSO_SHARED_SECRET, salt="sso-inv-5001")
+
+def _destino_valido():
+    try:
+        return url_for("listado_articulos")
+    except Exception:
+        return "/"
+
 @app.route('/')
 def index():
+    if 'usuario' in session:
+        return redirect('/dashboard')
     return render_template("login.html", sucursales=SUCURSALES)
 
 @app.route('/login', methods=['POST'])
@@ -156,6 +170,33 @@ def login():
     else:
         return "❌ Usuario o contraseña incorrectos"
 
+@app.route('/login', methods=['GET'])
+def login_get():
+    if 'usuario' in session:
+        return redirect('/dashboard')
+    return render_template("login.html", sucursales=SUCURSALES)
+
+@app.route("/sso-login")
+def sso_login():
+    token = request.args.get("token", "")
+    destino = request.args.get("next") or "/dashboard"
+    if not token:
+        return redirect("/login")
+    try:
+        data = sso_serializer().loads(token, max_age=300)  # 5 min
+    except (SignatureExpired, BadSignature):
+        return redirect("/login")
+
+    usuario = data.get("usuario") or ""
+    if not usuario:
+        return redirect("/login")
+
+    session["usuario"] = usuario
+    session["tipo"] = data.get("tipo", "")
+    session["sucursal"] = data.get("sucursal", "")
+
+    return redirect(destino)
+
 @app.route('/dashboard')
 def dashboard():
     if 'usuario' not in session:
@@ -181,6 +222,27 @@ def logout():
         registrar_log(session['usuario'], "Cierre de sesión", "Cerró sesión")
     session.clear()
     return redirect('/')
+
+@app.route("/ir-caja")
+def ir_caja():
+    if "usuario" not in session:
+        return redirect("/login")
+    payload = {
+        "usuario": session.get("usuario",""),
+        "tipo": session.get("tipo",""),
+        "sucursal": session.get("sucursal",""),
+        "ts": int(time.time())
+    }
+    token = sso_serializer().dumps(payload)
+    # Por defecto manda a panel según tipo; puedes forzar otro con ?next=/panel-admin
+    q = urlencode({"token": token})
+    return redirect(f"{CAJA_URL_BASE}/sso-login-caja?{q}")
+
+@app.route("/logout-global")
+def logout_global():
+    session.clear()
+    # encadena al logout de Caja:
+    return redirect(f"{CAJA_URL_BASE}/logout")
 
 @app.route("/chat")
 def chat():
