@@ -127,6 +127,35 @@ def obtener_sucursales():
             pass
     return ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
 
+def ensure_ventas_desglose_schema(conn):
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS ventas_desglose(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha TEXT,
+            sucursal TEXT,
+            usuario TEXT,
+            efectivo REAL DEFAULT 0,
+            tarjeta REAL DEFAULT 0,
+            dolares REAL DEFAULT 0,
+            tipo_cambio REAL DEFAULT 0,
+            referencia TEXT
+        )
+    """)
+    cur.execute("PRAGMA table_info(ventas_desglose)")
+    cols = {r[1] for r in cur.fetchall()}
+    defs = {
+        "efectivo": "REAL DEFAULT 0",
+        "tarjeta": "REAL DEFAULT 0",
+        "dolares": "REAL DEFAULT 0",
+        "tipo_cambio": "REAL DEFAULT 0",
+        "referencia": "TEXT"
+    }
+    for col, ddl in defs.items():
+        if col not in cols:
+            cur.execute(f"ALTER TABLE ventas_desglose ADD COLUMN {col} {ddl}")
+    conn.commit()
+
 def enviar_codigo_verificacion(destino: str, codigo: str):
     msg = EmailMessage()
     msg["Subject"] = "Código de verificación"
@@ -603,12 +632,39 @@ def eliminar_venta_admin(id):
         return jsonify(success=False)
 
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        cur.execute("DELETE FROM ventas WHERE id = ?", (id,))
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+
+            cur.execute("""
+                SELECT fecha, sucursal
+                FROM ventas
+                WHERE id = ?
+            """, (id,))
+            row = cur.fetchone()
+            if not row:
+                return jsonify(success=False)
+
+            fecha_ts, sucursal = row  # fecha_ts tiene formato "%d-%m-%Y %H:%M:%S"
+
+            cur.execute("DELETE FROM ventas WHERE id = ?", (id,))
+            conn.commit()
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM ventas
+                WHERE fecha = ? AND sucursal = ?
+            """, (fecha_ts, sucursal))
+            quedan = int(cur.fetchone()[0] or 0)
+
+            if quedan == 0:
+                cur.execute("""
+                    DELETE FROM ventas_desglose
+                    WHERE fecha = ? AND sucursal = ?
+                """, (fecha_ts, sucursal))
+                conn.commit()
+
         return jsonify(success=True)
+
     except Exception as e:
         print("Error al eliminar venta:", e)
         return jsonify(success=False)
@@ -683,19 +739,12 @@ def cobrar():
     tipo_cambio = safe_float(request.form.get("dolar"))
     referencia_general = request.form.get("referencia", "").strip()
 
-    total_pago = efectivo + tarjeta + (dolares * tipo_cambio)
-    total_venta = sum(safe_float(item.get("precio", 0)) for item in carrito)
-    cambio = total_pago - total_venta
-
-    if cambio < 0:
-        flash(f"❌ Aún faltan ${abs(cambio):.2f} para completar el pago.")
-        return redirect("/ventas")
-
     def a_centavos(x):
         return int(round(safe_float(x) * 100))
 
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
+        ensure_ventas_desglose_schema(conn)
 
         cur.execute("SELECT COUNT(*) FROM ventas WHERE fecha LIKE ? AND sucursal = ?", (f"{fecha_dia}%", sucursal))
         ventas_hoy = cur.fetchone()[0]
@@ -705,8 +754,8 @@ def cobrar():
                 flash("No hay productos en el carrito.")
                 return redirect("/ventas")
 
-            descripcion_primera = " ".join(str(carrito[0].get("descripcion", "")).split()).strip().upper()
-            concepto_primera = " ".join(str(carrito[0].get("concepto", "")).split()).strip().upper()
+            descripcion_primera = str(carrito[0].get("descripcion", "")).strip().upper()
+            concepto_primera = str(carrito[0].get("concepto", "")).strip().upper()
             es_feria = (descripcion_primera == "FERIA" or concepto_primera == "FERIA")
 
             cur.execute("""
@@ -734,7 +783,7 @@ def cobrar():
             if es_feria and not autorizado_hoy:
                 monto_venta_feria = safe_float(carrito[0].get("precio", 0))
                 ayer = (fecha_dt - timedelta(days=1)).strftime("%d-%m-%Y")
-                cur.execute("SELECT COALESCE(SUM(monto), 0) FROM gastos WHERE fecha = ? AND sucursal = ? AND UPPER(motivo) = 'FERIA'", (ayer, sucursal))
+                cur.execute("SELECT COALESCE(SUM(monto), 0) FROM gastos WHERE fecha = ? AND sucursal = ? AND TRIM(UPPER(motivo)) = 'FERIA'", (ayer, sucursal))
                 total_feria_ayer = safe_float(cur.fetchone()[0])
 
                 if a_centavos(monto_venta_feria) != a_centavos(total_feria_ayer):
@@ -746,8 +795,24 @@ def cobrar():
                     return render_template("venta_bloqueada.html", mensaje="❌ El monto de la FERIA no coincide con la salida registrada ayer. Espera autorización de un administrador.")
                 else:
                     carrito[0]["precio"] = round(total_feria_ayer, 2)
-                    total_venta = sum(safe_float(item.get("precio", 0)) for item in carrito)
-                    cambio = total_pago - total_venta
+
+        total_venta = sum(safe_float(item.get("precio", 0)) for item in carrito)
+
+        total_mxn = round(total_venta, 2)
+        usd_mxn_entregado = round(dolares * tipo_cambio, 2)
+
+        restante = total_mxn
+        usd_usado_mxn = min(usd_mxn_entregado, restante); restante = round(restante - usd_usado_mxn, 2)
+        efectivo_usado  = min(efectivo, restante);        restante = round(restante - efectivo_usado, 2)
+        tarjeta_usada   = min(tarjeta, restante);         restante = round(restante - tarjeta_usada, 2)
+        dolares_usados  = round(usd_usado_mxn / tipo_cambio, 2) if tipo_cambio > 0 else 0.0
+
+        total_pago = round(efectivo + tarjeta + usd_mxn_entregado, 2)
+        cambio = round(total_pago - total_mxn, 2)
+
+        if cambio < 0:
+            flash(f"❌ Aún faltan ${abs(cambio):.2f} para completar el pago.")
+            return redirect("/ventas")
 
         for item in carrito:
             cur.execute("""
@@ -766,6 +831,20 @@ def cobrar():
             imei = item.get("imei", "")
             if imei:
                 cur.execute("UPDATE articulos SET estado = 'Vendido' WHERE imei = ?", (imei,))
+
+        cur.execute("""
+            INSERT INTO ventas_desglose
+            (fecha, sucursal, usuario, efectivo, tarjeta, dolares, tipo_cambio, referencia)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            fecha, sucursal, usuario,
+            round(efectivo_usado, 2),
+            round(tarjeta_usada, 2),
+            round(dolares_usados, 2),
+            round(tipo_cambio, 4),
+            referencia_general
+        ))
+
         conn.commit()
 
     NOMBRES_USUARIOS = {
@@ -2019,72 +2098,103 @@ def corte_del_dia():
     if "usuario" not in session:
         return redirect("/")
 
-    tipo = session["tipo"]
+    tipo = session.get("tipo", "")
+    sucursal_sesion = session.get("sucursal", "")
+    tz = ZoneInfo("America/Monterrey")
 
     if tipo == "admin":
-        fecha = request.args.get("fecha", datetime.now(TZ).strftime("%Y-%m-%d"))
+        fecha_qs = request.args.get("fecha", datetime.now(tz).strftime("%Y-%m-%d"))
         try:
-            fecha_str = datetime.strptime(fecha, "%Y-%m-%d").strftime("%d-%m-%Y")
-        except:
-            fecha_str = fecha
-        sucursal = request.args.get("sucursal", session.get("sucursal", ""))
+            fecha_str = datetime.strptime(fecha_qs, "%Y-%m-%d").strftime("%d-%m-%Y")
+        except Exception:
+            fecha_str = fecha_qs
+        sucursal = request.args.get("sucursal", sucursal_sesion)
     else:
-        fecha_str = datetime.now(TZ).strftime("%d-%m-%Y")
-        sucursal = session.get("sucursal", "")
+        fecha_str = datetime.now(tz).strftime("%d-%m-%Y")
+        sucursal = sucursal_sesion
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    cur.execute("PRAGMA table_info(ventas)")
-    cols = {r[1] for r in cur.fetchall()}
-    tiene_desglose = {"efectivo", "tarjeta", "dolares", "dolar"}.issubset(cols)
+    cur.execute("""
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='ventas_desglose'
+    """)
+    tiene_tabla_desglose = cur.fetchone() is not None
 
-    if tiene_desglose:
+    ventas_efectivo = 0.0
+    ventas_tarjeta = 0.0
+
+    if tiene_tabla_desglose:
+        cur.execute("""
+            SELECT COUNT(*) FROM ventas_desglose
+            WHERE fecha LIKE ? AND sucursal = ?
+        """, (f"{fecha_str}%", sucursal))
+        cnt_desglose = cur.fetchone()[0] or 0
+    else:
+        cnt_desglose = 0
+
+    if cnt_desglose > 0:
         cur.execute("""
             SELECT
-              IFNULL(SUM(COALESCE(efectivo,0)),0),
-              IFNULL(SUM(COALESCE(dolares,0) * COALESCE(dolar,0)),0)
-            FROM ventas
+                IFNULL(SUM(COALESCE(efectivo,0)), 0)      AS s_efectivo,
+                IFNULL(SUM(COALESCE(tarjeta,0)), 0)       AS s_tarjeta,
+                IFNULL(SUM(COALESCE(dolares,0) * COALESCE(tipo_cambio,0)), 0) AS s_dolares_mxn
+            FROM ventas_desglose
             WHERE fecha LIKE ? AND sucursal = ?
         """, (f"{fecha_str}%", sucursal))
-        s_efe, s_dol_mxn = cur.fetchone()
-        s_efe = s_efe or 0
-        s_dol_mxn = s_dol_mxn or 0
-
-        cur.execute("""
-            SELECT IFNULL(SUM(COALESCE(tarjeta,0)),0)
-            FROM ventas
-            WHERE fecha LIKE ? AND sucursal = ?
-        """, (f"{fecha_str}%", sucursal))
-        ventas_tarjeta = cur.fetchone()[0] or 0
-
-        ventas_efectivo = s_efe + s_dol_mxn
+        s_efec, s_tar, s_dmxn = cur.fetchone()
+        ventas_efectivo = (s_efec or 0) + (s_dmxn or 0)
+        ventas_tarjeta  = (s_tar or 0)
     else:
-        cur.execute("""
-            SELECT IFNULL(SUM(precio),0)
-            FROM ventas
-            WHERE fecha LIKE ? AND sucursal = ?
-              AND (tipo_pago IN ('Efectivo','Dólar') OR metodo_pago IN ('Efectivo','Dólar'))
-        """, (f"{fecha_str}%", sucursal))
-        ventas_efectivo = cur.fetchone()[0] or 0
+        cur.execute("PRAGMA table_info(ventas)")
+        cols = {r[1] for r in cur.fetchall()}
+        tiene_desglose_en_ventas = {"efectivo", "tarjeta", "dolares", "dolar"}.issubset(cols)
 
-        cur.execute("""
-            SELECT IFNULL(SUM(precio),0)
-            FROM ventas
-            WHERE fecha LIKE ? AND sucursal = ?
-              AND (tipo_pago='Tarjeta' OR metodo_pago='Tarjeta')
-        """, (f"{fecha_str}%", sucursal))
-        ventas_tarjeta = cur.fetchone()[0] or 0
+        if tiene_desglose_en_ventas:
+            cur.execute("""
+                SELECT
+                    IFNULL(SUM(COALESCE(efectivo,0)),0),
+                    IFNULL(SUM(COALESCE(dolares,0) * COALESCE(dolar,0)),0)
+                FROM ventas
+                WHERE fecha LIKE ? AND sucursal = ?
+            """, (f"{fecha_str}%", sucursal))
+            s_efe, s_dol_mxn = cur.fetchone()
+            ventas_efectivo = (s_efe or 0) + (s_dol_mxn or 0)
 
-        cur.execute("""
-            SELECT IFNULL(SUM(precio),0)
-            FROM ventas
-            WHERE fecha LIKE ? AND sucursal = ?
-              AND (tipo_pago='Mixto' OR metodo_pago='Mixto')
-        """, (f"{fecha_str}%", sucursal))
-        mixto_total = cur.fetchone()[0] or 0
-        ventas_efectivo += (mixto_total / 2.0)
-        ventas_tarjeta  += (mixto_total / 2.0)
+            cur.execute("""
+                SELECT IFNULL(SUM(COALESCE(tarjeta,0)),0)
+                FROM ventas
+                WHERE fecha LIKE ? AND sucursal = ?
+            """, (f"{fecha_str}%", sucursal))
+            ventas_tarjeta = cur.fetchone()[0] or 0
+        else:
+            cur.execute("""
+                SELECT IFNULL(SUM(precio),0)
+                FROM ventas
+                WHERE fecha LIKE ? AND sucursal = ?
+                  AND (tipo_pago IN ('Efectivo','Dólar') OR metodo_pago IN ('Efectivo','Dólar'))
+            """, (f"{fecha_str}%", sucursal))
+            ventas_efectivo = cur.fetchone()[0] or 0
+
+            cur.execute("""
+                SELECT IFNULL(SUM(precio),0)
+                FROM ventas
+                WHERE fecha LIKE ? AND sucursal = ?
+                  AND (tipo_pago='Tarjeta' OR metodo_pago='Tarjeta')
+            """, (f"{fecha_str}%", sucursal))
+            ventas_tarjeta = cur.fetchone()[0] or 0
+
+            cur.execute("""
+                SELECT IFNULL(SUM(precio),0)
+                FROM ventas
+                WHERE fecha LIKE ? AND sucursal = ?
+                  AND (tipo_pago='Mixto' OR metodo_pago='Mixto')
+            """, (f"{fecha_str}%", sucursal))
+            mixto_total = cur.fetchone()[0] or 0
+
+            ventas_efectivo += (mixto_total / 2.0)
+            ventas_tarjeta  += (mixto_total / 2.0)
 
     cur.execute("""
         SELECT IFNULL(SUM(monto),0)
@@ -2098,12 +2208,12 @@ def corte_del_dia():
         WHERE fecha = ? AND sucursal = ?
         ORDER BY id DESC LIMIT 1
     """, (fecha_str, sucursal))
-    fondo = cur.fetchone()
-    fondo_inicial = fondo[0] if fondo else 0
+    fila_fondo = cur.fetchone()
+    fondo_inicial = fila_fondo[0] if fila_fondo else 0
 
-    total_entradas_efectivo = fondo_inicial + ventas_efectivo
-    total_caja = total_entradas_efectivo - gastos
-    ventas_total_dia = ventas_efectivo + ventas_tarjeta
+    total_entradas_efectivo = (fondo_inicial or 0) + (ventas_efectivo or 0)
+    total_caja = total_entradas_efectivo - (gastos or 0)
+    ventas_total_dia = (ventas_efectivo or 0) + (ventas_tarjeta or 0)
 
     conn.close()
 
