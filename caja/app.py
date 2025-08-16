@@ -205,13 +205,11 @@ def sso_login_caja():
     except (SignatureExpired, BadSignature):
         return redirect("/")
 
-    # Crea/renueva sesión en Caja
     session["usuario"] = data.get("usuario","")
     session["tipo"] = data.get("tipo","")
     session["sucursal"] = data.get("sucursal","")
     session["inicio_sesion"] = datetime.now().isoformat()
 
-    # Redirige a su panel
     return redirect(_destino_panel_caja())
 
 @app.before_request
@@ -537,7 +535,6 @@ def gastos():
     fecha_hoy_str = datetime.now(TZ).strftime("%d-%m-%Y")
     sucursales = ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
 
-    # Obtener filtros (solo los usa el admin)
     sucursal_filtro = request.args.get("sucursal", sucursal_sesion)
     fecha_filtro = request.args.get("fecha", fecha_hoy_str)
 
@@ -696,7 +693,7 @@ def eliminar_venta_admin(id):
             if not row:
                 return jsonify(success=False)
 
-            fecha_ts, sucursal = row  # fecha_ts tiene formato "%d-%m-%Y %H:%M:%S"
+            fecha_ts, sucursal = row  
 
             cur.execute("DELETE FROM ventas WHERE id = ?", (id,))
             conn.commit()
@@ -1511,7 +1508,7 @@ def feria():
                 reponer[denom] = cantidad
                 total_reponer += cantidad * denom
 
-                sugerido = min(cantidad, objetivo)  # sugerido a reponer
+                sugerido = min(cantidad, objetivo)  
                 cur.execute("UPDATE fondo SET cantidad_actual = cantidad_actual - ? WHERE denominacion = ?", (sugerido, denom))
             elif actual > objetivo:
                 cantidad = actual - objetivo
@@ -1655,9 +1652,9 @@ def guardar_feria():
 
             nuevo_valor = actual_caja
             if diferencias[val] < 0:
-                nuevo_valor -= abs(diferencias[val])  # Se dio dinero, se resta
+                nuevo_valor -= abs(diferencias[val])  
             elif diferencias[val] > 0:
-                nuevo_valor += abs(diferencias[val])  # Sobró dinero, se suma
+                nuevo_valor += abs(diferencias[val])  
 
             cur.execute("UPDATE caja SET cantidad = ? WHERE denom = ?", (nuevo_valor, val))
 
@@ -1883,7 +1880,7 @@ def enviar_mensaje():
     destinatario = data.get("destinatario")
     mensaje = data.get("mensaje")
     modulo = data.get("modulo")
-    archivo = data.get("archivo", None)  # Opcional
+    archivo = data.get("archivo", None)  
 
     if not mensaje or not destinatario:
         return jsonify({"ok": False, "error": "Mensaje o destinatario faltante"})
@@ -1961,11 +1958,10 @@ def ver_reporte_excel():
     gastos = []
 
     if sucursal and fecha:
-        # ✅ Manejar correctamente fechas en ambos formatos
         try:
             fecha_str = datetime.strptime(fecha, "%Y-%m-%d").strftime("%d-%m-%Y")
         except ValueError:
-            fecha_str = fecha  # Si ya viene en %d-%m-%Y lo dejamos igual
+            fecha_str = fecha  
 
         with sqlite3.connect(DB_PATH) as conn:
             conn.row_factory = sqlite3.Row
@@ -2040,13 +2036,13 @@ def reporte_excel():
 
     tipo_usuario = session.get("tipo")
     sucursal = request.args.get("sucursal", session.get("sucursal", ""))
-    fecha = request.args.get("fecha", fecha_hoy())  # puede venir como DD-MM-YYYY
+    fecha = request.args.get("fecha", fecha_hoy())  
 
     
     try:
         fecha = datetime.strptime(fecha, "%Y-%m-%d").strftime("%d-%m-%Y")
     except:
-        pass  # ya está en formato correcto
+        pass 
 
     if tipo_usuario != "admin":
         sucursal = session.get("sucursal", "")

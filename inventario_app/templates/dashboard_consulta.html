@@ -199,10 +199,8 @@
     <a href="/confirmar-transferencias" class="btn">✅ Confirmar transferencias</a>
     <a href="/recibir-garantia" class="btn">📦🔁 Recibir Garantía</a>
 
-    <!-- Nuevo: botón uniforme para Ir a Inventario (misma estética, misma ruta) -->
     <a href="/ir-inventario" class="btn">📋 Ir a Inventario</a>
 
-    <!-- Botones especiales uniformados conservando rutas -->
     <a href="/ir-caja" class="btn btn-secondary">↩ Volver a Caja</a>
     <a href="/logout-global" class="btn btn-danger">Cerrar sesión (ambas)</a>
   </div>
@@ -213,7 +211,7 @@
 <script>
   async function revisarNotificaciones() {
     try {
-      const res = await fetch("/chat/notificaciones?modulo=Inventario");
+      const res = await fetch("/chat/notificaciones?modulo=Inventario"); 
       const data = await res.json();
       if (data.nuevos > 0) {
         const n = document.getElementById("notif");
