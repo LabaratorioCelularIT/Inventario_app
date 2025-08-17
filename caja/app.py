@@ -678,45 +678,96 @@ def ventas():
 @app.route('/eliminar-venta-admin/<int:id>', methods=['POST'])
 def eliminar_venta_admin(id):
     if "usuario" not in session or session.get("tipo") != "admin":
-        return jsonify(success=False)
-
+        return jsonify(success=False, msg="no-auth")
     try:
         with sqlite3.connect(DB_PATH) as conn:
             cur = conn.cursor()
 
             cur.execute("""
-                SELECT fecha, sucursal
+                SELECT id, fecha, sucursal,
+                       IFNULL(precio,0),
+                       IFNULL(tipo_pago,''),
+                       IFNULL(dolar,0),
+                       IFNULL(referencia,'')
                 FROM ventas
                 WHERE id = ?
             """, (id,))
             row = cur.fetchone()
             if not row:
-                return jsonify(success=False)
+                return jsonify(success=False, msg="venta-no-encontrada")
 
-            fecha_ts, sucursal = row  
+            _, fecha_ts, sucursal, precio, tipo_pago, v_tc, v_ref = row
+            fecha_dia = (fecha_ts or "").split(" ")[0]  # "dd-mm-YYYY"
+
+            v_efectivo = 0.0
+            v_tarjeta  = 0.0
+            v_dolares  = 0.0
+            tp = (tipo_pago or "").strip().lower()
+            if tp in ("efectivo", "cash"):
+                v_efectivo = float(precio or 0)
+            elif tp in ("tarjeta", "pos", "tpv", "debito", "crédito", "credito"):
+                v_tarjeta = float(precio or 0)
+            elif tp in ("dolares", "dólares", "dolar", "dólar", "usd"):
+                v_dolares = float(precio or 0)
+            else:
+                v_efectivo = float(precio or 0)
+
+            def descontar_monto(columna, monto):
+                if monto <= 0:
+                    return 0.0
+                params = [f"{fecha_dia}%", sucursal]
+                filtro_ref = ""
+                if (v_ref or "").strip() != "":
+                    filtro_ref = "AND IFNULL(referencia,'') = ?"
+                    params.append(v_ref)
+                retirado = 0.0
+                while monto > 1e-6:
+                    cur.execute(f"""
+                        SELECT rowid, IFNULL({columna},0)
+                        FROM ventas_desglose
+                        WHERE fecha LIKE ?
+                          AND sucursal = ?
+                          {filtro_ref}
+                          AND IFNULL({columna},0) > 0
+                        ORDER BY rowid DESC
+                        LIMIT 1
+                    """, params)
+                    r = cur.fetchone()
+                    if not r:
+                        break
+                    rid, disponible = r
+                    disponible = float(disponible or 0)
+                    quitar = min(monto, disponible)
+                    if quitar <= 0:
+                        break
+                    cur.execute(f"""
+                        UPDATE ventas_desglose
+                           SET {columna} = {columna} - ?
+                         WHERE rowid = ?
+                    """, (quitar, rid))
+                    cur.execute("""
+                        SELECT IFNULL(efectivo,0), IFNULL(tarjeta,0), IFNULL(dolares,0)
+                          FROM ventas_desglose
+                         WHERE rowid = ?
+                    """, (rid,))
+                    e, t, d = cur.fetchone()
+                    if abs(e) < 1e-6 and abs(t) < 1e-6 and abs(d) < 1e-6:
+                        cur.execute("DELETE FROM ventas_desglose WHERE rowid = ?", (rid,))
+                    monto -= quitar
+                    retirado += quitar
+                return retirado
+
+            r_e = descontar_monto("efectivo", v_efectivo)
+            r_t = descontar_monto("tarjeta",  v_tarjeta)
+            r_d = descontar_monto("dolares",  v_dolares)
 
             cur.execute("DELETE FROM ventas WHERE id = ?", (id,))
             conn.commit()
 
-            cur.execute("""
-                SELECT COUNT(*)
-                FROM ventas
-                WHERE fecha = ? AND sucursal = ?
-            """, (fecha_ts, sucursal))
-            quedan = int(cur.fetchone()[0] or 0)
-
-            if quedan == 0:
-                cur.execute("""
-                    DELETE FROM ventas_desglose
-                    WHERE fecha = ? AND sucursal = ?
-                """, (fecha_ts, sucursal))
-                conn.commit()
-
-        return jsonify(success=True)
-
+        return jsonify(success=True, msg=f"descontado e={r_e} t={r_t} d={r_d}")
     except Exception as e:
-        print("Error al eliminar venta:", e)
-        return jsonify(success=False)
+        print("Error al eliminar venta:", repr(e))
+        return jsonify(success=False, msg=str(e))
 
 @app.route("/eliminar-item", methods=["POST"])
 def eliminar_item():
