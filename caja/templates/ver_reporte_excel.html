@@ -1,41 +1,178 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Reporte Diario de Corte</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
-<style>
-:root{--azul:#0c3b6a;--cel:#eaf2ff;--card:#fff;--b:#e6e9ef;--ok:#2ecc71;--warn:#f1c40f;--bad:#e74c3c}
-*{box-sizing:border-box}body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--cel)}
-.topbar{background:var(--azul);color:#fff;padding:18px 20px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.2);display:flex;align-items:center;gap:12px}
-.topbar img{height:28px}
-.wrap{max-width:980px;margin:26px auto;padding:0 16px}
-.card{background:var(--card);border:1px solid var(--b);border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.06);padding:18px}
-.row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.kpi{background:#f8fbff;border:1px solid var(--b);border-radius:12px;padding:14px}
-.kpi h4{margin:0 0 6px 0;font-size:13px;color:#406080;font-weight:600}
-.kpi .v{font-size:22px;font-weight:800}
-.kpi.ok .v{color:var(--ok)}.kpi.bad .v{color:var(--bad)}.kpi.warn .v{color:#8a6d3b}
-.filters{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-select,input[type="date"]{border:1px solid var(--b);border-radius:10px;padding:10px 12px;background:#fff}
-button{border:0;background:#1f6bd8;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
-button:disabled{opacity:.6;cursor:not-allowed}
-.section{margin-top:14px}
-.sub{font-size:13px;color:#6b7a90;margin-top:4px}
-.footer-btns{display:flex;gap:8px;margin-top:14px}
-a.link{display:inline-block;background:#e74c3c;color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700}
-.table{margin-top:12px;border:1px solid var(--b);border-radius:10px;overflow:hidden}
-.table .rowh{display:grid;grid-template-columns:repeat(3,1fr);background:#f3f7ff;padding:10px 12px;font-weight:700}
-.table .rowb{display:grid;grid-template-columns:repeat(3,1fr);padding:10px 12px;border-top:1px solid var(--b)}
-@media(max-width:850px){.row{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:520px){.row{grid-template-columns:1fr}}
-</style>
+  <meta charset="UTF-8">
+  <title>Reporte Diario de Corte</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+  <style>
+    :root {
+      --azul: #0c3b6a;
+      --cel: #eaf2ff;
+      --card: #fff;
+      --b: #e6e9ef;
+      --ok: #2ecc71;
+      --warn: #f1c40f;
+      --bad: #e74c3c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--cel);
+    }
+
+    .topbar {
+      background: var(--azul);
+      color: #fff;
+      padding: 12px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .volver-btn {
+      background: #e74c3c;
+      color: white;
+      padding: 10px 14px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .volver-btn:hover { background: #c0392b; }
+
+    .title-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 12px;
+    }
+    .title-center img { height: 70px; }
+    .title-center h1 {
+      font-size: 25px;
+      font-weight: bold;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    .wrap { max-width: 980px; margin: 26px auto; padding: 0 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--b);
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.06);
+      padding: 18px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .kpi {
+      background: #f8fbff;
+      border: 1px solid var(--b);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .kpi h4 {
+      margin: 0 0 6px 0;
+      font-size: 13px;
+      color: #406080;
+      font-weight: 600;
+    }
+    .kpi .v { font-size: 22px; font-weight: 800; }
+    .kpi.ok .v { color: var(--ok); }
+    .kpi.bad .v { color: var(--bad); }
+    .kpi.warn .v { color: #8a6d3b; }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    select, input[type="date"] {
+      border: 1px solid var(--b);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fff;
+    }
+    button {
+      border: 0;
+      background: #1f6bd8;
+      color: #fff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+
+    .section { margin-top: 14px; }
+    .sub {
+      font-size: 13px;
+      color: #6b7a90;
+      margin-top: 4px;
+    }
+
+    .footer-btns {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    a.link {
+      display: inline-block;
+      background: var(--azul);
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    a.link:hover { opacity: 0.9; }
+
+    .table {
+      margin-top: 12px;
+      border: 1px solid var(--b);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .table .rowh,
+    .table .rowb {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      padding: 10px 12px;
+    }
+    .table .rowh {
+      background: #f3f7ff;
+      font-weight: 700;
+    }
+    .table .rowb { border-top: 1px solid var(--b); }
+
+    @media(max-width:850px) { .row { grid-template-columns: repeat(2, 1fr); } }
+    @media(max-width:520px) { 
+      .row { grid-template-columns: 1fr; }
+      .title-center h1 { font-size: 16px; }
+    }
+  </style>
 </head>
 <body>
+
 <div class="topbar">
-  <img src="{{ url_for('static', filename='logo.png') }}" alt="logo">
-  <div>Celulares Crédito Fácil – Reporte Diario de Corte</div>
+  <a class="volver-btn"
+     href="{% if tipo_usuario == 'admin' %}/panel-admin{% elif tipo_usuario == 'consulta' %}/panel-consulta{% else %}/panel-reparto{% endif %}">
+     ← Volver al Panel
+  </a>
+  <div class="title-center">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="logo">
+    <h1>Celulares Crédito Fácil – Reporte Diario de Corte</h1>
+  </div>
 </div>
 
 <div class="wrap">
@@ -56,13 +193,6 @@ a.link{display:inline-block;background:#e74c3c;color:#fff;padding:10px 14px;bord
       <label>Fecha:</label>
       <input type="date" id="fecha" value="{{ fecha }}">
       <button id="btnFiltrar" type="button">Filtrar</button>
-      {% if tipo_usuario == 'admin' %}
-      <a class="link" href="/panel-admin" style="background:#e74c3c">← Volver al Panel</a>
-      {% elif tipo_usuario == 'consulta' %}
-      <a class="link" href="/panel-consulta" style="background:#e74c3c">← Volver al Panel</a>
-      {% elif tipo_usuario == 'reparto' %}
-      <a class="link" href="/panel-reparto" style="background:#e74c3c">← Volver al Panel</a>
-      {% endif %}
     </div>
 
     <div class="row">
@@ -105,10 +235,9 @@ a.link{display:inline-block;background:#e74c3c;color:#fff;padding:10px 14px;bord
 
 <script>
 function f(n){return new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:2}).format(Number(n||0))}
-
 async function cargar(){
   const sucEl = document.getElementById('sucursal');
-  const suc = (sucEl.tagName === 'SELECT') ? sucEl.value : sucEl.value;
+  const suc = sucEl.value;
   const fecha = document.getElementById('fecha').value;
   const btn = document.getElementById('btnFiltrar');
 
@@ -155,8 +284,10 @@ async function cargar(){
 
 document.getElementById('btnFiltrar').addEventListener('click', cargar);
 document.getElementById('fecha').addEventListener('change', cargar);
-const sucEl = document.getElementById('sucursal'); if(sucEl && sucEl.tagName==='SELECT'){ sucEl.addEventListener('change', cargar); }
+const sucEl = document.getElementById('sucursal');
+if(sucEl && sucEl.tagName==='SELECT'){ sucEl.addEventListener('change', cargar); }
 window.addEventListener('DOMContentLoaded', cargar);
 </script>
+
 </body>
 </html>

@@ -5,112 +5,187 @@
   <title>Fondo Actual</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    :root {
-      --azul: #003366;
-      --celeste: #f0f8ff;
-      --blanco: #ffffff;
-      --gris: #f8f8f8;
-      --sombra: rgba(0, 0, 0, 0.1);
-      --resaltado: #d9ecf5;
+    :root{
+      --azul-rey:#003366;
+      --azul:#337ab7;
+      --azul-hover:#286090;
+      --celeste:#e6f0ff;
+      --blanco:#ffffff;
+      --gris:#f5f5f5;
+      --borde:#d9e1ec;
+      --sombra:rgba(0,0,0,.08);
+      --texto:#2c3e50;
+      --verde:#2e8b57;
+      --rojo:#d9534f;
+      --rojo-hover:#c9302c;
     }
 
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      background-color: var(--celeste);
-      color: #333;
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:'Segoe UI',sans-serif;
+      background:var(--celeste);
+      color:var(--texto);
     }
 
-    .topbar {
-      background-color: var(--azul);
-      color: white;
-      padding: 16px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-      box-shadow: 0 2px 5px var(--sombra);
+    .topbar{
+      background:var(--azul-rey);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      padding:16px 20px;
+      font-size:22px;
+      font-weight:700;
+      box-shadow:0 2px 10px rgba(0,0,0,.2);
+      position:sticky;
+      top:0;
+      z-index:50;
+      border-bottom:3px solid #001f3f;
+    }
+    .topbar img{height:70px}
+
+    .volver-fijo{
+      position:fixed;
+      top:16px;
+      left:16px;
+      z-index:60;
     }
 
-    .container {
-      max-width: 520px;
-      margin: 40px auto;
-      background-color: var(--blanco);
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 0 8px var(--sombra);
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:10px 16px;
+      border-radius:10px;
+      font-weight:700;
+      text-decoration:none;
+      cursor:pointer;
+      box-shadow:0 4px 10px rgba(0,0,0,.06);
+      transition:background-color .2s ease, transform .1s ease, filter .2s ease;
+      user-select:none;
+      border:2px solid transparent;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+
+    .btn-rojo {
+      background: var(--rojo);
+      color: #fff;
+      border-color: var(--rojo-hover);
+    }
+    .btn-rojo:hover {
+      background: var(--rojo-hover);
     }
 
-    h2 {
-      color: var(--azul);
-      margin-top: 0;
-      text-align: center;
+    .container{
+      max-width:720px;
+      margin:30px auto;
+      background:var(--blanco);
+      border-radius:16px;
+      padding:24px;
+      box-shadow:0 8px 24px var(--sombra);
+      border:1px solid var(--borde);
     }
 
-    ul {
-      list-style: none;
-      padding: 0;
+    h2{
+      margin:0 0 16px 0;
+      text-align:center;
+      color:var(--azul-rey);
     }
 
-    li {
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
+    .lista{
+      list-style:none;
+      padding:0;
+      margin:0;
+      border:1px solid var(--borde);
+      border-radius:12px;
+      overflow:hidden;
+      box-shadow:0 4px 14px var(--sombra);
+      background:#fff;
+    }
+    .item{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      padding:12px 14px;
+      border-bottom:1px solid #edf2f7;
+      align-items:center;
+    }
+    .item:last-child{border-bottom:none}
+    .item:nth-child(even){background:#fafcff}
+    .denom{font-weight:600}
+    .destacado{font-weight:700;color:var(--azul-rey)}
+    .valor{font-weight:700}
+
+    .footer{
+      margin-top:16px;
+      text-align:center;
+      font-size:16px;
+      font-weight:700;
+    }
+    .footer .total{color:var(--verde)}
+
+    .volver-bottom{
+      text-align:center;
+      margin-top:20px;
+      display:none;
     }
 
-    .destacado {
-      font-weight: bold;
-      color: var(--azul);
-    }
-
-    .volver {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 10px 16px;
-      background-color: var(--azul);
-      color: white;
-      text-decoration: none;
-      border-radius: 8px;
-      text-align: center;
-      transition: background-color 0.2s;
-    }
-
-    .volver:hover {
-      background-color: #001f4d;
-    }
-
-    .footer {
-      text-align: center;
-      margin-top: 20px;
-      font-weight: bold;
-      font-size: 16px;
-    }
-
-    .footer span {
-      color: green;
+    @media (max-width:720px){
+      .container{margin:20px 14px;padding:18px}
+      .volver-bottom{display:block}
     }
   </style>
 </head>
 <body>
-  <div class="topbar">💼 Fondo Actual</div>
+
+  <div class="topbar">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <span>Celulares Crédito Fácil – 💼 Fondo Actual</span>
+  </div>
+
+  <!-- Botón Volver rojo -->
+  <div class="volver-fijo">
+    {% if session['tipo'] == 'admin' %}
+      <a href="{{ url_for('panel_admin') }}" class="btn btn-rojo">← Volver</a>
+    {% elif session['tipo'] == 'consulta' %}
+      <a href="{{ url_for('panel_consulta') }}" class="btn btn-rojo">← Volver</a>
+    {% elif session['tipo'] == 'reparto' %}
+      <a href="{{ url_for('panel_reparto') }}" class="btn btn-rojo">← Volver</a>
+    {% endif %}
+  </div>
 
   <div class="container">
     <h2>🧾 Detalle del Fondo Principal</h2>
-    <ul>
+
+    <ul class="lista">
       {% for item in fondo %}
-      <li>Monedas de ${{ item.denominacion }}: <span class="destacado">{{ item.cantidad }}</span> (Valor total: ${{ item.valor }})</li>
+      <li class="item">
+        <div class="denom">Monedas de ${{ item.denominacion }}:
+          <span class="destacado">{{ item.cantidad }}</span>
+        </div>
+        <div class="valor">$ {{ item.valor }}</div>
+      </li>
       {% endfor %}
     </ul>
 
-    <div class="footer">💰 <span>Total general del fondo: ${{ total_fondo }}</span></div>
+    <div class="footer">
+      💰 <span class="total">Total general del fondo: ${{ total_fondo }}</span>
+    </div>
 
-        <div style="text-align: center; margin-top: 20px;">
+    <div class="volver-bottom">
       {% if session['tipo'] == 'admin' %}
-        <a href="{{ url_for('panel_admin') }}" class="volver">⬅️ Volver</a>
+        <a href="{{ url_for('panel_admin') }}" class="btn btn-rojo">← Volver</a>
       {% elif session['tipo'] == 'consulta' %}
-        <a href="{{ url_for('panel_consulta') }}" class="volver">⬅️ Volver</a>
+        <a href="{{ url_for('panel_consulta') }}" class="btn btn-rojo">← Volver</a>
       {% elif session['tipo'] == 'reparto' %}
-        <a href="{{ url_for('panel_reparto') }}" class="volver">⬅️ Volver</a>
+        <a href="{{ url_for('panel_reparto') }}" class="btn btn-rojo">← Volver</a>
       {% endif %}
     </div>
   </div>
+
 </body>
 </html>
