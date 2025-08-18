@@ -16,6 +16,10 @@ import time
 import json
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+import ast
+from email.mime.text import MIMEText
+from email.utils import formataddr
 
 app = Flask(__name__)
 app.secret_key = 'clave-secreta-caja'
@@ -41,11 +45,11 @@ NOMBRES_REALES = {
     "admin_dvcd_6497": "David",
     "admin_vctr_9051": "Victoria",
     "consulta_abav_5921": "Abigail Avila",
-    "consulta_ftrr_8350": "Fátima Reyes",
+    "consulta_ftrr_8350": "Fatima Reyes",
     "consulta_cndz_1043": "Carolina Díaz",
     "consulta_abcr_6619": "Abigail Corona",
     "consulta_lzrz_1284": "Lizeth Ruiz",
-    "consulta_lsrv_2390": "Leslie Reservas",
+    "consulta_lsrv_2390": "Leslie",
     "consulta_alnd_7452": "Alondra",
     "consulta_lrbn_3017": "Lorena",
     "consulta_brsd_5126": "Briseida",
@@ -58,7 +62,13 @@ NOMBRES_REALES = {
     "consulta_arln_6235": "Arlen",
     "consulta_angl_0187": "Angela",
     "reparto_jsss_7493": "Jesús",
+    "consulta_daniel_6786": "Daneil",
+    "admin_cndz_1043": "Carolina (admin)",
+    "consulta_mrsa_5709": "Marisa",
+    "consulta_angs_1789": "Angeles",
+    "consulta_brayan_4812": "Brayan",
     "consulta_ajnd_7204": "Alejandrina (consulta)",
+    
 }
 
 TZ = timezone("America/Monterrey")
@@ -209,6 +219,147 @@ def _destino_panel_caja():
         return "/panel-reparto"
     return "/"
 
+def ahora_mx():
+    return datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y %H:%M:%S")
+
+def send_email(to_list, subject, html):
+    if not to_list:
+        return False
+    msg = MIMEText(html, "html", "utf-8")
+    msg["Subject"] = subject
+    msg["From"] = formataddr((SMTP_FROM_NAME, SMTP_USER))  # remitente válido
+    msg["To"] = ", ".join(to_list)
+    context = ssl.create_default_context()
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
+        server.starttls(context=context)
+        if SMTP_USER:
+            server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(SMTP_USER, to_list, msg.as_string())
+    return True
+
+def get_admin_emails(conn):
+    cur = conn.cursor()
+    cur.execute("SELECT correo FROM usuarios WHERE tipo='admin' AND correo IS NOT NULL AND correo<>''")
+    return [r[0] for r in cur.fetchall()]
+
+def get_emails_by_usernames(conn, nombres):
+    if not nombres: return []
+    qmarks = ",".join("?" for _ in nombres)
+    cur = conn.cursor()
+    cur.execute(f"SELECT correo FROM usuarios WHERE nombre IN ({qmarks}) AND correo IS NOT NULL AND correo<>''", tuple(nombres))
+    return [r[0] for r in cur.fetchall()]
+
+def crear_pendiente(conn, tipo, referencia="", sucursal="", detalle_dict=None, creado_por="", involucrados=None):
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO pendientes (tipo, referencia, sucursal, fecha, detalle, estado, creado_por) VALUES (?, ?, ?, ?, ?, 'pendiente', ?)",
+        (tipo, referencia, sucursal, ahora_mx(), json.dumps(detalle_dict or {}), creado_por)
+    )
+    pid = cur.lastrowid
+    for u in (involucrados or []):
+        cur.execute("INSERT INTO pendientes_involucrados (pendiente_id, usuario, estado) VALUES (?, ?, 'pendiente')", (pid, u))
+    conn.commit()
+
+    try:
+        mails_invol = get_emails_by_usernames(conn, involucrados or [])
+        mails_admin = get_admin_emails(conn)
+        mails_watch = get_watchers_emails(conn)
+        to_list = list({*mails_invol, *mails_admin, *mails_watch})
+        asunto = f"[PENDIENTE] {tipo} — {referencia or 's/ ref'}"
+        html = f"""
+        <div style="font-family:Segoe UI,Arial,sans-serif">
+          <h2>Nuevo pendiente</h2>
+          <p><b>Tipo:</b> {tipo} | <b>Ref:</b> {referencia or '-'} | <b>Sucursal:</b> {sucursal or '-'}</p>
+          <p><b>Creado por:</b> {creado_por or '-'} | <b>Fecha:</b> {ahora_mx()}</p>
+          <p><b>Involucrados:</b> {", ".join(involucrados or []) or "-"}</p>
+          <pre style="background:#f6f6f6;padding:10px;border-radius:8px">{json.dumps(detalle_dict or {}, ensure_ascii=False, indent=2)}</pre>
+          <p><a href="{request.url_root.rstrip('/')}/pendientes" target="_blank">Abrir PENDIENTES</a></p>
+        </div>
+        """
+        if to_list:
+            send_email(to_list, asunto, html)
+        cur.execute("UPDATE pendientes_involucrados SET ultimo_correo=?, recordatorios=COALESCE(recordatorios,0)+1 WHERE pendiente_id=?", (ahora_mx(), pid))
+        conn.commit()
+    except Exception:
+        pass
+
+    return pid
+
+def _fetch_pendientes(conn, usuario_actual=None, solo_mios=False):
+    cur = conn.cursor()
+    if solo_mios:
+        cur.execute("""
+            SELECT p.id, p.tipo, p.referencia, p.sucursal, p.fecha, p.detalle, p.estado,
+                   GROUP_CONCAT(pi.usuario || ':' || pi.estado) AS inv_raw,
+                   COALESCE((SELECT estado FROM pendientes_involucrados WHERE pendiente_id=p.id AND usuario=?),'') AS mi_estado
+            FROM pendientes p
+            LEFT JOIN pendientes_involucrados pi ON pi.pendiente_id=p.id
+            WHERE EXISTS (SELECT 1 FROM pendientes_involucrados x WHERE x.pendiente_id=p.id AND x.usuario=?)
+            GROUP BY p.id
+            ORDER BY p.fecha DESC
+        """, (usuario_actual, usuario_actual))
+    else:
+        cur.execute("""
+            SELECT p.id, p.tipo, p.referencia, p.sucursal, p.fecha, p.detalle, p.estado,
+                   GROUP_CONCAT(pi.usuario || ':' || pi.estado) AS inv_raw,
+                   COALESCE((SELECT estado FROM pendientes_involucrados WHERE pendiente_id=p.id AND usuario=?),'') AS mi_estado
+            FROM pendientes p
+            LEFT JOIN pendientes_involucrados pi ON pi.pendiente_id=p.id
+            GROUP BY p.id
+            ORDER BY p.fecha DESC
+        """, (usuario_actual or "",))
+    rows = cur.fetchall()
+    lista = []
+    for r in rows:
+        inv = []
+        if r[7]:
+            for x in r[7].split(","):
+                if ":" in x:
+                    u, s = x.split(":", 1)
+                    inv.append({"usuario": u, "estado": s})
+        try:
+            dct = json.loads(r[5] or "{}")
+        except:
+            dct = {}
+        lista.append({
+            "id": r[0], "tipo": r[1], "referencia": r[2] or "", "sucursal": r[3] or "",
+            "fecha": r[4] or "", "detalle": dct, "estado": r[6],
+            "involucrados": inv, "mi_estado": r[8] or ""
+        })
+    return lista
+
+def usuarios_para_select():
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+
+        cur.execute("PRAGMA table_info(usuarios)")
+        cols = {row["name"] for row in cur.fetchall()}
+
+        if "nombre_real" in cols:
+            cur.execute("""
+                SELECT nombre AS usuario, nombre_real AS nombre
+                FROM usuarios
+                ORDER BY nombre_real, nombre
+            """)
+            rows = [dict(r) for r in cur.fetchall()]
+        else:
+            cur.execute("SELECT nombre FROM usuarios ORDER BY nombre")
+            rows = [{"usuario": r["nombre"],
+                     "nombre": NOMBRES_REALES.get(r["nombre"], r["nombre"])}
+                    for r in cur.fetchall()]
+    return rows
+
+def get_watchers_emails(conn):
+    cur = conn.cursor()
+    cur.execute("SELECT correo FROM usuarios WHERE recibe_todos_pendientes=1 AND correo IS NOT NULL AND correo<>''")
+    return [r[0] for r in cur.fetchall()]
+
+def is_watcher(conn, user):
+    cur = conn.cursor()
+    cur.execute("SELECT 1 FROM usuarios WHERE nombre=? AND recibe_todos_pendientes=1", (user,))
+    return cur.fetchone() is not None
+
 @app.route("/sso-login-caja")
 def sso_login_caja():
     token = request.args.get("token","")
@@ -307,6 +458,93 @@ def panel_consulta():
         tipo=session.get("tipo", ""),
         nombre_real=nombre_real
     )
+
+@app.route("/crear-pendiente", methods=["GET","POST"])
+def crear_pendiente_view():
+    if "usuario" not in session or session.get("tipo") not in ("admin","consulta"):
+        return redirect("/")
+
+    if request.method == "POST":
+        tipo = request.form.get("tipo","otro")
+        referencia = request.form.get("referencia","")
+        sucursal = request.form.get("sucursal","")
+        detalle_txt = request.form.get("detalle","")
+        involucrados = request.form.getlist("involucrados")   # <- multiple
+        try:
+            detalle = json.loads(detalle_txt) if detalle_txt.strip().startswith("{") else {"texto": detalle_txt}
+        except Exception:
+            detalle = {"texto": detalle_txt}
+        with sqlite3.connect(DB_PATH) as conn:
+            crear_pendiente(conn, tipo, referencia, sucursal, detalle,
+                            session.get("usuario",""), involucrados)
+        flash("Pendiente creado")
+        return redirect("/pendientes")
+
+    usuarios = usuarios_para_select()
+    return render_template(
+        "crear_pendiente.html",
+        usuarios=usuarios,                    
+        sucursales=SUCURSALES,
+        sucursal_default=session.get("sucursal","")
+    )
+
+@app.route("/pendientes")
+def ver_pendientes():
+    if "usuario" not in session:
+        return redirect("/")
+    with sqlite3.connect(DB_PATH) as conn:
+        data = _fetch_pendientes(conn, session.get("usuario",""), solo_mios=False)
+    return render_template("ver_pendientes.html", pendientes=data, usuario_actual=session.get("usuario",""), soy_admin=(session.get("tipo")=="admin"))
+
+@app.route("/mis-pendientes")
+def mis_pendientes():
+    if "usuario" not in session:
+        return redirect("/")
+    with sqlite3.connect(DB_PATH) as conn:
+        data = _fetch_pendientes(conn, session.get("usuario",""), solo_mios=True)
+    return render_template("ver_pendientes.html", pendientes=data, usuario_actual=session.get("usuario",""), soy_admin=(session.get("tipo")=="admin"))
+
+@app.route("/pendiente/realizado/<int:pid>", methods=["POST"])
+def pendiente_realizado(pid):
+    if "usuario" not in session:
+        return jsonify(success=False)
+    usuario = session.get("usuario","")
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("UPDATE pendientes_involucrados SET estado='realizado' WHERE pendiente_id=? AND usuario=?", (pid, usuario))
+        conn.commit()
+        cur.execute("SELECT COUNT(*) FROM pendientes_involucrados WHERE pendiente_id=? AND estado='pendiente'", (pid,))
+        quedan = int(cur.fetchone()[0] or 0)
+        if quedan == 0:
+            cur.execute("UPDATE pendientes SET estado='autorizado', autorizado_por=?, fecha_autorizacion=? WHERE id=?", (usuario, ahora_mx(), pid))
+            conn.commit()
+    return jsonify(success=True, quedan=quedan)
+
+@app.route("/pendientes-resumen-json")
+def pendientes_resumen_json():
+    if "usuario" not in session:
+        return jsonify({"ok": False})
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM pendientes WHERE estado='pendiente'")
+        total = int(cur.fetchone()[0] or 0)
+        cur.execute("SELECT tipo, COUNT(*) FROM pendientes WHERE estado='pendiente' GROUP BY tipo")
+        por_tipo = {t: c for t, c in cur.fetchall()}
+    return jsonify({"ok": True, "total": total, "por_tipo": por_tipo})
+
+@app.route("/mis-pendientes-resumen-json")
+def mis_pendientes_resumen_json():
+    if "usuario" not in session:
+        return jsonify({"ok": False})
+    u = session.get("usuario","")
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("""SELECT COUNT(*)
+                       FROM pendientes_involucrados pi
+                       JOIN pendientes p ON p.id=pi.pendiente_id
+                       WHERE pi.usuario=? AND pi.estado='pendiente' AND p.estado='pendiente'""", (u,))
+        total = int(cur.fetchone()[0] or 0)
+    return jsonify({"ok": True, "total": total})
 
 @app.route("/registro", methods=["GET", "POST"])
 def registro():
@@ -465,35 +703,6 @@ def enviar_codigo():
     else:
         return render_template("enviar_codigo.html", error=f"No se pudo enviar el correo: {err}")
 
-@app.route("/pendientes")
-def ver_pendientes():
-    if "usuario" not in session or session.get("tipo") != "admin":
-        return redirect("/")
-    with sqlite3.connect(DB_PATH) as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT id, tipo, referencia, sucursal, fecha, detalle, estado, creado_por, autorizado_por, fecha_autorizacion FROM pendientes ORDER BY fecha DESC")
-        rows = cur.fetchall()
-    lista = []
-    for r in rows:
-        dct = {}
-        try:
-            dct = json.loads(r[5] or "{}")
-        except:
-            dct = {}
-        lista.append({
-            "id": r[0],
-            "tipo": r[1],
-            "referencia": r[2] or "",
-            "sucursal": r[3] or "",
-            "fecha": r[4] or "",
-            "detalle": dct,
-            "estado": r[6],
-            "creado_por": r[7] or "",
-            "autorizado_por": r[8] or "",
-            "fecha_autorizacion": r[9] or ""
-        })
-    return render_template("ver_pendientes.html", pendientes=lista)
-
 @app.route("/pendiente/autorizar/<int:pid>", methods=["POST"])
 def autorizar_pendiente(pid):
     if "usuario" not in session or session.get("tipo") != "admin":
@@ -551,18 +760,6 @@ def rechazar_pendiente(pid):
         cur.execute("UPDATE pendientes SET estado='rechazado', autorizado_por=?, fecha_autorizacion=? WHERE id=?", (admin, ahora_mx(), pid))
         conn.commit()
     return jsonify(success=True)
-
-@app.route("/pendientes-resumen-json")
-def pendientes_resumen_json():
-    if "usuario" not in session or session.get("tipo") != "admin":
-        return jsonify({"ok": False})
-    with sqlite3.connect(DB_PATH) as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT COUNT(*) FROM pendientes WHERE estado='pendiente'")
-        total = int(cur.fetchone()[0] or 0)
-        cur.execute("SELECT tipo, COUNT(*) FROM pendientes WHERE estado='pendiente' GROUP BY tipo")
-        por_tipo = {t: c for t, c in cur.fetchall()}
-    return jsonify({"ok": True, "total": total, "por_tipo": por_tipo})
 
 @app.route('/firmar', methods=['POST'])
 def firmar():
