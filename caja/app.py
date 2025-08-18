@@ -13,6 +13,9 @@ from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from itsdangerous import URLSafeTimedSerializer
 from urllib.parse import urlencode
 import time
+import json
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 app = Flask(__name__)
 app.secret_key = 'clave-secreta-caja'
@@ -184,6 +187,18 @@ def enviar_codigo_verificacion(destino: str, codigo: str):
         except Exception as e2:
             return False, f"{type(e2).__name__}: {e2}"
 
+def ahora_mx():
+    return datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y %H:%M:%S")
+
+def crear_pendiente(conn, tipo, referencia="", sucursal="", detalle_dict=None, creado_por=""):
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO pendientes (tipo, referencia, sucursal, fecha, detalle, estado, creado_por) VALUES (?, ?, ?, ?, ?, 'pendiente', ?)",
+        (tipo, referencia, sucursal, ahora_mx(), json.dumps(detalle_dict or {}), creado_por)
+    )
+    conn.commit()
+    return cur.lastrowid
+
 def _destino_panel_caja():
     t = session.get("tipo","")
     if t == "admin":
@@ -228,7 +243,7 @@ def forzar_logout_por_turno():
             if ahora - inicio_sesion > timedelta(hours=4):
                 session.clear()
                 flash("🔒 Tu sesión ha expirado después del turno de 4 horas. Por favor inicia sesión de nuevo.")
-                return redirect("/login")
+                return redirect("/")
 
 @app.route("/", methods=["GET", "POST"])
 def login():
@@ -301,35 +316,38 @@ def registro():
         contrasena = request.form["contrasena"]
         confirmar = request.form["confirmar"]
         telefono = request.form["telefono"]
-        tipo = request.form["tipo"]
+        tipo_u = request.form["tipo"]
 
         if contrasena != confirmar:
             return render_template("registro.html", error="Las contraseñas no coinciden.")
 
         patron = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=?<>.,]).{6,}$"
         if not re.match(patron, contrasena):
-            return render_template("registro.html", error="La contrasena no cumple con los requisitos.")
+            return render_template("registro.html", error="La contraseña no cumple con los requisitos.")
 
         nombre_base = nombre.split()[0].lower()
         codigo = random.randint(1000, 9999)
-        usuario_generado = f"{tipo}_{nombre_base}_{codigo}"
+        usuario_generado = f"{tipo_u}_{nombre_base}_{codigo}"
 
-        conn = sqlite3.connect("inventario.sqlite3")
-        cur = conn.cursor()
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT 1 FROM usuarios WHERE nombre = ?", (usuario_generado,))
+            while cur.fetchone():
+                codigo = random.randint(1000, 9999)
+                usuario_generado = f"{tipo_u}_{nombre_base}_{codigo}"
+                cur.execute("SELECT 1 FROM usuarios WHERE nombre = ?", (usuario_generado,))
 
-        cur.execute("SELECT * FROM usuarios WHERE nombre = ?", (usuario_generado,))
-        while cur.fetchone():
-            codigo = random.randint(1000, 9999)
-            usuario_generado = f"{tipo}_{nombre_base}_{codigo}"
-            cur.execute("SELECT * FROM usuarios WHERE nombre = ?", (usuario_generado,))
+            detalle = {
+                "nombre_generado": usuario_generado,
+                "contrasena": contrasena,
+                "tipo": tipo_u,
+                "correo": correo,
+                "telefono": telefono,
+                "nombre_capturado": nombre
+            }
+            crear_pendiente(conn, "registro_usuario", referencia=usuario_generado, sucursal="", detalle_dict=detalle, creado_por=usuario_generado)
 
-        cur.execute("INSERT INTO usuarios (nombre, contraseña, tipo, correo, telefono) VALUES (?, ?, ?, ?, ?)", 
-                    (usuario_generado, contrasena, tipo, correo, telefono))
-        conn.commit()
-        conn.close()
-
-        return render_template("registro.html", success=f"Usuario registrado con éxito: {usuario_generado}")
-
+        return render_template("registro.html", success="Tu solicitud fue enviada. Un administrador debe autorizarla.")
     return render_template("registro.html")
 
 @app.route("/recuperar", methods=["GET", "POST"])
@@ -446,6 +464,105 @@ def enviar_codigo():
         return redirect(url_for("verificar_codigo", usuario=usuario))
     else:
         return render_template("enviar_codigo.html", error=f"No se pudo enviar el correo: {err}")
+
+@app.route("/pendientes")
+def ver_pendientes():
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return redirect("/")
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT id, tipo, referencia, sucursal, fecha, detalle, estado, creado_por, autorizado_por, fecha_autorizacion FROM pendientes ORDER BY fecha DESC")
+        rows = cur.fetchall()
+    lista = []
+    for r in rows:
+        dct = {}
+        try:
+            dct = json.loads(r[5] or "{}")
+        except:
+            dct = {}
+        lista.append({
+            "id": r[0],
+            "tipo": r[1],
+            "referencia": r[2] or "",
+            "sucursal": r[3] or "",
+            "fecha": r[4] or "",
+            "detalle": dct,
+            "estado": r[6],
+            "creado_por": r[7] or "",
+            "autorizado_por": r[8] or "",
+            "fecha_autorizacion": r[9] or ""
+        })
+    return render_template("ver_pendientes.html", pendientes=lista)
+
+@app.route("/pendiente/autorizar/<int:pid>", methods=["POST"])
+def autorizar_pendiente(pid):
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return jsonify(success=False)
+    admin = session.get("usuario","")
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT id, tipo, detalle, estado FROM pendientes WHERE id = ?", (pid,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify(success=False, msg="No existe")
+        if row[3] != "pendiente":
+            return jsonify(success=False, msg="Ya procesado")
+        tipo = row[1]
+        detalle = {}
+        try:
+            detalle = json.loads(row[2] or "{}")
+        except:
+            detalle = {}
+
+        if tipo == "registro_usuario":
+            nombre = detalle.get("nombre_generado","")
+            contrasena = detalle.get("contrasena","")
+            tipo_u = detalle.get("tipo","consulta")
+            correo = detalle.get("correo","")
+            telefono = detalle.get("telefono","")
+            with conn:
+                c2 = conn.cursor()
+                c2.execute("SELECT 1 FROM usuarios WHERE nombre = ?", (nombre,))
+                if c2.fetchone():
+                    pass
+                else:
+                    c2.execute("INSERT INTO usuarios (nombre, contraseña, tipo, correo, telefono, aprobado) VALUES (?, ?, ?, ?, ?, 1)", (nombre, contrasena, tipo_u, correo, telefono))
+
+        if tipo == "feria":
+            pass
+
+        cur.execute("UPDATE pendientes SET estado='autorizado', autorizado_por=?, fecha_autorizacion=? WHERE id=?", (admin, ahora_mx(), pid))
+        conn.commit()
+    return jsonify(success=True)
+
+@app.route("/pendiente/rechazar/<int:pid>", methods=["POST"])
+def rechazar_pendiente(pid):
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return jsonify(success=False)
+    admin = session.get("usuario","")
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT estado FROM pendientes WHERE id = ?", (pid,))
+        row = cur.fetchone()
+        if not row:
+            return jsonify(success=False)
+        if row[0] != "pendiente":
+            return jsonify(success=False)
+        cur.execute("UPDATE pendientes SET estado='rechazado', autorizado_por=?, fecha_autorizacion=? WHERE id=?", (admin, ahora_mx(), pid))
+        conn.commit()
+    return jsonify(success=True)
+
+@app.route("/pendientes-resumen-json")
+def pendientes_resumen_json():
+    if "usuario" not in session or session.get("tipo") != "admin":
+        return jsonify({"ok": False})
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM pendientes WHERE estado='pendiente'")
+        total = int(cur.fetchone()[0] or 0)
+        cur.execute("SELECT tipo, COUNT(*) FROM pendientes WHERE estado='pendiente' GROUP BY tipo")
+        por_tipo = {t: c for t, c in cur.fetchall()}
+    return jsonify({"ok": True, "total": total, "por_tipo": por_tipo})
 
 @app.route('/firmar', methods=['POST'])
 def firmar():
@@ -697,7 +814,7 @@ def eliminar_venta_admin(id):
                 return jsonify(success=False, msg="venta-no-encontrada")
 
             _, fecha_ts, sucursal, precio, tipo_pago, v_tc, v_ref = row
-            fecha_dia = (fecha_ts or "").split(" ")[0]  # "dd-mm-YYYY"
+            fecha_dia = (fecha_ts or "").split(" ")[0]
 
             v_efectivo = 0.0
             v_tarjeta  = 0.0
@@ -712,12 +829,12 @@ def eliminar_venta_admin(id):
             else:
                 v_efectivo = float(precio or 0)
 
-            def descontar_monto(columna, monto):
+            def _quitar(columna, monto, usar_ref=True):
                 if monto <= 0:
                     return 0.0
                 params = [f"{fecha_dia}%", sucursal]
                 filtro_ref = ""
-                if (v_ref or "").strip() != "":
+                if usar_ref and (v_ref or "").strip() != "":
                     filtro_ref = "AND IFNULL(referencia,'') = ?"
                     params.append(v_ref)
                 retirado = 0.0
@@ -737,19 +854,9 @@ def eliminar_venta_admin(id):
                         break
                     rid, disponible = r
                     disponible = float(disponible or 0)
-                    quitar = min(monto, disponible)
-                    if quitar <= 0:
-                        break
-                    cur.execute(f"""
-                        UPDATE ventas_desglose
-                           SET {columna} = {columna} - ?
-                         WHERE rowid = ?
-                    """, (quitar, rid))
-                    cur.execute("""
-                        SELECT IFNULL(efectivo,0), IFNULL(tarjeta,0), IFNULL(dolares,0)
-                          FROM ventas_desglose
-                         WHERE rowid = ?
-                    """, (rid,))
+                    quitar = disponible if disponible < monto else monto
+                    cur.execute(f"UPDATE ventas_desglose SET {columna} = {columna} - ? WHERE rowid = ?", (quitar, rid))
+                    cur.execute("SELECT IFNULL(efectivo,0), IFNULL(tarjeta,0), IFNULL(dolares,0) FROM ventas_desglose WHERE rowid = ?", (rid,))
                     e, t, d = cur.fetchone()
                     if abs(e) < 1e-6 and abs(t) < 1e-6 and abs(d) < 1e-6:
                         cur.execute("DELETE FROM ventas_desglose WHERE rowid = ?", (rid,))
@@ -757,9 +864,17 @@ def eliminar_venta_admin(id):
                     retirado += quitar
                 return retirado
 
-            r_e = descontar_monto("efectivo", v_efectivo)
-            r_t = descontar_monto("tarjeta",  v_tarjeta)
-            r_d = descontar_monto("dolares",  v_dolares)
+            r_e = _quitar("efectivo", v_efectivo, usar_ref=True)
+            if v_efectivo - r_e > 1e-6:
+                r_e += _quitar("efectivo", v_efectivo - r_e, usar_ref=False)
+
+            r_t = _quitar("tarjeta", v_tarjeta, usar_ref=True)
+            if v_tarjeta - r_t > 1e-6:
+                r_t += _quitar("tarjeta", v_tarjeta - r_t, usar_ref=False)
+
+            r_d = _quitar("dolares", v_dolares, usar_ref=True)
+            if v_dolares - r_d > 1e-6:
+                r_d += _quitar("dolares", v_dolares - r_d, usar_ref=False)
 
             cur.execute("DELETE FROM ventas WHERE id = ?", (id,))
             conn.commit()
@@ -994,54 +1109,24 @@ def cobrar():
 
     return redirect("/abrir-ticket")
 
-@app.route("/autorizar-bloqueo/<int:id>")
-def autorizar_bloqueo(id):
-    if "usuario" not in session or session.get("tipo") != "admin":
-        return redirect("/login")
-
-    with sqlite3.connect(DB_PATH) as conn:
-        cur = conn.cursor()
-        cur.execute("UPDATE bloqueos_feria SET autorizado = 1 WHERE id = ?", (id,))
-        conn.commit()
-
-    flash("✅ Bloqueo autorizado correctamente. Ya pueden continuar las ventas.")
-    return redirect("/panel-admin")
-
 @app.route("/ver-bloqueos")
 def ver_bloqueos():
-    if "usuario" not in session or session.get("tipo") != "admin":
-        return redirect("/")
+    return redirect("/pendientes")
 
-    with sqlite3.connect(DB_PATH) as conn:
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT id, sucursal, fecha, motivo, autorizado 
-            FROM bloqueos_feria 
-            ORDER BY fecha DESC
-        """)
-        bloqueos = cur.fetchall()
-
-    return render_template("ver_bloqueos.html", bloqueos=bloqueos)
+@app.route("/autorizar-bloqueo/<int:id>")
+def autorizar_bloqueo(id):
+    return redirect("/pendientes")
 
 @app.route("/bloqueos-pendientes-json")
 def bloqueos_pendientes_json():
-    try:
-        fecha_hoy = datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y")
-        with sqlite3.connect(DB_PATH) as conn:
-            cur = conn.cursor()
-            cur.execute(
-                "SELECT COUNT(*) FROM bloqueos_feria WHERE autorizado=0 AND fecha LIKE ?",
-                (fecha_hoy + "%",)
-            )
-            total = int(cur.fetchone()[0] or 0)
-            cur.execute(
-                "SELECT DISTINCT sucursal FROM bloqueos_feria WHERE autorizado=0 AND fecha LIKE ? ORDER BY sucursal",
-                (fecha_hoy + "%",)
-            )
-            sucursales = [r[0] for r in cur.fetchall()]
-        return jsonify({"bloqueos_pendientes": total, "sucursales": sucursales})
-    except Exception:
-        return jsonify({"bloqueos_pendientes": 0, "sucursales": []})
+    fecha_hoy = datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y")
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM pendientes WHERE tipo='feria' AND estado='pendiente' AND fecha LIKE ?", (fecha_hoy+"%",))
+        total = int(cur.fetchone()[0] or 0)
+        cur.execute("SELECT DISTINCT sucursal FROM pendientes WHERE tipo='feria' AND estado='pendiente' AND fecha LIKE ? ORDER BY sucursal", (fecha_hoy+"%",))
+        sucursales = [r[0] for r in cur.fetchall()]
+    return jsonify({"bloqueos_pendientes": total, "sucursales": sucursales})
 
 @app.route("/abrir-ticket")
 def abrir_ticket():
@@ -1886,43 +1971,118 @@ def guardar_feria_admin():
 
 @app.route("/nota", methods=["GET", "POST"])
 def nota():
-    if "usuario" not in session or session.get("tipo") != "consulta":
+    if "usuario" not in session:
         return redirect("/")
 
-    sucursal = session["sucursal"]
-    fecha = request.args.get("fecha", datetime.now(TZ).strftime("%d-%m-%Y"))
+    tipo = session.get("tipo", "")
+    es_admin = (tipo == "admin")
+
+    def ymd_to_dmy(s):
+        if not s: return s
+        if len(s) >= 10 and s[4] == "-" and s[7] == "-":
+            y, m, d = s[:10].split("-")
+            return f"{d}-{m}-{y}"
+        return s
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    if request.method == "POST":
-        texto = request.form["texto"]
-        cur.execute("INSERT INTO notas (texto, fecha, sucursal) VALUES (?, ?, ?)", (texto, fecha, sucursal))
-        conn.commit()
-        registrar_log(session["usuario"], "consulta", f"Registró una nota: {texto}")
-        return redirect("/nota")
+    if es_admin:
+        cur.execute("""
+            SELECT sucursal FROM ventas
+            UNION
+            SELECT sucursal FROM notas
+        """)
+        sucursales_disponibles = sorted({r[0] for r in cur.fetchall() if r[0]})
+        if session.get("sucursal") and session["sucursal"] not in sucursales_disponibles:
+            sucursales_disponibles.append(session["sucursal"])
+    else:
+        sucursales_disponibles = [session.get("sucursal", "")]
 
-    cur.execute("SELECT id, texto FROM notas WHERE fecha = ? AND sucursal = ?", (fecha, sucursal))
+    hoy_dt = datetime.now(TZ)
+    hoy_str = hoy_dt.strftime("%d-%m-%Y")
+    ayer_str = (hoy_dt - timedelta(days=1)).strftime("%d-%m-%Y")
+
+    fecha_qs_raw = request.args.get("fecha")
+    fecha_qs = ymd_to_dmy(fecha_qs_raw) if fecha_qs_raw else hoy_str
+    sucursal_qs = request.args.get("sucursal") or (
+        session.get("sucursal", "") if not es_admin
+        else (sucursales_disponibles[0] if sucursales_disponibles else "")
+    )
+
+    if request.method == "POST":
+        texto = (request.form.get("texto") or "").strip()
+        if es_admin:
+            fecha_post = ymd_to_dmy(request.form.get("fecha_form")) or fecha_qs
+            sucursal_post = request.form.get("sucursal_form") or sucursal_qs
+        else:
+            # consulta no elige fecha/sucursal en el form
+            fecha_post = fecha_qs
+            sucursal_post = session.get("sucursal", "")
+
+        if texto and fecha_post and sucursal_post:
+            cur.execute(
+                "INSERT INTO notas (texto, fecha, sucursal) VALUES (?, ?, ?)",
+                (texto, fecha_post, sucursal_post)
+            )
+            conn.commit()
+            registrar_log(session["usuario"], tipo, f"Registró una nota en {sucursal_post} ({fecha_post})")
+            conn.close()
+            # Redirige mostrando la misma fecha/sucursal
+            return redirect(f"/nota?fecha={fecha_post}&sucursal={sucursal_post}")
+
+    cur.execute(
+        "SELECT id, texto FROM notas WHERE fecha = ? AND sucursal = ? ORDER BY id DESC",
+        (fecha_qs, sucursal_qs)
+    )
     notas = cur.fetchall()
+
+    cur.execute(
+        "SELECT id, texto, fecha, sucursal FROM notas WHERE fecha = ? AND sucursal = ? ORDER BY id DESC LIMIT 50",
+        (fecha_qs, sucursal_qs)
+    )
+    historial = cur.fetchall()
+
     conn.close()
 
-    return render_template("notas.html", notas=notas)
+    return render_template(
+        "notas.html",
+        notas=notas,
+        es_admin=es_admin,
+        fecha_actual=fecha_qs,          
+        sucursal_actual=sucursal_qs,
+        sucursales=sucursales_disponibles,
+        hoy_str=hoy_str,
+        ayer_str=ayer_str,
+        historial=historial
+    )
 
 @app.route("/eliminar-nota", methods=["POST"])
 def eliminar_nota():
-    if "usuario" not in session or session.get("tipo") != "consulta":
+    if "usuario" not in session:
         return redirect("/")
 
-    nota_id = request.form["id"]
+    tipo = session.get("tipo", "")
+    if tipo not in ("consulta", "admin"):
+        return redirect("/")
+
+    nota_id = request.form.get("id")
+    fecha = request.form.get("fecha") or datetime.now(TZ).strftime("%d-%m-%Y")
+    sucursal = request.form.get("sucursal") or session.get("sucursal", "")
 
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
-    cur.execute("DELETE FROM notas WHERE id = ?", (nota_id,))
+
+    if tipo == "consulta":
+        cur.execute("DELETE FROM notas WHERE id = ? AND sucursal = ?", (nota_id, session.get("sucursal", "")))
+    else:
+        cur.execute("DELETE FROM notas WHERE id = ?", (nota_id,))
+
     conn.commit()
     conn.close()
 
-    registrar_log(session["usuario"], "consulta", f"Eliminó una nota con ID {nota_id}")
-    return redirect("/nota")
+    registrar_log(session["usuario"], tipo, f"Eliminó una nota ID {nota_id}")
+    return redirect(f"/nota?fecha={fecha}&sucursal={sucursal}")
 
 @app.route("/chat/enviar", methods=["POST"])
 def enviar_mensaje():
@@ -1995,90 +2155,159 @@ def subir_archivo_chat():
 
     return jsonify({"ok": True, "nombre": nombre})
 
-@app.route("/ver-reporte-excel", methods=["GET", "POST"])
+@app.route("/ver-reporte-excel")
 def ver_reporte_excel():
     if "usuario" not in session:
         return redirect("/")
+    tipo_usuario = session.get("tipo","")
+    suc_sesion = session.get("sucursal","")
 
-    sucursal = request.args.get("sucursal", "")
-    fecha = request.args.get("fecha", "")
-    datos_ventas = []
-    total_ventas = total_efectivo = total_tarjeta = total_dolar = total_mixto = 0.0
-    total_gastos = total_anticipos = total_dolares = 0.0
-    notas = []
-    gastos = []
+    with sqlite3.connect(DB_PATH) as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT DISTINCT sucursal FROM (
+                SELECT sucursal FROM ventas
+                UNION
+                SELECT sucursal FROM gastos
+                UNION
+                SELECT sucursal FROM fondo_caja
+                UNION
+                SELECT sucursal FROM dolares
+                UNION
+                SELECT sucursal FROM anticipos
+                UNION
+                SELECT sucursal FROM notas
+            ) WHERE sucursal IS NOT NULL AND TRIM(sucursal) <> ''
+            ORDER BY sucursal
+        """)
+        sucursales = [r[0] for r in cur.fetchall()]
 
-    if sucursal and fecha:
-        try:
-            fecha_str = datetime.strptime(fecha, "%Y-%m-%d").strftime("%d-%m-%Y")
-        except ValueError:
-            fecha_str = fecha  
+    if tipo_usuario != "admin" and suc_sesion:
+        if suc_sesion not in sucursales:
+            sucursales.insert(0, suc_sesion)
 
-        with sqlite3.connect(DB_PATH) as conn:
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
+    fecha_iso = request.args.get("fecha", fecha_hoy())
+    sucursal = request.args.get("sucursal", suc_sesion)
 
-            
-            cur.execute("""
-                SELECT tipo_pago, precio 
-                FROM ventas 
-                WHERE fecha LIKE ? AND sucursal = ? AND eliminado = 0
-            """, (fecha_str, sucursal))
-            datos_ventas = cur.fetchall()
-
-            for v in datos_ventas:
-                precio = float(v["precio"])
-                total_ventas += precio
-                tipo_pago = v["tipo_pago"].strip().lower()
-                if tipo_pago == "efectivo":
-                    total_efectivo += precio
-                elif tipo_pago == "tarjeta":
-                    total_tarjeta += precio
-                elif tipo_pago in ("dólar", "dolar"):
-                    total_dolar += precio
-                elif tipo_pago == "mixto":
-                    total_mixto += precio
-
-            
-            cur.execute("""
-                SELECT motivo, monto, fecha 
-                FROM gastos 
-                WHERE fecha LIKE ? || '%' AND sucursal = ?
-            """, (fecha_str, sucursal))
-            gastos = cur.fetchall()
-            total_gastos = sum(float(g["monto"]) for g in gastos)
-
-            
-            cur.execute("""
-                SELECT monto 
-                FROM anticipos 
-                WHERE fecha LIKE ? || '%' AND sucursal = ?
-            """, (fecha_str, sucursal))
-            anticipos = cur.fetchall()
-            total_anticipos = sum(float(a["monto"]) for a in anticipos)
-
-            
-            cur.execute("""
-                SELECT texto 
-                FROM notas 
-                WHERE fecha LIKE ? || '%' AND sucursal = ?
-            """, (fecha_str, sucursal))
-            notas = [n["texto"] for n in cur.fetchall()]
-
-    return render_template("ver_reporte_excel.html",
+    return render_template(
+        "ver_reporte_excel.html",
         sucursal=sucursal,
-        fecha=fecha,
-        total_ventas=total_ventas,
-        total_efectivo=total_efectivo,
-        total_tarjeta=total_tarjeta,
-        total_dolar=total_dolar,
-        total_mixto=total_mixto,
-        total_gastos=total_gastos,
-        total_anticipos=total_anticipos,
-        total_dolares=total_dolar,
-        gastos=gastos,
-        notas=notas
+        sucursales=sucursales,
+        fecha=fecha_iso,
+        tipo_usuario=tipo_usuario
     )
+
+@app.route("/api/reporte-excel-resumen")
+def api_reporte_excel_resumen():
+    if "usuario" not in session:
+        return jsonify(ok=False, msg="no-auth")
+
+    tipo_usuario = session.get("tipo","")
+    suc_sesion = session.get("sucursal","")
+    fecha_iso = request.args.get("fecha", fecha_hoy())
+    try:
+        fecha_dia = datetime.strptime(fecha_iso, "%Y-%m-%d").strftime("%d-%m-%Y")
+    except:
+        fecha_dia = fecha_iso
+
+    sucursal = request.args.get("sucursal", suc_sesion)
+    if tipo_usuario != "admin":
+        sucursal = suc_sesion
+
+    def has_col(cur, table, col):
+        cur.execute(f"PRAGMA table_info({table})")
+        return any(r[1].lower() == col.lower() for r in cur.fetchall())
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT IFNULL(SUM(precio),0), COUNT(*)
+            FROM ventas
+            WHERE fecha LIKE ? AND sucursal=? AND (eliminado IS NULL OR eliminado=0)
+        """, (f"{fecha_dia}%", sucursal))
+        v_total, v_count = cur.fetchone() or (0,0)
+
+        efectivo = tarjeta = dolar_mxn = mixto = 0.0
+
+        if has_col(cur, "ventas", "tipo_pago"):
+            cur.execute("""
+                SELECT
+                  IFNULL(SUM(CASE WHEN LOWER(IFNULL(tipo_pago,''))='efectivo' THEN precio ELSE 0 END),0),
+                  IFNULL(SUM(CASE WHEN LOWER(IFNULL(tipo_pago,''))='tarjeta'  THEN precio ELSE 0 END),0),
+                  IFNULL(SUM(CASE WHEN LOWER(IFNULL(tipo_pago,'')) IN ('dolar','dólar','dolares','dólares') THEN precio ELSE 0 END),0),
+                  IFNULL(SUM(CASE WHEN LOWER(IFNULL(tipo_pago,''))='mixto'    THEN precio ELSE 0 END),0)
+                FROM ventas
+                WHERE fecha LIKE ? AND sucursal=? AND (eliminado IS NULL OR eliminado=0)
+            """, (f"{fecha_dia}%", sucursal))
+            efectivo, tarjeta, dolar_mxn, mixto = cur.fetchone() or (0,0,0,0)
+        elif has_col(cur, "ventas_desglose", "tipo_pago"):
+            cur.execute("""
+                SELECT
+                  IFNULL(SUM(CASE WHEN LOWER(tipo_pago)='efectivo' THEN monto ELSE 0 END),0),
+                  IFNULL(SUM(CASE WHEN LOWER(tipo_pago)='tarjeta'  THEN monto ELSE 0 END),0),
+                  IFNULL(SUM(CASE WHEN LOWER(tipo_pago) IN ('dolar','dólar') THEN monto ELSE 0 END),0)
+                FROM ventas_desglose
+                WHERE fecha LIKE ? AND sucursal=?
+            """, (f"{fecha_dia}%", sucursal))
+            efectivo, tarjeta, dolar_mxn = cur.fetchone() or (0,0,0)
+            mixto = max(0.0, v_total - (efectivo + tarjeta + dolar_mxn))
+        else:
+            for col, var in (("efectivo","efectivo"),("tarjeta","tarjeta"),("dolares","dolar_mxn")):
+                if has_col(cur, "ventas", col):
+                    cur.execute(f"SELECT IFNULL(SUM({col}),0) FROM ventas WHERE fecha LIKE ? AND sucursal=? AND (eliminado IS NULL OR eliminado=0)", (f"{fecha_dia}%", sucursal))
+                    val = cur.fetchone()[0] or 0
+                    if var=="efectivo": efectivo = val
+                    elif var=="tarjeta": tarjeta = val
+                    else: dolar_mxn = val
+            mixto = max(0.0, v_total - (efectivo + tarjeta + dolar_mxn))
+
+        cur.execute("SELECT IFNULL(SUM(monto),0), COUNT(*) FROM gastos WHERE fecha LIKE ? AND sucursal=?", (f"{fecha_dia}%", sucursal))
+        g_total, g_count = cur.fetchone() or (0,0)
+
+        cur.execute("SELECT IFNULL(SUM(monto),0), COUNT(*) FROM anticipos WHERE fecha LIKE ? AND sucursal=?", (f"{fecha_dia}%", sucursal))
+        a_total, a_count = cur.fetchone() or (0,0)
+
+        if has_col(cur, "dolares", "monto"):
+            cur.execute("SELECT IFNULL(SUM(monto),0), IFNULL(SUM(cantidad),0) FROM dolares WHERE fecha LIKE ? AND sucursal=?", (f"{fecha_dia}%", sucursal))
+            d_mxn_total, d_pzas = cur.fetchone() or (0,0)
+        else:
+            d_mxn_total, d_pzas = 0, 0
+
+        fondo = 0
+        if has_col(cur, "fondo_caja", "monto"):
+            cur.execute("SELECT monto FROM fondo_caja WHERE fecha LIKE ? AND sucursal=? ORDER BY id DESC LIMIT 1", (f"{fecha_dia}%", sucursal))
+            row_f = cur.fetchone()
+            fondo = row_f[0] if row_f else 0
+
+        total_notas = 0.0
+        if has_col(cur, "notas", "texto"):
+            cur.execute("SELECT texto FROM notas WHERE fecha LIKE ? AND sucursal=?", (f"{fecha_dia}%", sucursal))
+            for (texto,) in cur.fetchall():
+                for x in re.findall(r"\$\s*([\d,]+(?:\.\d{1,2})?)", texto or ""):
+                    try: total_notas += float(x.replace(",",""))
+                    except: pass
+
+        conn.close()
+
+        return jsonify(
+            ok=True,
+            fecha=fecha_iso, fecha_dia=fecha_dia, sucursal=sucursal,
+            ventas_total=round(v_total,2), ventas_count=int(v_count or 0),
+            efectivo=round(efectivo,2), tarjeta=round(tarjeta,2),
+            dolar_en_mxn=round(dolar_mxn,2), mixto=round(mixto,2),
+            gastos_total=round(g_total,2), gastos_count=int(g_count or 0),
+            anticipos_total=round(a_total,2), anticipos_count=int(a_count or 0),
+            dolares_mxn=round(d_mxn_total,2), dolares_pzas=int(d_pzas or 0),
+            fondo_caja=round(fondo,2), notas_total=round(total_notas,2),
+            balance_dia=round((v_total or 0) - (g_total or 0),2)
+        )
+    except Exception as e:
+        print("API resumen ERROR:", e)
+        try: conn.close()
+        except: pass
+        return jsonify(ok=False, msg="server-error")
 
 @app.route("/reporte-excel")
 def reporte_excel():

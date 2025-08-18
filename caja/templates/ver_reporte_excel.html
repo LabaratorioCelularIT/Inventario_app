@@ -1,242 +1,162 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Reporte Diario de Corte</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    :root {
-      --bg: #e6f0ff;
-      --fg: #003366;
-      --card: #ffffff;
-      --accent: #337ab7;
-      --accent-hover: #286090;
-      --danger: #d9534f;
-      --danger-hover: #c9302c;
-    }
-
-    body {
-      background-color: var(--bg);
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 0;
-      color: var(--fg);
-    }
-
-    .topbar {
-      background-color: var(--fg);
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-      position: relative;
-      border-bottom: 3px solid #001f3f;
-    }
-
-    .topbar img {
-      height: 70px;
-      margin-right: 15px;
-    }
-
-    .topbar .title {
-      font-size: 26px;
-      font-weight: bold;
-      color: white;
-      display: flex;
-      align-items: center;
-    }
-
-    .container {
-      max-width: 1000px;
-      margin: 40px auto;
-      background-color: var(--card);
-      padding: 30px;
-      border-radius: 14px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-    }
-
-    h2 {
-            color: #003366;
-            margin-top: 30px;
-        }
-
-     table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-    th, td {
-      border: 1px solid #ccc;
-      padding: 10px;
-      text-align: center;
-    }
-
-    th {
-      background-color: var(--accent);
-      color: white;
-    }
-
-        .highlight {
-            font-weight: bold;
-            font-size: 18px;
-            margin: 10px 0;
-        }
-
-    .filter-bar {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-      margin-bottom: 25px;
-      text-align: center;
-    }
-
-    .filter-bar label {
-      font-weight: bold;
-      font-size: 15px;
-      color: var(--fg);
-    }
-
-    .filter-bar select,
-    .filter-bar input[type="date"],
-    .filter-bar button {
-      padding: 10px 14px;
-      font-size: 15px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-
-    .filter-bar button {
-      background-color: var(--accent);
-      color: white;
-      font-weight: bold;
-      border: none;
-      transition: background-color 0.3s ease;
-      cursor: pointer;
-    }
-
-    .filter-bar button:hover {
-      background-color: var(--accent-hover);
-    }
-
-    .card {
-      background-color: var(--card);
-      padding: 25px;
-      border-radius: 14px;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
-      margin-top: 10px;
-    }
-
-    ul {
-      margin-top: 10px;
-      padding-left: 20px;
-    }
-
-    .back-button {
-      display: inline-block;
-      margin-top: 30px;
-      background-color: var(--danger);
-      color: white;
-      padding: 12px 20px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: background-color 0.3s ease;
-    }
-
-    .back-button:hover {
-      background-color: var(--danger-hover);
-    }
-
-    @media (max-width: 600px) {
-      .topbar .title {
-        flex-direction: column;
-        font-size: 20px;
-      }
-
-      .topbar img {
-        height: 60px;
-        margin-bottom: 10px;
-      }
-
-      table, th, td {
-        font-size: 13px;
-      }
-
-      .container {
-        padding: 20px;
-        margin: 20px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Reporte Diario de Corte</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+<style>
+:root{--azul:#0c3b6a;--cel:#eaf2ff;--card:#fff;--b:#e6e9ef;--ok:#2ecc71;--warn:#f1c40f;--bad:#e74c3c}
+*{box-sizing:border-box}body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--cel)}
+.topbar{background:var(--azul);color:#fff;padding:18px 20px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.2);display:flex;align-items:center;gap:12px}
+.topbar img{height:28px}
+.wrap{max-width:980px;margin:26px auto;padding:0 16px}
+.card{background:var(--card);border:1px solid var(--b);border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.06);padding:18px}
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:#f8fbff;border:1px solid var(--b);border-radius:12px;padding:14px}
+.kpi h4{margin:0 0 6px 0;font-size:13px;color:#406080;font-weight:600}
+.kpi .v{font-size:22px;font-weight:800}
+.kpi.ok .v{color:var(--ok)}.kpi.bad .v{color:var(--bad)}.kpi.warn .v{color:#8a6d3b}
+.filters{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+select,input[type="date"]{border:1px solid var(--b);border-radius:10px;padding:10px 12px;background:#fff}
+button{border:0;background:#1f6bd8;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.6;cursor:not-allowed}
+.section{margin-top:14px}
+.sub{font-size:13px;color:#6b7a90;margin-top:4px}
+.footer-btns{display:flex;gap:8px;margin-top:14px}
+a.link{display:inline-block;background:#e74c3c;color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:700}
+.table{margin-top:12px;border:1px solid var(--b);border-radius:10px;overflow:hidden}
+.table .rowh{display:grid;grid-template-columns:repeat(3,1fr);background:#f3f7ff;padding:10px 12px;font-weight:700}
+.table .rowb{display:grid;grid-template-columns:repeat(3,1fr);padding:10px 12px;border-top:1px solid var(--b)}
+@media(max-width:850px){.row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.row{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
+<div class="topbar">
+  <img src="{{ url_for('static', filename='logo.png') }}" alt="logo">
+  <div>Celulares Crédito Fácil – Reporte Diario de Corte</div>
+</div>
 
-  <div class="topbar">
-    <div class="title">
-      <img src="/static/logo.png" alt="Logo">
-      Celulares Crédito Fácil – Reporte Diario de Corte
-    </div>
-  </div>
-
-  <div class="container">
-    <form method="get" class="filter-bar">
-      <label>Sucursal:
-        <select name="sucursal">
-          {% for s in ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"] %}
-            <option value="{{ s }}" {% if s == sucursal %}selected{% endif %}>{{ s }}</option>
+<div class="wrap">
+  <div class="card">
+    <div class="filters">
+      <label>Sucursal:</label>
+      {% if tipo_usuario == 'admin' %}
+        <select id="sucursal">
+          {% for s in sucursales %}
+            <option value="{{ s }}" {{ 'selected' if s==sucursal else '' }}>{{ s }}</option>
           {% endfor %}
         </select>
-      </label>
-      <label>Fecha:
-        <input type="date" name="fecha" value="{{ fecha }}">
-      </label>
-      <button type="submit">Filtrar</button>
-    </form>
-
-    <div class="card">
-      <div class="summary">
-        <strong>Ventas Totales: ${{ "{:,.2f}".format(total_ventas) }}</strong><br>
-        Efectivo: ${{ "{:,.2f}".format(total_efectivo) }} |
-        Tarjeta: ${{ "{:,.2f}".format(total_tarjeta) }} |
-        Dólar: ${{ "{:,.2f}".format(total_dolar) }} |
-        Mixto: ${{ "{:,.2f}".format(total_mixto) }}<br>
-        Gastos: ${{ "{:,.2f}".format(total_gastos) }} |
-        Anticipos: ${{ "{:,.2f}".format(total_anticipos) }} |
-        Dólares: ${{ "{:,.2f}".format(total_dolares) }}
-      </div>
-
-      {% if gastos %}
-      <h2>Gastos</h2>
-      <table>
-        <thead>
-          <tr><th>Fecha</th><th>Motivo</th><th>Monto</th></tr>
-        </thead>
-        <tbody>
-          {% for g in gastos %}
-          <tr>
-            <td>{{ g["fecha"] }}</td>
-            <td>{{ g["motivo"] }}</td>
-            <td>${{ "{:,.2f}".format(g["monto"]) }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% else %}
+        <input id="sucursal" value="{{ sucursal }}" hidden>
+        <strong>{{ sucursal }}</strong>
       {% endif %}
 
-      {% if notas %}
-      <h2>Notas</h2>
-      <ul>
-        {% for nota in notas %}
-        <li>{{ nota }}</li>
-        {% endfor %}
-      </ul>
+      <label>Fecha:</label>
+      <input type="date" id="fecha" value="{{ fecha }}">
+      <button id="btnFiltrar" type="button">Filtrar</button>
+      {% if tipo_usuario == 'admin' %}
+      <a class="link" href="/panel-admin" style="background:#e74c3c">← Volver al Panel</a>
+      {% elif tipo_usuario == 'consulta' %}
+      <a class="link" href="/panel-consulta" style="background:#e74c3c">← Volver al Panel</a>
+      {% elif tipo_usuario == 'reparto' %}
+      <a class="link" href="/panel-reparto" style="background:#e74c3c">← Volver al Panel</a>
       {% endif %}
     </div>
 
-    <a class="back-button" href="{{ url_for('panel_admin') if session['tipo'] == 'admin' else url_for('panel_consulta') }}">← Volver al Panel</a>
+    <div class="row">
+      <div class="kpi"><h4>Ventas Totales</h4><div class="v" id="k_ventas">$0.00</div><div class="sub" id="k_ventas_sub">0 ventas</div></div>
+      <div class="kpi"><h4>Efectivo</h4><div class="v" id="k_efectivo">$0.00</div><div class="sub">Incluido en ventas</div></div>
+      <div class="kpi"><h4>Tarjeta</h4><div class="v" id="k_tarjeta">$0.00</div><div class="sub">Incluido en ventas</div></div>
+      <div class="kpi"><h4>Dólar (MXN)</h4><div class="v" id="k_dolar_mxn">$0.00</div><div class="sub">Incluido en ventas</div></div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <div class="kpi"><h4>Mixto</h4><div class="v" id="k_mixto">$0.00</div><div class="sub">Incluido en ventas</div></div>
+      <div class="kpi warn"><h4>Gastos</h4><div class="v" id="k_gastos">$0.00</div><div class="sub" id="k_gastos_sub">0 registros</div></div>
+      <div class="kpi"><h4>Anticipos</h4><div class="v" id="k_anticipos">$0.00</div><div class="sub" id="k_anticipos_sub">0 registros</div></div>
+      <div class="kpi"><h4>Dólares (monto)</h4><div class="v" id="k_dolares">$0.00</div><div class="sub" id="k_dolares_sub">0 pzas</div></div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <div class="kpi"><h4>Fondo de Caja</h4><div class="v" id="k_fondo">$0.00</div><div class="sub">Último del día</div></div>
+      <div class="kpi"><h4>Notas con $</h4><div class="v" id="k_notas">$0.00</div><div class="sub">Suma detectada</div></div>
+      <div class="kpi ok"><h4>Balance del Día</h4><div class="v" id="k_balance">$0.00</div><div class="sub">Ventas − Gastos</div></div>
+      <div class="kpi"><h4>Fecha/Sucursal</h4><div class="v" id="k_meta">—</div><div class="sub">Referencia</div></div>
+    </div>
+
+    <div class="section">
+      <div class="table">
+        <div class="rowh"><div>Caja</div><div>Ingresos</div><div>Egresos</div></div>
+        <div class="rowb"><div>Ventas</div><div id="t_ventas">$0.00</div><div>—</div></div>
+        <div class="rowb"><div>Gastos</div><div>—</div><div id="t_gastos">$0.00</div></div>
+        <div class="rowb"><div>Anticipos</div><div id="t_anticipos">$0.00</div><div>—</div></div>
+        <div class="rowb"><div>Dólares (MXN)</div><div id="t_dolares">$0.00</div><div>—</div></div>
+        <div class="rowb"><div>Balance</div><div id="t_balance" style="font-weight:700">$0.00</div><div>—</div></div>
+      </div>
+    </div>
+
+    <div class="footer-btns">
+      <a class="link" id="btnDescargar" href="#">Descargar Excel</a>
+    </div>
   </div>
+</div>
+
+<script>
+function f(n){return new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:2}).format(Number(n||0))}
+
+async function cargar(){
+  const sucEl = document.getElementById('sucursal');
+  const suc = (sucEl.tagName === 'SELECT') ? sucEl.value : sucEl.value;
+  const fecha = document.getElementById('fecha').value;
+  const btn = document.getElementById('btnFiltrar');
+
+  if(!suc || !fecha){ alert('Selecciona sucursal y fecha.'); return; }
+
+  btn.disabled = true; const oldTxt = btn.textContent; btn.textContent = 'Cargando…';
+  try{
+    const r = await fetch(`/api/reporte-excel-resumen?sucursal=${encodeURIComponent(suc)}&fecha=${encodeURIComponent(fecha)}`, {cache:'no-store'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.msg || 'Respuesta no OK');
+
+    document.getElementById('k_ventas').textContent=f(j.ventas_total);
+    document.getElementById('k_ventas_sub').textContent=`${j.ventas_count} ventas`;
+    document.getElementById('k_efectivo').textContent=f(j.efectivo);
+    document.getElementById('k_tarjeta').textContent=f(j.tarjeta);
+    document.getElementById('k_dolar_mxn').textContent=f(j.dolar_en_mxn);
+    document.getElementById('k_mixto').textContent=f(j.mixto);
+    document.getElementById('k_gastos').textContent=f(j.gastos_total);
+    document.getElementById('k_gastos_sub').textContent=`${j.gastos_count} registros`;
+    document.getElementById('k_anticipos').textContent=f(j.anticipos_total);
+    document.getElementById('k_anticipos_sub').textContent=`${j.anticipos_count} registros`;
+    document.getElementById('k_dolares').textContent=f(j.dolares_mxn);
+    document.getElementById('k_dolares_sub').textContent=`${j.dolares_pzas} pzas`;
+    document.getElementById('k_fondo').textContent=f(j.fondo_caja);
+    document.getElementById('k_notas').textContent=f(j.notas_total);
+    document.getElementById('k_balance').textContent=f(j.balance_dia);
+    document.getElementById('k_meta').textContent=`${j.sucursal} • ${j.fecha}`;
+
+    document.getElementById('t_ventas').textContent=f(j.ventas_total);
+    document.getElementById('t_gastos').textContent=f(j.gastos_total);
+    document.getElementById('t_anticipos').textContent=f(j.anticipos_total);
+    document.getElementById('t_dolares').textContent=f(j.dolares_mxn);
+    document.getElementById('t_balance').textContent=f(j.balance_dia);
+
+    document.getElementById('btnDescargar').href=`/reporte-excel?sucursal=${encodeURIComponent(j.sucursal)}&fecha=${encodeURIComponent(j.fecha)}`;
+  }catch(err){
+    console.error('Error cargando resumen:', err);
+    alert('No se pudo cargar el resumen.');
+  }finally{
+    btn.textContent = oldTxt; btn.disabled = false;
+  }
+}
+
+document.getElementById('btnFiltrar').addEventListener('click', cargar);
+document.getElementById('fecha').addEventListener('change', cargar);
+const sucEl = document.getElementById('sucursal'); if(sucEl && sucEl.tagName==='SELECT'){ sucEl.addEventListener('change', cargar); }
+window.addEventListener('DOMContentLoaded', cargar);
+</script>
 </body>
 </html>

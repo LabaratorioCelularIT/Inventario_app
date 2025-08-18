@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pendientes | Celulares Crédito Fácil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root{--bg:#e6f0ff;--card:#fff;--fg:#003366;--muted:#6b7280;--accent:#337ab7;--accenth:#286090;--ok:#22c55e;--bad:#ef4444}
+    body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--bg);color:#111}
+    .topbar{background:var(--fg);color:#fff;padding:18px 20px;font-size:20px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+    .wrap{max-width:1150px;margin:24px auto;padding:0 16px}
+    .card{background:var(--card);border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:18px}
+    .filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+    select,input[type="search"]{padding:10px 12px;border:1px solid #d1d5db;border-radius:10px}
+    table{width:100%;border-collapse:separate;border-spacing:0 10px}
+    th{font-weight:700;color:#374151;text-align:left;padding:8px 10px}
+    td{background:#fff;padding:12px 10px;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb}
+    tr td:first-child{border-left:1px solid #e5e7eb;border-top-left-radius:12px;border-bottom-left-radius:12px}
+    tr td:last-child{border-right:1px solid #e5e7eb;border-top-right-radius:12px;border-bottom-right-radius:12px}
+    .pill{padding:4px 10px;border-radius:999px;font-size:12px}
+    .p-pend{background:#fee2e2;color:#b91c1c}
+    .p-ok{background:#dcfce7;color:#166534}
+    .p-bad{background:#fee2e2;color:#b91c1c}
+    .btn{border:0;border-radius:10px;padding:8px 12px;cursor:pointer}
+    .b-ok{background:var(--ok);color:#fff}
+    .b-bad{background:var(--bad);color:#fff}
+    .b-ghost{background:#f3f4f6}
+    .small{font-size:12px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
+    @media(max-width:860px){.hide-m{display:none}}
+  </style>
+</head>
+<body>
+  <div class="topbar">Celulares Crédito Fácil — Pendientes <a href="/panel-admin" style="color:#fff;text-decoration:none;font-size:14px">Volver al panel</a></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="filters">
+        <select id="f-tipo">
+          <option value="">Todos los tipos</option>
+          <option value="registro_usuario">Registro de usuario</option>
+          <option value="feria">Feria</option>
+        </select>
+        <select id="f-estado">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="autorizado">Autorizado</option>
+          <option value="rechazado">Rechazado</option>
+        </select>
+        <input id="f-q" type="search" placeholder="Buscar por referencia, sucursal o detalle">
+        <button class="btn b-ghost" onclick="aplicar()">Aplicar</button>
+      </div>
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th class="hide-m">Referencia</th>
+            <th>Sucursal</th>
+            <th class="hide-m">Fecha</th>
+            <th>Detalle</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in pendientes %}
+          <tr data-tipo="{{p.tipo}}" data-estado="{{p.estado}}">
+            <td>{{p.id}}</td>
+            <td>{{p.tipo}}</td>
+            <td class="hide-m">{{p.referencia}}</td>
+            <td>{{p.sucursal}}</td>
+            <td class="hide-m">{{p.fecha}}</td>
+            <td class="small">{{p.detalle | tojson}}</td>
+            <td>
+              {% if p.estado == 'pendiente' %}<span class="pill p-pend">Pendiente</span>{% elif p.estado == 'autorizado' %}<span class="pill p-ok">Autorizado</span>{% else %}<span class="pill p-bad">Rechazado</span>{% endif %}
+            </td>
+            <td class="grid">
+              <button class="btn b-ok" onclick="aprobar({{p.id}}, this)" {% if p.estado!='pendiente' %}disabled{% endif %}>Autorizar</button>
+              <button class="btn b-bad" onclick="rechazar({{p.id}}, this)" {% if p.estado!='pendiente' %}disabled{% endif %}>Rechazar</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    function aplicar(){
+      const t = document.getElementById('f-tipo').value
+      const e = document.getElementById('f-estado').value
+      const q = document.getElementById('f-q').value.toLowerCase()
+      document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
+        const mt = t ? tr.dataset.tipo===t : true
+        const me = e ? tr.dataset.estado===e : true
+        const txt = tr.innerText.toLowerCase()
+        const mq = q ? txt.includes(q) : true
+        tr.style.display = (mt && me && mq) ? '' : 'none'
+      })
+    }
+    async function aprobar(id, btn){
+      btn.disabled = true
+      const r = await fetch(`/pendiente/autorizar/${id}`, {method:'POST'})
+      const j = await r.json()
+      if(j.success){
+        const pill = btn.closest('tr').querySelector('td:nth-child(7) .pill')
+        pill.textContent = 'Autorizado'
+        pill.className = 'pill p-ok'
+        btn.closest('td').querySelectorAll('button').forEach(b=>b.disabled=true)
+      }else{
+        btn.disabled = false
+        alert(j.msg || 'Error')
+      }
+    }
+    async function rechazar(id, btn){
+      btn.disabled = true
+      const r = await fetch(`/pendiente/rechazar/${id}`, {method:'POST'})
+      const j = await r.json()
+      if(j.success){
+        const pill = btn.closest('tr').querySelector('td:nth-child(7) .pill')
+        pill.textContent = 'Rechazado'
+        pill.className = 'pill p-bad'
+        btn.closest('td').querySelectorAll('button').forEach(b=>b.disabled=true)
+      }else{
+        btn.disabled = false
+        alert('Error')
+      }
+    }
+  </script>
+</body>
+</html>
