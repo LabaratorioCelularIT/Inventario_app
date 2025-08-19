@@ -50,19 +50,16 @@ NOMBRES_REALES = {
     "consulta_abcr_6619": "Abigail Corona",
     "consulta_lzrz_1284": "Lizeth Ruiz",
     "consulta_lsrv_2390": "Leslie",
-    "consulta_alnd_7452": "Alondra",
     "consulta_lrbn_3017": "Lorena",
     "consulta_brsd_5126": "Briseida",
     "consulta_evln_6029": "Evelin",
     "consulta_mnsr_1045": "Monserrath",
-    "consulta_angl_7238": "Angeles",
     "consulta_dnlv_2096": "Daniel",
     "consulta_ltzb_8431": "Litzy",
     "consulta_bryn_9327": "Brayan",
-    "consulta_arln_6235": "Arlen",
     "consulta_angl_0187": "Angela",
     "reparto_jsss_7493": "Jesús",
-    "consulta_daniel_6786": "Daneil",
+    "consulta_daniel_6786": "Daniel",
     "admin_cndz_1043": "Carolina (admin)",
     "consulta_mrsa_5709": "Marisa",
     "consulta_angs_1789": "Angeles",
@@ -147,6 +144,14 @@ def obtener_sucursales():
             pass
     return ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
 
+def ensure_column(conn, table, col, ddl):
+    cur = conn.cursor()
+    cur.execute(f"PRAGMA table_info({table})")
+    cols = {r[1].lower() for r in cur.fetchall()}
+    if col.lower() not in cols:
+        cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}")
+        conn.commit()
+
 def ensure_ventas_desglose_schema(conn):
     cur = conn.cursor()
     cur.execute("""
@@ -227,7 +232,7 @@ def send_email(to_list, subject, html):
         return False
     msg = MIMEText(html, "html", "utf-8")
     msg["Subject"] = subject
-    msg["From"] = formataddr((SMTP_FROM_NAME, SMTP_USER))  # remitente válido
+    msg["From"] = formataddr((SMTP_FROM_NAME, SMTP_USER))  
     msg["To"] = ", ".join(to_list)
     context = ssl.create_default_context()
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
@@ -469,7 +474,7 @@ def crear_pendiente_view():
         referencia = request.form.get("referencia","")
         sucursal = request.form.get("sucursal","")
         detalle_txt = request.form.get("detalle","")
-        involucrados = request.form.getlist("involucrados")   # <- multiple
+        involucrados = request.form.getlist("involucrados")   
         try:
             detalle = json.loads(detalle_txt) if detalle_txt.strip().startswith("{") else {"texto": detalle_txt}
         except Exception:
@@ -844,60 +849,76 @@ def gastos():
     if "usuario" not in session:
         return redirect("/")
 
-    tipo_usuario = session.get("tipo")
-    sucursal_sesion = session.get("sucursal")
-    fecha_hoy_str = datetime.now(TZ).strftime("%d-%m-%Y")
-    sucursales = ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
+    tipo_usuario   = session.get("tipo")
+    sucursal_sesion= session.get("sucursal")
+    hoy_dt         = datetime.now(TZ)
+    hoy_dmy        = hoy_dt.strftime("%d-%m-%Y")
+    hoy_iso        = hoy_dt.strftime("%Y-%m-%d")
+    sucursales     = ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
 
     sucursal_filtro = request.args.get("sucursal", sucursal_sesion)
-    fecha_filtro = request.args.get("fecha", fecha_hoy_str)
+    fecha_qs_iso    = request.args.get("fecha", hoy_iso)   
+
+    try:
+        fecha_filtro_db = datetime.strptime(fecha_qs_iso, "%Y-%m-%d").strftime("%d-%m-%Y")
+    except Exception:
+        fecha_filtro_db = hoy_dmy
+        fecha_qs_iso    = hoy_iso
 
     if tipo_usuario != "admin":
         sucursal_filtro = sucursal_sesion
-        fecha_filtro = fecha_hoy_str
+        fecha_filtro_db = hoy_dmy
+        fecha_qs_iso    = hoy_iso
 
     if request.method == "POST":
         motivo = request.form["motivo"]
-        monto = float(request.form["monto"])
+        monto  = float(request.form["monto"])
 
         if tipo_usuario == "admin":
-            fecha = request.form.get("fecha", fecha_hoy_str)
+            fecha_post_iso = request.form.get("fecha", hoy_iso)
             try:
-                fecha = datetime.strptime(fecha, "%Y-%m-%d").strftime("%d-%m-%Y")
-            except:
-                pass
-            sucursal = request.form.get("sucursal", sucursal_sesion)
+                fecha_post_db = datetime.strptime(fecha_post_iso, "%Y-%m-%d").strftime("%d-%m-%Y")
+            except Exception:
+                fecha_post_db = hoy_dmy
+                fecha_post_iso= hoy_iso
+            sucursal_post = request.form.get("sucursal", sucursal_sesion)
         else:
-            fecha = fecha_hoy_str
-            sucursal = sucursal_sesion
+            fecha_post_db  = hoy_dmy
+            fecha_post_iso = hoy_iso
+            sucursal_post  = sucursal_sesion
 
         with sqlite3.connect(DB_PATH) as conn:
             cur = conn.cursor()
-            cur.execute("INSERT INTO gastos (motivo, monto, fecha, sucursal) VALUES (?, ?, ?, ?)",
-                        (motivo, monto, fecha, sucursal))
+            cur.execute(
+                "INSERT INTO gastos (motivo, monto, fecha, sucursal) VALUES (?, ?, ?, ?)",
+                (motivo, monto, fecha_post_db, sucursal_post)
+            )
             conn.commit()
 
-        registrar_log(session["usuario"], session["tipo"], f"Registró un gasto en {sucursal} de ${monto:.2f} - {motivo}")
-        return redirect(f"/gastos?sucursal={sucursal_filtro}&fecha={fecha_filtro}")
+        registrar_log(session["usuario"], tipo_usuario,
+                      f"Registró un gasto en {sucursal_post} de ${monto:.2f} - {motivo}")
 
-    
+        return redirect(f"/gastos?sucursal={sucursal_filtro}&fecha={fecha_qs_iso}")
+
     with sqlite3.connect(DB_PATH) as conn:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         cur.execute("""
-            SELECT id, motivo, monto, fecha, sucursal 
-            FROM gastos 
-            WHERE sucursal = ? AND fecha = ? 
+            SELECT id, motivo, monto, fecha, sucursal
+            FROM gastos
+            WHERE sucursal = ? AND fecha = ?
             ORDER BY id DESC
-        """, (sucursal_filtro, fecha_filtro))
-        gastos = cur.fetchall()
+        """, (sucursal_filtro, fecha_filtro_db))
+        gastos_rows = cur.fetchall()
 
-    return render_template("gastos.html",
-                           tipo=tipo_usuario,
-                           sucursales=sucursales,
-                           gastos=gastos,
-                           sucursal_filtro=sucursal_filtro,
-                           fecha_filtro=fecha_filtro)
+    return render_template(
+        "gastos.html",
+        tipo=tipo_usuario,
+        sucursales=sucursales,
+        gastos=gastos_rows,
+        sucursal_filtro=sucursal_filtro,
+        fecha_filtro=fecha_qs_iso  
+    )
 
 @app.route("/eliminar-gasto", methods=["POST"])
 def eliminar_gasto():
@@ -1146,17 +1167,26 @@ def cobrar():
             return 0.0
 
     efectivo = safe_float(request.form.get("efectivo"))
-    tarjeta = safe_float(request.form.get("tarjeta"))
-    dolares = safe_float(request.form.get("dolares"))
+    tarjeta  = safe_float(request.form.get("tarjeta"))
+    dolares  = safe_float(request.form.get("dolares"))
     tipo_cambio = safe_float(request.form.get("dolar"))
     referencia_general = request.form.get("referencia", "").strip()
 
     def a_centavos(x):
         return int(round(safe_float(x) * 100))
 
+    def ensure_column(conn, table, col, ddl):
+        cur = conn.cursor()
+        cur.execute(f"PRAGMA table_info({table})")
+        cols = {r[1].lower() for r in cur.fetchall()}
+        if col.lower() not in cols:
+            cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}")
+            conn.commit()
+
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
         ensure_ventas_desglose_schema(conn)
+        ensure_column(conn, "ventas", "imei", "TEXT")
 
         cur.execute("SELECT COUNT(*) FROM ventas WHERE fecha LIKE ? AND sucursal = ?", (f"{fecha_dia}%", sucursal))
         ventas_hoy = cur.fetchone()[0]
@@ -1180,36 +1210,48 @@ def cobrar():
                 )
             """)
 
-            cur.execute("SELECT autorizado FROM bloqueos_feria WHERE fecha = ? AND sucursal = ? ORDER BY id DESC LIMIT 1", (fecha_dia, sucursal))
+            cur.execute("SELECT autorizado FROM bloqueos_feria WHERE fecha = ? AND sucursal = ? ORDER BY id DESC LIMIT 1",
+                        (fecha_dia, sucursal))
             fila_bloqueo = cur.fetchone()
             autorizado_hoy = (fila_bloqueo and int(fila_bloqueo[0]) == 1)
 
             if not es_feria and not autorizado_hoy:
-                cur.execute("SELECT id FROM bloqueos_feria WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0 ORDER BY id DESC LIMIT 1", (fecha_dia, sucursal, "Primera venta no fue FERIA"))
+                cur.execute("""SELECT id FROM bloqueos_feria
+                               WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0
+                               ORDER BY id DESC LIMIT 1""",
+                            (fecha_dia, sucursal, "Primera venta no fue FERIA"))
                 ya = cur.fetchone()
                 if not ya:
-                    cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)", (sucursal, fecha_dia, "Primera venta no fue FERIA"))
+                    cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)",
+                                (sucursal, fecha_dia, "Primera venta no fue FERIA"))
                     conn.commit()
-                return render_template("venta_bloqueada.html", mensaje="❌ La primera venta del día debe ser FERIA. Espera autorización de un administrador.")
+                return render_template("venta_bloqueada.html",
+                                       mensaje="❌ La primera venta del día debe ser FERIA. Espera autorización de un administrador.")
 
             if es_feria and not autorizado_hoy:
                 monto_venta_feria = safe_float(carrito[0].get("precio", 0))
                 ayer = (fecha_dt - timedelta(days=1)).strftime("%d-%m-%Y")
-                cur.execute("SELECT COALESCE(SUM(monto), 0) FROM gastos WHERE fecha = ? AND sucursal = ? AND TRIM(UPPER(motivo)) = 'FERIA'", (ayer, sucursal))
+                cur.execute("""SELECT COALESCE(SUM(monto), 0) FROM gastos
+                               WHERE fecha = ? AND sucursal = ? AND TRIM(UPPER(motivo)) = 'FERIA'""",
+                            (ayer, sucursal))
                 total_feria_ayer = safe_float(cur.fetchone()[0])
 
                 if a_centavos(monto_venta_feria) != a_centavos(total_feria_ayer):
-                    cur.execute("SELECT id FROM bloqueos_feria WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0 ORDER BY id DESC LIMIT 1", (fecha_dia, sucursal, "Feria no coincide con la salida de ayer"))
+                    cur.execute("""SELECT id FROM bloqueos_feria
+                                   WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0
+                                   ORDER BY id DESC LIMIT 1""",
+                                (fecha_dia, sucursal, "Feria no coincide con la salida de ayer"))
                     ya = cur.fetchone()
                     if not ya:
-                        cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)", (sucursal, fecha_dia, "Feria no coincide con la salida de ayer"))
+                        cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)",
+                                    (sucursal, fecha_dia, "Feria no coincide con la salida de ayer"))
                         conn.commit()
-                    return render_template("venta_bloqueada.html", mensaje="❌ El monto de la FERIA no coincide con la salida registrada ayer. Espera autorización de un administrador.")
+                    return render_template("venta_bloqueada.html",
+                                           mensaje="❌ El monto de la FERIA no coincide con la salida registrada ayer. Espera autorización de un administrador.")
                 else:
                     carrito[0]["precio"] = round(total_feria_ayer, 2)
 
         total_venta = sum(safe_float(item.get("precio", 0)) for item in carrito)
-
         total_mxn = round(total_venta, 2)
         usd_mxn_entregado = round(dolares * tipo_cambio, 2)
 
@@ -1221,26 +1263,29 @@ def cobrar():
 
         total_pago = round(efectivo + tarjeta + usd_mxn_entregado, 2)
         cambio = round(total_pago - total_mxn, 2)
-
         if cambio < 0:
             flash(f"❌ Aún faltan ${abs(cambio):.2f} para completar el pago.")
             return redirect("/ventas")
 
         for item in carrito:
+            ref_item = (item.get("referencia") or "").strip()
             cur.execute("""
-                INSERT INTO ventas (usuario, sucursal, descripcion, tipo, concepto, referencia, precio, tipo_pago, fecha)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO ventas
+                (usuario, sucursal, descripcion, tipo, concepto, referencia, imei, precio, tipo_pago, fecha)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 usuario, sucursal,
                 item.get("descripcion", ""),
                 item.get("tipo", ""),
                 item.get("concepto", ""),
-                item.get("referencia", referencia_general),
+                ref_item if ref_item else referencia_general,
+                (item.get("imei") or "").strip(),
                 safe_float(item.get("precio", 0)),
                 item.get("tipo_pago", ""),
                 fecha
             ))
-            imei = item.get("imei", "")
+
+            imei = (item.get("imei") or "").strip()
             if imei:
                 cur.execute("UPDATE articulos SET estado = 'Vendido' WHERE imei = ?", (imei,))
 
@@ -1305,7 +1350,6 @@ def cobrar():
         return redirect("/ventas")
 
     return redirect("/abrir-ticket")
-
 @app.route("/ver-bloqueos")
 def ver_bloqueos():
     return redirect("/pendientes")
@@ -1792,10 +1836,11 @@ def modificar_ciclo(ciclo_id):
 def faltantes_json():
     import pytz
     from datetime import datetime
+    import sqlite3
 
     sucursales = ["Hidalgo", "Colinas", "Voluntad 1", "Reservas", "Villas"]
     TZ = pytz.timezone("America/Monterrey")
-    hoy = datetime.now(TZ).strftime("%d-%m-%Y")
+    hoy = datetime.now(TZ).strftime("%Y-%m-%d")
 
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
@@ -2044,6 +2089,11 @@ def feria_admin():
     sucursal_sel = request.values.get("sucursal") or (session.get("sucursal") if session.get("sucursal") in sucursales else sucursales[0])
     fecha_sel = request.values.get("fecha") or datetime.now(TZ).strftime("%Y-%m-%d")
 
+    try:
+        fecha_fmt = datetime.strptime(fecha_sel, "%Y-%m-%d").strftime("%d-%m-%Y")
+    except ValueError:
+        fecha_fmt = datetime.strptime(fecha_sel, "%d-%m-%Y").strftime("%d-%m-%Y")
+
     if request.method == "POST" and request.form.get("fase") == "calcular":
         denominaciones = [1,2,5,10,20,50,100]
         objetivos = {1:40,2:40,5:40,10:20,20:20,50:10,100:5}
@@ -2093,7 +2143,7 @@ def feria_admin():
                            actuales=actuales,
                            denom=[1,2,5,10,20,50,100],
                            sucursal=sucursal_sel,
-                           fecha=datetime.strptime(fecha_sel,"%Y-%m-%d").strftime("%d-%m-%Y"),
+                           fecha=fecha_fmt,
                            modo_admin=True,
                            sucursales=sucursales)
 
@@ -2213,7 +2263,6 @@ def nota():
             fecha_post = ymd_to_dmy(request.form.get("fecha_form")) or fecha_qs
             sucursal_post = request.form.get("sucursal_form") or sucursal_qs
         else:
-            # consulta no elige fecha/sucursal en el form
             fecha_post = fecha_qs
             sucursal_post = session.get("sucursal", "")
 
@@ -2225,7 +2274,6 @@ def nota():
             conn.commit()
             registrar_log(session["usuario"], tipo, f"Registró una nota en {sucursal_post} ({fecha_post})")
             conn.close()
-            # Redirige mostrando la misma fecha/sucursal
             return redirect(f"/nota?fecha={fecha_post}&sucursal={sucursal_post}")
 
     cur.execute(

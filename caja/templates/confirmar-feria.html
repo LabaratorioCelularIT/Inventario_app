@@ -6,79 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
   <style>
-    :root {
-      --azul: #003366;
-      --celeste: #e6f0ff;
-      --blanco: #ffffff;
-      --gris: #f2f2f2;
-      --verde: #4CAF50;
-      --rojo: #e74c3c;
-    }
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--celeste);
-      margin: 0;
-      padding: 0;
-      color: #333;
-    }
-    .topbar {
-      background-color: var(--azul);
-      color: var(--blanco);
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      font-weight: bold;
-    }
-    .container {
-      max-width: 800px;
-      margin: 30px auto;
-      background-color: var(--blanco);
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .section { margin-bottom: 30px; }
-    .section-title {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 15px;
-      border-bottom: 2px solid var(--azul);
-      padding-bottom: 5px;
-    }
-    .info-line { margin: 10px 0; }
-    ul.resumen-claro {
-      list-style: none;
-      padding: 0;
-      font-size: 16px;
-    }
-    ul.resumen-claro li { margin: 5px 0; }
-    .resumen {
-      background-color: var(--gris);
-      padding: 15px;
-      border-radius: 8px;
-    }
-    .botones {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 30px;
-    }
-    .btn {
-      padding: 12px 20px;
-      font-size: 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .btn-confirmar { background-color: var(--verde); color: white; }
-    .btn-cancelar {
-      background-color: var(--rojo);
-      color: white;
-      text-decoration: none;
-      display: inline-block;
-      text-align: center;
-    }
+    :root { --azul:#003366; --celeste:#e6f0ff; --blanco:#ffffff; --gris:#f2f2f2; --verde:#4CAF50; --rojo:#e74c3c; }
+    body{font-family:'Segoe UI',sans-serif;background-color:var(--celeste);margin:0;padding:0;color:#333}
+    .topbar{background-color:var(--azul);color:var(--blanco);padding:20px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold}
+    .container{max-width:800px;margin:30px auto;background-color:var(--blanco);padding:20px;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+    .section{margin-bottom:30px}
+    .section-title{font-size:20px;font-weight:bold;margin-bottom:15px;border-bottom:2px solid var(--azul);padding-bottom:5px}
+    .info-line{margin:10px 0}
+    ul.resumen-claro{list-style:none;padding:0;font-size:16px}
+    ul.resumen-claro li{margin:5px 0}
+    .resumen{background-color:var(--gris);padding:15px;border-radius:8px}
+    .botones{display:flex;justify-content:space-between;margin-top:30px}
+    .btn{padding:12px 20px;font-size:16px;border:none;border-radius:6px;cursor:pointer}
+    .btn-confirmar{background-color:var(--verde);color:#fff}
+    .btn-cancelar{background-color:var(--rojo);color:#fff;text-decoration:none;display:inline-block;text-align:center}
   </style>
 </head>
 <body>
@@ -101,7 +42,7 @@
         {% if diferencia > 0 %}
           <li style="color: green;">✅ Sobran {{ diferencia }} de ${{ denom }}</li>
         {% elif diferencia < 0 %}
-          <li style="color: red;">❌ Faltan {{ diferencia | abs }} de ${{ denom }}</li>
+          <li style="color: red;">❌ Faltan {{ diferencia|abs }} de ${{ denom }}</li>
         {% else %}
           <li style="color: gray;">✔️ Justo en ${{ denom }}</li>
         {% endif %}
@@ -130,7 +71,7 @@
     {% endfor %}
 
     <div class="botones">
-      <a href="{{ '/feria-admin' if es_admin else '/feria' }}" class="btn btn-cancelar">Cancelar</a>
+      <a href="{{ '/feria-admin?sucursal=' ~ data.sucursal ~ '&fecha=' ~ data.fecha if es_admin else '/feria' }}" class="btn btn-cancelar">Cancelar</a>
       <button type="submit" class="btn btn-confirmar">Guardar Feria</button>
     </div>
   </form>

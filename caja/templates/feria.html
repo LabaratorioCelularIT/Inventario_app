@@ -5,184 +5,45 @@
   <title>Registrar Feria - {{ sucursal }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    :root{
-      --azul-rey:#003366;
-      --azul:#337ab7;
-      --azul-hover:#286090;
-      --celeste:#e6f0ff;
-      --blanco:#ffffff;
-      --gris:#f5f5f5;
-      --borde:#d9e1ec;
-      --rojo:#d9534f;
-      --rojo-hover:#c9302c;
-      --verde:#2e8b57;
-      --texto:#2c3e50;
-    }
-
+    :root{--azul-rey:#003366;--azul:#337ab7;--azul-hover:#286090;--celeste:#e6f0ff;--blanco:#ffffff;--gris:#f5f5f5;--borde:#d9e1ec;--rojo:#d9534f;--rojo-hover:#c9302c;--verde:#2e8b57;--texto:#2c3e50}
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:'Segoe UI',sans-serif;
-      background-color:var(--celeste);
-      color:var(--texto);
-    }
-
-    /* Topbar */
-    .topbar{
-      background-color:var(--azul-rey);
-      color:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:12px;
-      padding:16px 20px;
-      font-size:22px;
-      font-weight:700;
-      box-shadow:0 2px 10px rgba(0,0,0,.2);
-      position:sticky;
-      top:0;
-      z-index:50;
-      border-bottom:3px solid #001f3f;
-    }
+    body{margin:0;font-family:'Segoe UI',sans-serif;background-color:var(--celeste);color:var(--texto)}
+    .topbar{background-color:var(--azul-rey);color:#fff;display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 20px;font-size:22px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.2);position:sticky;top:0;z-index:50;border-bottom:3px solid #001f3f}
     .topbar img{height:70px}
-
-    /* Botón fijo Volver al Panel */
-    .volver-fijo{
-      position:fixed;
-      top:16px;
-      left:16px;
-      z-index:60;
-    }
-
-    /* Contenedor principal (tarjeta) */
-    .container{
-      max-width:1000px;
-      margin:30px auto;
-      background:var(--blanco);
-      padding:28px;
-      border-radius:16px;
-      box-shadow:0 8px 24px rgba(0,0,0,.08);
-      border:1px solid var(--borde);
-    }
-
-    /* Filtros admin */
-    .filtros-admin{
-      display:flex;
-      gap:12px;
-      align-items:flex-end;
-      flex-wrap:wrap;
-      margin-bottom:18px;
-      background:var(--gris);
-      padding:12px;
-      border-radius:12px;
-      border:1px solid var(--borde);
-    }
+    .volver-fijo{position:fixed;top:16px;left:16px;z-index:60}
+    .container{max-width:1000px;margin:30px auto;background:var(--blanco);padding:28px;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.08);border:1px solid var(--borde)}
+    .filtros-admin{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px;background:var(--gris);padding:12px;border-radius:12px;border:1px solid var(--borde)}
     .filtros-admin label{font-weight:600;display:block;margin-bottom:6px}
-    .input, .select{
-      padding:10px 12px;
-      border:1px solid #cfd8e3;
-      border-radius:10px;
-      font-size:14px;
-      background:#fff;
-      min-width:180px;
-      outline:none;
-      transition:border-color .15s ease, box-shadow .15s ease;
-    }
-    .input:focus, .select:focus{
-      border-color:var(--azul);
-      box-shadow:0 0 0 4px rgba(51,122,183,.15);
-    }
-
-    /* Denominaciones */
-    .denominacion{
-      margin-bottom:32px;
-      padding-bottom:20px;
-      border-bottom:1px solid var(--borde);
-    }
-    .denominacion h2{
-      margin:0 0 12px 0;
-      font-size:20px;
-      color:var(--azul-rey);
-    }
-    .campo{
-      margin:10px 0;
-    }
-    .campo label{
-      font-weight:700;
-      display:block;
-      margin-bottom:6px;
-    }
-    .numero{
-      width:160px;
-      padding:10px 12px;
-      font-size:16px;
-      border:1px solid #cfd8e3;
-      border-radius:10px;
-      outline:none;
-      transition:border-color .15s ease, box-shadow .15s ease;
-    }
-    .numero:focus{
-      border-color:var(--azul);
-      box-shadow:0 0 0 4px rgba(51,122,183,.15);
-    }
-
+    .input,.select{padding:10px 12px;border:1px solid #cfd8e3;border-radius:10px;font-size:14px;background:#fff;min-width:180px;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
+    .input:focus,.select:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(51,122,183,.15)}
+    .denominacion{margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--borde)}
+    .denominacion h2{margin:0 0 12px 0;font-size:20px;color:var(--azul-rey)}
+    .campo{margin:10px 0}
+    .campo label{font-weight:700;display:block;margin-bottom:6px}
+    .numero{width:160px;padding:10px 12px;font-size:16px;border:1px solid #cfd8e3;border-radius:10px;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
+    .numero:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(51,122,183,.15)}
     .resumen{margin-top:10px;font-size:15px}
     .faltante{color:var(--rojo);font-weight:700}
     .correcto{color:var(--verde);font-weight:700}
-
-    /* Botones */
-    .btn{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
-      padding:12px 18px;
-      border-radius:10px;
-      font-weight:700;
-      border:2px solid #1c5e8c;
-      text-decoration:none;
-      cursor:pointer;
-      box-shadow:0 4px 10px rgba(0,0,0,.06);
-      transition:background-color .2s ease, transform .1s ease, filter .2s ease;
-      user-select:none;
-    }
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:10px;font-weight:700;border:2px solid #1c5e8c;text-decoration:none;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.06);transition:background-color .2s ease,transform .1s ease,filter .2s ease;user-select:none}
     .btn:hover{transform:translateY(-1px)}
     .btn:active{transform:translateY(0)}
-
-    .btn-azul{
-      background:var(--azul);
-      color:#fff;
-    }
+    .btn-azul{background:var(--azul);color:#fff}
     .btn-azul:hover{background:var(--azul-hover)}
-
-    .btn-rojo{
-      background:var(--rojo);
-      color:#fff;
-      border-color:#001f3f;
-    }
+    .btn-rojo{background:var(--rojo);color:#fff;border-color:#001f3f}
     .btn-rojo:hover{background:var(--rojo-hover)}
-
-    .acciones{display:flex; gap:10px; align-items:center}
-
-    @media (max-width:700px){
-      .volver-fijo{top:12px;left:12px}
-      .container{margin:20px 14px;padding:18px}
-      .numero{width:100%}
-      .input,.select{min-width:unset;width:100%}
-      .acciones{flex-direction:column;align-items:stretch}
-    }
+    .acciones{display:flex;gap:10px;align-items:center}
+    @media (max-width:700px){.volver-fijo{top:12px;left:12px}.container{margin:20px 14px;padding:18px}.numero{width:100%}.input,.select{min-width:unset;width:100%}.acciones{flex-direction:column;align-items:stretch}}
   </style>
 </head>
 <body>
   {% set es_admin = modo_admin|default(False) %}
 
-  <!-- Barra superior -->
   <div class="topbar">
     <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
     <span>Registrar Feria — {{ sucursal }}</span>
   </div>
 
-  <!-- Botón fijo Volver al Panel (mantiene tu ruta) -->
   <div class="volver-fijo">
     <a class="btn btn-rojo" href="/volver-panel">⬅ Volver al Panel</a>
   </div>
@@ -210,6 +71,7 @@
 
     <form method="POST" action="{{ '/feria-admin' if es_admin else '/confirmar-feria' }}">
       {% if es_admin %}
+        <input type="hidden" name="fase" value="calcular">
         <input type="hidden" name="sucursal" value="{{ sucursal }}">
         <input type="hidden" name="fecha" value="{{ fecha }}">
       {% endif %}
@@ -237,7 +99,7 @@
       </div>
       {% endfor %}
 
-      <div style="text-align:center; margin-top:6px">
+      <div style="text-align:center;margin-top:6px">
         <button type="submit" class="btn btn-azul">Continuar</button>
       </div>
     </form>
@@ -246,14 +108,12 @@
   <script>
     const objetivos = {{ objetivos|tojson }};
     const denom = {{ denom|tojson }};
-
     function actualizarResumen(d){
       const actual = parseInt(document.getElementById('actual_'+d).value)||0;
       const objetivo = parseInt(objetivos[d])||0;
       const diferencia = objetivo - actual;
       const valorObjetivo = objetivo * d;
       const valorActual = actual * d;
-
       let resumen = "V. Objetivo: $"+valorObjetivo+"<br>V. Actual: $"+valorActual+"<br>";
       if(diferencia > 0){
         resumen += `<span class="faltante">Faltan (neto): ${diferencia} monedas ($${diferencia*d}) — Repuesto sugerido: ${diferencia} monedas</span>`;
@@ -265,7 +125,6 @@
       }
       document.getElementById('resumen_'+d).innerHTML = resumen;
     }
-
     window.onload = () => { denom.forEach(d => actualizarResumen(d)); };
   </script>
 </body>

@@ -21,20 +21,34 @@
       align-items: center;
       border-bottom: 3px solid #001f3f;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      position: relative; /* importante para ubicar el volver-btn */
     }
 
     .topbar img {
-      height: 60px;
+      height: 70px;
       margin-right: 15px;
     }
 
     .topbar .title {
-      font-size: 28px;
+      font-size: 26px;
       font-weight: bold;
       color: #ffffff;
       display: flex;
       align-items: center;
     }
+
+    .volver-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background-color: #e74c3c;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .volver-btn:hover { background-color: #c0392b; }
 
     .container {
       max-width: 1000px;
@@ -74,9 +88,7 @@
       box-sizing: border-box;
     }
 
-    .full-width {
-      grid-column: span 2;
-    }
+    .full-width { grid-column: span 2; }
 
     .boton {
       background-color: #3498db;
@@ -88,51 +100,21 @@
       font-size: 16px;
       margin-right: 10px;
     }
-
-    .boton:hover {
-      background-color: #2980b9;
-    }
+    .boton:hover { background-color: #2980b9; }
 
     .mensaje {
       margin-top: 20px;
       font-weight: bold;
       color: #27ae60;
     }
-
-    .error {
-      color: #e74c3c;
-    }
-
-    .btn-volver {
-      display: block;
-      text-align: center;
-      background-color: #2980b9;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: bold;
-      margin-top: 40px;
-    }
-
-    .btn-volver:hover {
-      background-color: #21618c;
-    }
+    .error { color: #e74c3c; }
 
     @media (max-width: 768px) {
-      form {
-        grid-template-columns: 1fr;
-      }
-
-      .topbar {
-        flex-direction: column;
-      }
-
-      .topbar .title {
-        font-size: 22px;
-        text-align: center;
-        margin-top: 10px;
-      }
+      form { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; text-align: center; }
+      .topbar .title { font-size: 20px; margin-top: 8px; }
+      .topbar img { height: 60px; margin-right: 0; }
+      .volver-btn { top: 15px; right: 15px; padding: 8px 12px; font-size: 14px; }
     }
   </style>
 </head>
@@ -141,13 +123,13 @@
   <div class="topbar">
     <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
     <div class="title">Celulares Crédito Fácil</div>
+    <a href="/dashboard" class="volver-btn">⬅ Volver al Panel</a>
   </div>
 
   <div class="container">
     <h2>Agregar Artículo al Inventario</h2>
 
     <form method="POST">
-      <!-- Campos -->
       <div>
         <label for="tipo_producto">Tipo de Producto</label>
         <input list="tipos_producto" name="tipo_producto_nombre" id="tipo_producto" required>
@@ -274,8 +256,6 @@
     {% if mensaje %}
     <div class="mensaje {% if '❌' in mensaje %}error{% endif %}">{{ mensaje }}</div>
     {% endif %}
-
-    <a href="/dashboard" class="btn-volver">← Volver al Panel Principal</a>
   </div>
 
 <script>

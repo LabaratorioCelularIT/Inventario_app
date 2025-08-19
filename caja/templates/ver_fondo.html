@@ -2,160 +2,101 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Fondo Actual</title>
+  <title>Fondo Actual | Celulares Crédito Fácil</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     :root{
-      --azul-rey:#003366;
-      --azul:#337ab7;
-      --azul-hover:#286090;
-      --celeste:#e6f0ff;
-      --blanco:#ffffff;
-      --gris:#f5f5f5;
+      --bg:#e6f0ff;
+      --fg:#003366;
+      --card:#ffffff;
+      --accent:#337ab7;
+      --accent-hover:#286090;
+      --danger:#d9534f;
+      --danger-hover:#c9302c;
       --borde:#d9e1ec;
       --sombra:rgba(0,0,0,.08);
       --texto:#2c3e50;
       --verde:#2e8b57;
-      --rojo:#d9534f;
-      --rojo-hover:#c9302c;
     }
 
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:'Segoe UI',sans-serif;
-      background:var(--celeste);
-      color:var(--texto);
-    }
+    body{ margin:0; font-family:'Segoe UI',Tahoma,sans-serif; background:var(--bg); color:#000 }
 
     .topbar{
-      background:var(--azul-rey);
+      background:var(--fg);
       color:#fff;
       display:flex;
-      align-items:center;
       justify-content:center;
+      align-items:center;
       gap:12px;
-      padding:16px 20px;
-      font-size:22px;
-      font-weight:700;
-      box-shadow:0 2px 10px rgba(0,0,0,.2);
-      position:sticky;
-      top:0;
-      z-index:50;
+      padding:20px;
       border-bottom:3px solid #001f3f;
+      box-shadow:0 2px 10px rgba(0,0,0,.2);
+      position:relative;
     }
-    .topbar img{height:70px}
+    .topbar img{ height:70px; }
+    .topbar .title{ font-size:26px; font-weight:700; display:flex; align-items:center; color:#fff }
 
-    .volver-fijo{
-      position:fixed;
-      top:16px;
-      left:16px;
-      z-index:60;
+    .volver-btn{
+      position:absolute; top:20px; right:20px;
+      background:var(--danger); color:#fff;
+      padding:10px 16px; border-radius:6px; text-decoration:none;
+      font-weight:bold; z-index:2;
     }
-
-    .btn{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
-      padding:10px 16px;
-      border-radius:10px;
-      font-weight:700;
-      text-decoration:none;
-      cursor:pointer;
-      box-shadow:0 4px 10px rgba(0,0,0,.06);
-      transition:background-color .2s ease, transform .1s ease, filter .2s ease;
-      user-select:none;
-      border:2px solid transparent;
-    }
-    .btn:hover{transform:translateY(-1px)}
-    .btn:active{transform:translateY(0)}
-
-    .btn-rojo {
-      background: var(--rojo);
-      color: #fff;
-      border-color: var(--rojo-hover);
-    }
-    .btn-rojo:hover {
-      background: var(--rojo-hover);
-    }
+    .volver-btn:hover{ background:var(--danger-hover); }
 
     .container{
       max-width:720px;
       margin:30px auto;
-      background:var(--blanco);
+      background:var(--card);
       border-radius:16px;
       padding:24px;
       box-shadow:0 8px 24px var(--sombra);
       border:1px solid var(--borde);
     }
 
-    h2{
-      margin:0 0 16px 0;
-      text-align:center;
-      color:var(--azul-rey);
-    }
+    h2{ margin:0 0 16px; text-align:center; color:var(--fg); font-size:24px }
 
     .lista{
-      list-style:none;
-      padding:0;
-      margin:0;
+      list-style:none; padding:0; margin:0;
       border:1px solid var(--borde);
-      border-radius:12px;
-      overflow:hidden;
+      border-radius:12px; overflow:hidden;
       box-shadow:0 4px 14px var(--sombra);
       background:#fff;
     }
     .item{
-      display:grid;
-      grid-template-columns: 1fr auto;
-      gap:10px;
-      padding:12px 14px;
-      border-bottom:1px solid #edf2f7;
-      align-items:center;
+      display:grid; grid-template-columns:1fr auto; gap:10px;
+      padding:12px 14px; border-bottom:1px solid #edf2f7; align-items:center;
     }
-    .item:last-child{border-bottom:none}
-    .item:nth-child(even){background:#fafcff}
-    .denom{font-weight:600}
-    .destacado{font-weight:700;color:var(--azul-rey)}
-    .valor{font-weight:700}
+    .item:last-child{ border-bottom:none }
+    .item:nth-child(even){ background:#fafcff }
+    .item:hover{ background:#f3f8ff }
+    .denom{ font-weight:600; color:#1f2d3d }
+    .destacado{ font-weight:700; color:var(--fg) }
+    .valor{ font-weight:700 }
 
-    .footer{
-      margin-top:16px;
-      text-align:center;
-      font-size:16px;
-      font-weight:700;
-    }
-    .footer .total{color:var(--verde)}
+    .footer{ margin-top:16px; text-align:center; font-size:16px; font-weight:700 }
+    .footer .total{ color:var(--verde) }
 
-    .volver-bottom{
-      text-align:center;
-      margin-top:20px;
-      display:none;
-    }
-
-    @media (max-width:720px){
-      .container{margin:20px 14px;padding:18px}
-      .volver-bottom{display:block}
+    @media (max-width:600px){
+      .topbar{ flex-direction:column; text-align:center }
+      .topbar .title{ flex-direction:column; font-size:20px }
+      .topbar img{ height:60px; }
+      .volver-btn{ font-size:14px; padding:8px 12px; top:15px; right:15px }
+      .container{ margin:20px; padding:18px }
     }
   </style>
 </head>
 <body>
 
+  <a class="volver-btn"
+     href="{{ '/panel-admin' if session.get('tipo') == 'admin' else ('/panel-consulta' if session.get('tipo') == 'consulta' else '/panel-reparto') }}">
+     ⬅ Volver al Panel
+  </a>
+
   <div class="topbar">
     <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
-    <span>Celulares Crédito Fácil – 💼 Fondo Actual</span>
-  </div>
-
-  <!-- Botón Volver rojo -->
-  <div class="volver-fijo">
-    {% if session['tipo'] == 'admin' %}
-      <a href="{{ url_for('panel_admin') }}" class="btn btn-rojo">← Volver</a>
-    {% elif session['tipo'] == 'consulta' %}
-      <a href="{{ url_for('panel_consulta') }}" class="btn btn-rojo">← Volver</a>
-    {% elif session['tipo'] == 'reparto' %}
-      <a href="{{ url_for('panel_reparto') }}" class="btn btn-rojo">← Volver</a>
-    {% endif %}
+    <div class="title">Celulares Crédito Fácil – Fondo Actual</div>
   </div>
 
   <div class="container">
@@ -164,7 +105,8 @@
     <ul class="lista">
       {% for item in fondo %}
       <li class="item">
-        <div class="denom">Monedas de ${{ item.denominacion }}:
+        <div class="denom">
+          Monedas de ${{ item.denominacion }}:
           <span class="destacado">{{ item.cantidad }}</span>
         </div>
         <div class="valor">$ {{ item.valor }}</div>
@@ -174,16 +116,6 @@
 
     <div class="footer">
       💰 <span class="total">Total general del fondo: ${{ total_fondo }}</span>
-    </div>
-
-    <div class="volver-bottom">
-      {% if session['tipo'] == 'admin' %}
-        <a href="{{ url_for('panel_admin') }}" class="btn btn-rojo">← Volver</a>
-      {% elif session['tipo'] == 'consulta' %}
-        <a href="{{ url_for('panel_consulta') }}" class="btn btn-rojo">← Volver</a>
-      {% elif session['tipo'] == 'reparto' %}
-        <a href="{{ url_for('panel_reparto') }}" class="btn btn-rojo">← Volver</a>
-      {% endif %}
     </div>
   </div>
 

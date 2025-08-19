@@ -5,260 +5,256 @@
   <title>Inventario de la Sucursal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      margin: 0;
-      background-color: #e6f0ff;
-      color: #2c3e50;
+    :root{
+      --bg:#e6f0ff;
+      --fg:#003366;
+      --card:#ffffff;
+      --accent:#337ab7;
+      --accent-hover:#286090;
+      --danger:#d9534f;
+      --danger-hover:#c9302c;
+      --borde:#d9e1ec;
+      --sombra:rgba(0,0,0,.08);
+      --muted:#6b7280;
     }
 
-    .header {
-      background-color: #003366;
-      color: white;
-      padding: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
+    *{box-sizing:border-box}
+    body{
+      font-family:'Segoe UI',sans-serif;
+      margin:0;
+      background:var(--bg);
+      color:#2c3e50;
     }
 
-    .header img {
-      height: 60px;
-      margin-right: 15px;
+    .topbar{
+      background:var(--fg);
+      color:#fff;
+      padding:16px 20px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      border-bottom:3px solid #001f3f;
+      box-shadow:0 2px 8px rgba(0,0,0,.2);
+      position:relative;
+      z-index:5;
+    }
+    .topbar img{height:70px}
+    .title{
+      font-size:22px;
+      font-weight:700;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      text-align:center;
+    }
+    .actions-right{
+      position:absolute;
+      right:20px;
+      top:16px;
+      display:flex;
+      gap:8px;
+      align-items:center;
     }
 
-    .header h1 {
-      font-size: 24px;
-      margin: 0;
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:10px 16px;
+      border-radius:10px;
+      font-weight:700;
+      border:2px solid transparent;
+      text-decoration:none;
+      cursor:pointer;
+      user-select:none;
+      transition:background-color .2s ease, transform .1s ease;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn-azul{background:var(--accent);color:#fff;}
+    .btn-azul:hover{background:var(--accent-hover)}
+    .btn-rojo{background:var(--danger);color:#fff;border-color:#001f3f;}
+    .btn-rojo:hover{background:var(--danger-hover)}
+    .btn-ghost{background:#f3f4f6;color:#111;border-color:#e5e7eb;}
+
+    .container{
+      max-width:1000px;
+      margin:30px auto;
+      background:var(--card);
+      border-radius:14px;
+      padding:24px;
+      border:1px solid var(--borde);
+      box-shadow:0 8px 24px var(--sombra);
+    }
+    h2{
+      margin:0 0 12px 0;
+      text-align:center;
+      color:var(--fg);
+      font-size:22px;
     }
 
-    .btn-volver {
-      position: absolute;
-      right: 20px;
-      top: 20px;
-      background-color: #e74c3c;
-      color: white;
-      padding: 8px 14px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 14px;
-      border: none;
-      cursor: pointer;
+    .filtros{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:10px;
+      margin:12px 0 16px 0;
+    }
+    .filtros select{
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #cfd8e3;
+      background:#fff;
+      font-size:14px;
+      outline:none;
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    .filtros select:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 4px rgba(51,122,183,.15);
     }
 
-    .btn-volver:hover {
-      background-color: #c0392b;
+    .table-wrap{
+      margin-top:8px;
+      border:1px solid var(--borde);
+      border-radius:12px;
+      overflow:auto;
+      box-shadow:0 4px 14px var(--sombra);
+      background:#fff;
+    }
+    table{
+      width:100%;
+      min-width:760px;
+      border-collapse:collapse;
+      font-size:14px;
+    }
+    th, td{
+      padding:12px 10px;
+      border-bottom:1px solid #e6e9ef;
+      text-align:center;
+      white-space:nowrap;
+    }
+    th{
+      background:var(--accent);
+      color:#fff;
+      font-weight:700;
+      position:sticky; top:0;
+    }
+    tbody tr:nth-child(even) td{background:#fafcff}
+    tbody tr:hover td{background:#f7fbff}
+
+    .pill{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+      line-height:1;
+    }
+    .p-ok{background:#dcfce7;color:#166534}
+    .p-muted{background:#e5e7eb;color:#374151}
+
+    .cta-top{
+      text-align:center;
+      margin-bottom:12px;
     }
 
-    .container {
-      padding: 30px;
-      max-width: 1000px;
-      margin: 40px auto;
-      background-color: white;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-      font-size: 22px;
-    }
-
-    .filtros {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
-    .filtros select, .filtros button {
-      padding: 8px 12px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-    }
-
-    .filtros .limpiar-btn {
-      background-color: #95a5a6;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-      border: none;
-    }
-
-    .filtros .limpiar-btn:hover {
-      background-color: #7f8c8d;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-      background: white;
-    }
-
-    th, td {
-      padding: 12px 10px;
-      border: 1px solid #ccc;
-      text-align: center;
-    }
-
-    th {
-      background-color: #3498db;
-      color: white;
-    }
-
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-
-    .estatus {
-      padding: 5px 10px;
-      border-radius: 5px;
-      color: white;
-      font-size: 13px;
-    }
-
-    .estatus.nuevo {
-      background-color: #2ecc71;
-    }
-
-    .estatus.sin-estatus {
-      background-color: #95a5a6;
-    }
-
-    @media screen and (max-width: 768px) {
-      table, thead, tbody, th, td, tr {
-        display: block;
-      }
-
-      thead {
-        display: none;
-      }
-
-      tr {
-        margin-bottom: 15px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        padding: 10px;
-        background: #f9f9f9;
-      }
-
-      td {
-        text-align: left;
-        padding-left: 50%;
-        position: relative;
-        font-size: 13px;
-      }
-
-      td::before {
-        position: absolute;
-        left: 10px;
-        top: 10px;
-        font-weight: bold;
-        width: 45%;
-        white-space: nowrap;
-        color: #2c3e50;
-      }
-
-      td:nth-of-type(1)::before { content: "ID"; }
-      td:nth-of-type(2)::before { content: "Tipo"; }
-      td:nth-of-type(3)::before { content: "Memoria"; }
-      td:nth-of-type(4)::before { content: "Color"; }
-      td:nth-of-type(5)::before { content: "IMEI"; }
-      td:nth-of-type(6)::before { content: "Estado"; }
-
-      .btn-volver {
-        position: static;
-        display: block;
-        width: 100%;
-        margin: 10px 0;
-      }
-
-      .filtros {
-        flex-direction: column;
-        align-items: stretch;
-      }
+    @media(max-width:720px){
+      .title{flex-direction:column;font-size:18px}
+      .topbar img{height:60px}
+      .actions-right{right:12px;top:12px}
+      .btn{padding:8px 12px;font-size:14px}
+      .container{margin:20px 14px;padding:18px}
+      th,td{padding:10px 8px}
     }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
-    <h1>Celulares Crédito Fácil</h1>
-    <a href="{{ '/dashboard' if session.get('tipo') == 'admin' else '/dashboard' }}" class="btn-volver">← Volver al panel</a>
+  <div class="topbar">
+    <div class="actions-right">
+      <a href="/dashboard" class="btn btn-rojo">← Volver al panel</a>
+    </div>
+    <div class="title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      <span>Celulares Crédito Fácil — Inventario de la Sucursal</span>
+    </div>
   </div>
-
-  <!-- ... Todo tu código arriba queda igual ... -->
 
   <div class="container">
     <h2>Inventario de la sucursal: {{ sucursal }}</h2>
 
     {% if tiene_inventario %}
-      <form action="/hacer-inventario" method="get" style="text-align: center; margin-bottom: 20px;">
-        <button class="limpiar-btn" style="background-color: #28a745; font-size: 15px;">
-          📋 Hacer inventario
-        </button>
+    <div class="cta-top">
+      <form action="/hacer-inventario" method="get">
+        <button class="btn btn-azul">📋 Hacer inventario</button>
       </form>
+    </div>
     {% endif %}
 
     <form method="get" class="filtros" id="filtro-form">
       <select name="tipo" onchange="this.form.submit()">
-        <option value="">-- Tipo --</option>
+        <option value="">— Tipo —</option>
         {% for tipo in tipos %}
           <option value="{{ tipo }}" {% if request.args.get('tipo') == tipo %}selected{% endif %}>{{ tipo }}</option>
         {% endfor %}
       </select>
 
       <select name="memoria" onchange="this.form.submit()">
-        <option value="">-- Memoria --</option>
+        <option value="">— Memoria —</option>
         {% for mem in memorias %}
           <option value="{{ mem }}" {% if request.args.get('memoria') == mem %}selected{% endif %}>{{ mem }}</option>
         {% endfor %}
       </select>
 
       <select name="color" onchange="this.form.submit()">
-        <option value="">-- Color --</option>
+        <option value="">— Color —</option>
         {% for col in colores %}
           <option value="{{ col }}" {% if request.args.get('color') == col %}selected{% endif %}>{{ col }}</option>
         {% endfor %}
       </select>
 
-      <button type="button" class="limpiar-btn" onclick="window.location.href = window.location.pathname">Limpiar Filtros</button>
+      <button type="button" class="btn btn-ghost" onclick="window.location.href = window.location.pathname">
+        Limpiar filtros
+      </button>
     </form>
 
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Tipo</th>
-          <th>Memoria</th>
-          <th>Color</th>
-          <th>IMEI</th>
-          <th>Estado</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for art in articulos %}
-        <tr>
-          <td>{{ art[0] }}</td>
-          <td>{{ art[1] }}</td>
-          <td>{{ art[2] }}</td>
-          <td>{{ art[3] }}</td>
-          <td>{{ art[4] }}</td>
-          <td>
-            <span class="estatus {{ 'nuevo' if art[5]=='Nuevo' else 'sin-estatus' }}">
-              {{ art[5] if art[5] else 'Sin estatus' }}
-            </span>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tipo</th>
+            <th>Memoria</th>
+            <th>Color</th>
+            <th>IMEI</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for art in articulos %}
+          <tr>
+            <td>{{ art[0] }}</td>
+            <td>{{ art[1] }}</td>
+            <td>{{ art[2] }}</td>
+            <td>{{ art[3] }}</td>
+            <td>{{ art[4] }}</td>
+            <td>
+              {% if art[5]=='Nuevo' %}
+                <span class="pill p-ok">Nuevo</span>
+              {% elif art[5] %}
+                <span class="pill p-muted">{{ art[5] }}</span>
+              {% else %}
+                <span class="pill p-muted">Sin estatus</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
   </div>
 
 </body>

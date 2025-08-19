@@ -5,37 +5,29 @@
   <title>Registrar Ventas</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    :root {
-      --bg: #e6f0ff;
-      --card: #ffffff;
-      --fg: #003366;
-      --accent: #337ab7;
-      --accent-hover: #286090;
-      --danger: #d9534f;
-      --danger-hover: #c9302c;
-    }
-    body { background-color: var(--bg); font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; color: #000; }
-    .topbar { background-color: var(--fg); padding: 20px; display: flex; justify-content: center; align-items: center; border-bottom: 3px solid #001f3f; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25); position: relative; }
-    .topbar img { height: 70px; margin-right: 15px; }
-    .topbar .title { font-size: 26px; font-weight: bold; color: #ffffff; display: flex; align-items: center; }
-    .volver-btn { position: absolute; top: 20px; left: 20px; background-color: var(--danger); color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; z-index: 999; }
-    .volver-btn:hover { background-color: var(--danger-hover); }
-    .container { padding: 30px 20px; max-width: 1000px; margin: auto; }
-    h2 { text-align: center; color: var(--fg); font-size: 24px; margin-bottom: 20px; }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    input, select { width: 100%; padding: 10px 12px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; height: 44px; box-sizing: border-box; background-color: #fff; }
-    .btn { background-color: var(--accent); color: white; padding: 10px 15px; border: none; border-radius: 6px; font-weight: bold; margin-top: 15px; cursor: pointer; }
-    .btn:hover { background-color: var(--accent-hover); }
-    .btn-red { background-color: var(--danger); }
-    .btn-red:hover { background-color: var(--danger-hover); }
-    table { width: 100%; border-collapse: collapse; background-color: var(--card); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1); }
-    th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
-    th { background-color: var(--accent); color: white; }
-    .section { background-color: var(--card); border-radius: 10px; padding: 20px; margin-top: 30px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); }
-    .total-pagar { text-align: center; font-size: 24px; font-weight: bold; margin-top: 20px; padding: 12px; background-color: #cce5ff; color: var(--fg); border: 2px solid #99c2ff; border-radius: 8px; box-shadow: 2px 2px 6px rgba(0,0,0,0.1); }
-    @media (max-width: 600px) {
-      .topbar .title { flex-direction: column; font-size: 20px; }
-      .topbar img { height: 60px; margin-bottom: 10px; }
+    :root { --bg:#e6f0ff; --card:#ffffff; --fg:#003366; --accent:#337ab7; --accent-hover:#286090; --danger:#d9534f; --danger-hover:#c9302c; }
+    body{ background-color:var(--bg); font-family:'Segoe UI', Tahoma, sans-serif; margin:0; padding:0; color:#000; }
+    .topbar{ background-color:var(--fg); padding:20px; display:flex; justify-content:center; align-items:center; border-bottom:3px solid #001f3f; box-shadow:0 2px 10px rgba(0,0,0,.25); position:relative; }
+    .topbar img{ height:70px; margin-right:15px; }
+    .topbar .title{ font-size:26px; font-weight:bold; color:#fff; display:flex; align-items:center; }
+    .volver-btn{ position:absolute; top:20px; right:20px; background-color:var(--danger); color:#fff; padding:10px 16px; text-decoration:none; border-radius:6px; font-weight:bold; z-index:999; }
+    .volver-btn:hover{ background-color:var(--danger-hover); }
+    .container{ padding:30px 20px; max-width:1000px; margin:auto; }
+    h2{ text-align:center; color:var(--fg); font-size:24px; margin-bottom:20px; }
+    label{ display:block; margin-top:10px; font-weight:bold; }
+    input,select{ width:100%; padding:10px 12px; margin-top:5px; border-radius:6px; border:1px solid #ccc; font-size:16px; height:44px; box-sizing:border-box; background:#fff; }
+    .btn{ background-color:var(--accent); color:#fff; padding:10px 15px; border:none; border-radius:6px; font-weight:bold; margin-top:15px; cursor:pointer; }
+    .btn:hover{ background-color:var(--accent-hover); }
+    .btn-red{ background-color:var(--danger); }
+    .btn-red:hover{ background-color:var(--danger-hover); }
+    table{ width:100%; border-collapse:collapse; background:var(--card); box-shadow:0 3px 10px rgba(0,0,0,.1); }
+    th,td{ padding:12px; border:1px solid #ccc; text-align:center; }
+    th{ background-color:var(--accent); color:#fff; }
+    .section{ background:var(--card); border-radius:10px; padding:20px; margin-top:30px; box-shadow:0 6px 20px rgba(0,0,0,.1); }
+    .total-pagar{ text-align:center; font-size:24px; font-weight:bold; margin-top:20px; padding:12px; background:#cce5ff; color:var(--fg); border:2px solid #99c2ff; border-radius:8px; box-shadow:2px 2px 6px rgba(0,0,0,.1); }
+    @media (max-width:600px){
+      .topbar .title{ flex-direction:column; font-size:20px; }
+      .topbar img{ height:60px; margin-bottom:10px; }
     }
   </style>
 </head>
@@ -72,6 +64,7 @@
     <input type="hidden" name="sucursal" value="{{ sucursal_filtro }}">
     <label>Descripción del producto (Feria, Pago, Venta o Enganche):</label>
     <input type="text" name="descripcion" required>
+
     <label>Financiera:</label>
     <select name="tipo" required>
       <option value="PayJoy">PayJoy</option>
@@ -81,14 +74,17 @@
       <option value="Ventacontado">Ventacontado</option>
       <option value="Otro">Otro</option>
     </select>
+
     <label>Concepto:</label>
     <select name="concepto" required>
       <option value="Parcialidad">Parcialidad</option>
       <option value="Enganche">Enganche</option>
       <option value="Otro">Otro</option>
     </select>
+
     <label>IMEI (si aplica):</label>
-    <input type="text" name="imei">
+    <input type="text" name="imei" placeholder="15 dígitos">
+
     <label>Tipo de pago:</label>
     <select name="tipo_pago" required>
       <option value="Efectivo">Efectivo</option>
@@ -96,10 +92,13 @@
       <option value="Dólar">Dólar</option>
       <option value="Mixto">Mixto</option>
     </select>
+
     <label>Referencia:</label>
     <input type="text" name="referencia">
+
     <label>Precio a pagar:</label>
     <input type="number" step="1" name="precio" required>
+
     <button class="btn" type="submit">Agregar producto</button>
     <a href="{{ url_for('ultimo_ticket') }}" class="btn">🔁 Reimprimir último ticket</a>
   </form>
@@ -113,6 +112,7 @@
           <th>Descripción</th>
           <th>Concepto</th>
           <th>Tipo</th>
+          <th>IMEI</th>        
           <th>Precio</th>
           <th>Eliminar</th>
         </tr>
@@ -123,6 +123,7 @@
           <td>{{ item.descripcion }}</td>
           <td>{{ item.concepto }}</td>
           <td>{{ item.tipo }}</td>
+          <td>{{ item.imei or '-' }}</td>  
           <td>${{ '%.2f'|format(item.precio) }}</td>
           <td><button class="btn btn-red" onclick="eliminarVenta(event, {{ loop.index0 }})">X</button></td>
         </tr>
@@ -170,6 +171,7 @@
           <th>Descripción</th>
           <th>Concepto</th>
           <th>Tipo</th>
+          <th>IMEI</th>        
           <th>Referencia</th>
           <th>Precio</th>
           <th>Imprimir</th>
@@ -182,6 +184,7 @@
           <td>{{ venta.descripcion }}</td>
           <td>{{ venta.concepto }}</td>
           <td>{{ venta.tipo }}</td>
+          <td>{{ venta.imei or '-' }}</td>  
           <td>{{ venta.referencia }}</td>
           <td>${{ '%.2f'|format(venta.precio) }}</td>
           <td>
@@ -190,6 +193,7 @@
               '{{ venta.concepto }}',
               '{{ venta.tipo }}',
               '{{ venta.referencia }}',
+              '{{ venta.imei or '' }}',
               '{{ '%.2f'|format(venta.precio) }}'
             )">🖨️</button>
           </td>
@@ -205,50 +209,46 @@
 </div>
 
 <script>
-  function eliminarVenta(event, index) {
+  function eliminarVenta(event, index){
     event.preventDefault();
     fetch('/eliminar-item', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ index: index })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ index })
+    }).then(r=>r.json()).then(data=>{
+      if(data.success){
         document.querySelector(`tr[data-index='${index}']`).remove();
         document.getElementById('totalPagar').innerText = `Total: $${data.total.toFixed(2)}`;
       }
     });
   }
-
-  function eliminarVentaAdmin(id) {
-    if (!confirm("¿Seguro que deseas eliminar esta venta?")) return;
-    fetch(`/eliminar-venta-admin/${id}`, { method: 'POST' })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) document.getElementById(`venta-${id}`).remove();
+  function eliminarVentaAdmin(id){
+    if(!confirm("¿Seguro que deseas eliminar esta venta?")) return;
+    fetch(`/eliminar-venta-admin/${id}`, { method:'POST' })
+      .then(r=>r.json())
+      .then(data=>{
+        if(data.success) document.getElementById(`venta-${id}`).remove();
         else alert("Error al eliminar la venta.");
       });
   }
-
-  function calcularCambio() {
-    const efectivo = parseFloat(document.getElementById('efectivo').value) || 0;
-    const tarjeta  = parseFloat(document.getElementById('tarjeta').value)  || 0;
-    const dolares  = parseFloat(document.getElementById('dolares').value)  || 0;
-    const tipoCambio = parseFloat(document.getElementById('dolar').value) || 0;
+  function calcularCambio(){
+    const efectivo = parseFloat(document.getElementById('efectivo').value)||0;
+    const tarjeta  = parseFloat(document.getElementById('tarjeta').value)||0;
+    const dolares  = parseFloat(document.getElementById('dolares').value)||0;
+    const tipoCambio = parseFloat(document.getElementById('dolar').value)||0;
     const total = parseFloat("{{ total|default(0) }}");
     const pagoTotal = efectivo + tarjeta + (dolares * tipoCambio);
     const cambio = pagoTotal - total;
     const lbl = document.getElementById('resultadoCambio');
-    if (cambio >= 0) { lbl.style.color = "green"; lbl.innerText = `Cambio a regresar: $${cambio.toFixed(2)}`; return true; }
-    lbl.style.color = "red"; lbl.innerText = `Falta por pagar: $${Math.abs(cambio).toFixed(2)}`; return false;
+    if(cambio >= 0){ lbl.style.color="green"; lbl.innerText=`Cambio a regresar: $${cambio.toFixed(2)}`; return true; }
+    lbl.style.color="red"; lbl.innerText=`Falta por pagar: $${Math.abs(cambio).toFixed(2)}`; return false;
   }
-
-  ["efectivo", "tarjeta", "dolares", "dolar"].forEach(id => {
-    const el = document.getElementById(id); if (el) el.addEventListener("input", calcularCambio);
+  ["efectivo","tarjeta","dolares","dolar"].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener("input", calcularCambio);
   });
 
-  function imprimirTicketDesdeFila(descripcion, concepto, financiera, referencia, precio) {
+  function imprimirTicketDesdeFila(descripcion, concepto, financiera, referencia, precio){
+    const lineaImei = imei ? `IMEI: ${imei}\n` : "";
     const contenido =
 `Celulares Crédito Fácil
 Sucursal: {{ sucursal_filtro }}
@@ -257,7 +257,7 @@ Fecha: {{ fecha }}
 Producto: ${descripcion}
 Concepto: ${concepto}
 Financiera: ${financiera}
-Ref: ${referencia}
+${lineaImei}Ref: ${referencia}
 Precio: $${precio}
 
 Total: $${precio}
@@ -265,9 +265,12 @@ Pagado: $${precio}
 Cambio: $0.00
 
 ¡Gracias por su compra!`;
-    fetch("http://localhost:5500/imprimir", { method: "POST", headers: { "Content-Type": "text/plain" }, body: contenido })
-      .then(r => { if (!r.ok) throw new Error("Error en la impresión"); })
-      .catch(err => alert("Error al imprimir: " + err.message));
+    fetch("http://localhost:5500/imprimir", {
+      method:"POST",
+      headers:{ "Content-Type":"text/plain" },
+      body:contenido
+    }).then(r=>{ if(!r.ok) throw new Error("Error en la impresión"); })
+      .catch(err=>alert("Error al imprimir: " + err.message));
   }
 </script>
 </body>

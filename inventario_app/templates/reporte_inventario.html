@@ -12,6 +12,8 @@
       --textarea: #f9f9f9;
       --btn: #3498db;
       --btn-hover: #2980b9;
+      --danger: #d9534f;
+      --danger-hover: #c9302c;
     }
 
     body {
@@ -29,6 +31,8 @@
       justify-content: center;
       align-items: center;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      position: relative; /* para posicionar el botón volver */
+      border-bottom: 3px solid #001f3f;
     }
 
     .logo-texto {
@@ -46,6 +50,19 @@
       font-size: 22px;
       font-weight: 600;
     }
+
+    .volver-btn {
+      position: absolute;
+      right: 20px;
+      top: 15px;
+      background: var(--danger);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .volver-btn:hover { background: var(--danger-hover); }
 
     .container {
       max-width: 950px;
@@ -76,18 +93,7 @@
       cursor: pointer;
       font-weight: bold;
     }
-
-    .btn:hover {
-      background-color: var(--btn-hover);
-    }
-
-    .top-button {
-      margin-bottom: 20px;
-      background-color: #555;
-      width: auto;
-      font-size: 14px;
-      padding: 10px 16px;
-    }
+    .btn:hover { background-color: var(--btn-hover); }
 
     textarea {
       width: 100%;
@@ -138,22 +144,16 @@
         flex-direction: column;
         text-align: center;
       }
-
-      .logo-texto img {
-        height: 50px;
+      .logo-texto img { height: 50px; }
+      .logo-texto span { font-size: 20px; }
+      .volver-btn {
+        top: 12px;
+        right: 12px;
+        padding: 8px 12px;
+        font-size: 14px;
       }
-
-      h2 {
-        font-size: 20px;
-      }
-
-      .btn {
-        font-size: 15px;
-      }
-
-      .top-button {
-        width: 100%;
-      }
+      h2 { font-size: 20px; }
+      .btn { font-size: 15px; }
     }
   </style>
 
@@ -194,6 +194,7 @@
 </head>
 <body>
   <div class="topbar">
+    <a href="/dashboard" class="volver-btn">← Volver al Panel</a>
     <div class="logo-texto">
       <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
       <span>Celulares Crédito Fácil</span>
@@ -201,8 +202,6 @@
   </div>
 
   <div class="container">
-    <button onclick="location.href='/dashboard'" class="btn top-button">🔙 Volver al Panel</button>
-
     <h2>📋 Reporte de Inventario Activo</h2>
 
     <form method="POST">

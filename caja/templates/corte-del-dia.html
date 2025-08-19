@@ -12,35 +12,39 @@
       --card: #ffffff;
       --accent: #337ab7;
       --accent-hover: #286090;
-      --danger: #c0392b;
+      --danger: #d9534f;
+      --danger-hover: #c9302c;
     }
     body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg); color: var(--fg); }
-    .topbar { background-color: var(--fg); color: white; padding: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+    .topbar { background-color: var(--fg); padding: 20px; display: flex; justify-content: center; align-items: center; border-bottom: 3px solid #001f3f; box-shadow: 0 2px 8px rgba(0,0,0,.2); position: relative; }
     .topbar img { height: 70px; margin-right: 15px; }
-    .topbar .title { font-size: 26px; font-weight: bold; display: flex; align-items: center; }
+    .topbar .title { font-size: 26px; font-weight: bold; color: white; display: flex; align-items: center; }
+    /* Botón volver al panel igual que en ventas */
+    .volver-btn { position: absolute; top: 20px; right: 20px; background-color: var(--danger); color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; z-index: 999; }
+    .volver-btn:hover { background-color: var(--danger-hover); }
     .container { max-width: 1000px; margin: 30px auto; padding: 20px; }
     .filtros { text-align: center; margin-bottom: 20px; }
-    .filtros input, .filtros select { padding: 8px; margin: 10px; border-radius: 6px; border: 1px solid #ccc; }
-    .filtros button { background-color: orange; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .filtros input, .filtros select { padding: 10px 12px; margin: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; }
+    .filtros button { background-color: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .filtros button:hover { background-color: var(--accent-hover); }
     .corte-contenido { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
     .card { background-color: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,.08); width: 45%; min-width: 280px; transition: transform .2s ease; }
     .card:hover { transform: translateY(-5px); }
     .card h3 { border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 15px; font-size: 20px; color: var(--fg); text-align: center; }
     .card p { font-size: 16px; margin: 8px 0; }
-    .total { font-weight: bold; font-size: 18px; color: green; }
-    .btn-volver { text-align: center; margin-top: 40px; }
-    .btn-volver a { text-decoration: none; background-color: var(--accent); color: white; padding: 12px 20px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; transition: background-color .3s ease; }
-    .btn-volver a:hover { background-color: var(--accent-hover); }
+    .total { font-weight: bold; font-size: 18px; color: green; text-align: center; margin-top: 10px; }
     @media (max-width: 600px){
-      .topbar{ flex-direction: column; text-align: center; }
-      .topbar .title{ font-size: 20px; flex-direction: column; }
-      .topbar img{ height: 60px; margin-bottom: 10px; }
-      .card{ width: 100%; }
-      .btn-volver a{ font-size: 14px; padding: 10px 16px; }
+      .topbar { flex-direction: column; text-align: center; }
+      .topbar .title { font-size: 20px; flex-direction: column; }
+      .topbar img { height: 60px; margin-bottom: 10px; }
+      .card { width: 100%; }
+      .filtros input, .filtros select { width: 90%; margin: 8px auto; display: block; }
     }
   </style>
 </head>
 <body>
+  <a class="volver-btn" href="{{ '/panel-admin' if session['tipo'] == 'admin' else '/panel-consulta' }}">⬅ Volver al Panel</a>
+
   <div class="topbar">
     <div class="title">
       <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
@@ -71,18 +75,14 @@
       </div>
 
       <div class="card">
-  <h3>Pagos y Gastos</h3>
-  <p>Gastos del día: ${{ "{:,.2f}".format(gastos) }}</p>
-  <p>Pagos con Tarjeta: ${{ "{:,.2f}".format(ventas_tarjeta) }}</p>
-  <p class="total">
-    Dinero en caja actual:
-    ${{ "{:,.2f}".format(ventas_total_dia - gastos - ventas_tarjeta) }}
-  </p>
-</div>
-    </div>
-
-    <div class="btn-volver">
-      <a href="{{ '/panel-admin' if session['tipo'] == 'admin' else '/panel-consulta' }}">⬅️ Volver al Panel</a>
+        <h3>Pagos y Gastos</h3>
+        <p>Gastos del día: ${{ "{:,.2f}".format(gastos) }}</p>
+        <p>Pagos con Tarjeta: ${{ "{:,.2f}".format(ventas_tarjeta) }}</p>
+        <p class="total">
+          Dinero en caja actual:
+          ${{ "{:,.2f}".format(ventas_total_dia - gastos - ventas_tarjeta) }}
+        </p>
+      </div>
     </div>
   </div>
 </body>

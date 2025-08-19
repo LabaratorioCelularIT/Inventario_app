@@ -24,11 +24,13 @@
 
     .topbar {
       background-color: var(--azul-rey);
-      padding: 15px;
+      padding: 15px 20px;
       display: flex;
       justify-content: center;
       align-items: center;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      position: relative; /* necesario para posicionar el botón */
+      border-bottom: 3px solid #001f3f;
     }
 
     .logo-texto {
@@ -37,15 +39,27 @@
       gap: 12px;
     }
 
-    .logo-texto img {
-      height: 60px;
-    }
-
+    .logo-texto img { height: 70px; }
     .logo-texto span {
       color: var(--blanco);
-      font-size: 36px;
-      font-weight: 600;
+      font-size: 26px;
+      font-weight: 700;
     }
+
+    .volver-btn{
+      position:absolute;
+      top:15px;
+      right:20px;
+      background-color: var(--rojo);
+      color:#fff;
+      padding:10px 16px;
+      border-radius:8px;
+      border:2px solid #922b21;
+      font-weight:700;
+      text-decoration:none;
+      transition: background-color .2s ease;
+    }
+    .volver-btn:hover{ background-color: var(--rojo-hover); }
 
     .container {
       max-width: 1250px;
@@ -61,23 +75,6 @@
       margin-bottom: 25px;
       color: var(--azul-rey);
       font-size: 28px;
-    }
-
-    .top-button {
-      margin-bottom: 25px;
-      background-color: var(--rojo);
-      border: 2px solid #922b21;
-      font-size: 15px;
-      padding: 12px 18px;
-      border-radius: 8px;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background-color 0.2s ease;
-    }
-
-    .top-button:hover {
-      background-color: var(--rojo-hover);
     }
 
     .mensaje {
@@ -123,9 +120,7 @@
       cursor: pointer;
     }
 
-    textarea {
-      resize: vertical;
-    }
+    textarea { resize: vertical; }
 
     .btn {
       margin-top: 25px;
@@ -141,44 +136,19 @@
       transition: background-color 0.3s;
       grid-column: span 2;
     }
-
-    .btn:hover {
-      background-color: #002147;
-    }
+    .btn:hover { background-color: #002147; }
 
     @media (max-width: 768px) {
-      .container {
-        padding: 25px 20px;
-        margin: 15px;
-      }
-
-      .btn {
-        grid-column: span 1;
-      }
+      .container { padding: 25px 20px; margin: 15px; }
+      .btn { grid-column: span 1; }
     }
 
     @media (max-width: 600px) {
-      .logo-texto {
-        flex-direction: column;
-        text-align: center;
-      }
-
-      .logo-texto img {
-        height: 55px;
-      }
-
-      .logo-texto span {
-        font-size: 22px;
-      }
-
-      h2 {
-        font-size: 20px;
-      }
-
-      .btn, .top-button {
-        font-size: 15px;
-        width: 100%;
-      }
+      .logo-texto { flex-direction: column; text-align: center; }
+      .logo-texto img { height: 60px; }
+      .logo-texto span { font-size: 20px; }
+      .volver-btn{ top:12px; right:15px; padding:8px 12px; font-size:14px; }
+      h2 { font-size: 22px; }
     }
   </style>
 </head>
@@ -188,132 +158,122 @@
     <div class="logo-texto">
       <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
       <span>Celulares Crédito Fácil</span>
+      <a href="/dashboard" class="volver-btn">⬅ Volver al Panel</a>
     </div>
   </div>
 
   <div class="container">
-    <button onclick="location.href='/dashboard'" class="top-button">🔙 Volver al Panel</button>
     <h2>📦 Recibir Garantía / Seguro</h2>
 
     {% if mensaje %}
     <div class="mensaje">{{ mensaje }}</div>
     {% endif %}
 
-<form method="POST" enctype="multipart/form-data" class="form-grid">
-  <div>
-    <label for="folio">Folio:</label>
-    <input type="text" id="folio" name="folio" required>
+    <form method="POST" enctype="multipart/form-data" class="form-grid">
+      <div>
+        <label for="folio">Folio:</label>
+        <input type="text" id="folio" name="folio" required>
 
-    <label for="cliente">Nombre del Cliente:</label>
-    <input type="text" id="cliente" name="cliente" required>
+        <label for="cliente">Nombre del Cliente:</label>
+        <input type="text" id="cliente" name="cliente" required>
 
-    <label for="imei">📱 IMEI del equipo:</label>
-    <input type="text" id="imei" name="imei" required>
+        <label for="imei">📱 IMEI del equipo:</label>
+        <input type="text" id="imei" name="imei" required>
 
-    <label for="marca_modelo">📱 Marca y Modelo:</label>
-    <input type="text" id="marca_modelo" name="marca_modelo" placeholder="Ej: Samsung A32" required>
+        <label for="marca_modelo">📱 Marca y Modelo:</label>
+        <input type="text" id="marca_modelo" name="marca_modelo" placeholder="Ej: Samsung A32" required>
 
-    <label for="opcion1">Opción 1:</label>
-    <select id="opcion1" name="opcion1">
-      <option value="">-- Seleccionar --</option>
-      {% for m in modelos %}
-      <option value="{{ m }}">{{ m }}</option>
-      {% endfor %}
-    </select>
+        <label for="opcion1">Opción 1:</label>
+        <select id="opcion1" name="opcion1">
+          <option value="">-- Seleccionar --</option>
+          {% for m in modelos %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+        </select>
 
-    <label for="opcion2">Opción 2:</label>
-    <select id="opcion2" name="opcion2">
-      <option value="">-- Seleccionar --</option>
-      {% for m in modelos %}
-      <option value="{{ m }}">{{ m }}</option>
-      {% endfor %}
-    </select>
+        <label for="opcion2">Opción 2:</label>
+        <select id="opcion2" name="opcion2">
+          <option value="">-- Seleccionar --</option>
+          {% for m in modelos %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+        </select>
 
-    <label for="opcion3">Opción 3:</label>
-    <select id="opcion3" name="opcion3">
-      <option value="">-- Seleccionar --</option>
-      {% for m in modelos %}
-      <option value="{{ m }}">{{ m }}</option>
-      {% endfor %}
-    </select>
+        <label for="opcion3">Opción 3:</label>
+        <select id="opcion3" name="opcion3">
+          <option value="">-- Seleccionar --</option>
+          {% for m in modelos %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+        </select>
 
-    <label for="opcion4">Opción 4:</label>
-    <select id="opcion4" name="opcion4">
-      <option value="">-- Seleccionar --</option>
-      {% for m in modelos %}
-      <option value="{{ m }}">{{ m }}</option>
-      {% endfor %}
-    </select>
+        <label for="opcion4">Opción 4:</label>
+        <select id="opcion4" name="opcion4">
+          <option value="">-- Seleccionar --</option>
+          {% for m in modelos %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+        </select>
 
-    <label for="opcion5">Opción 5:</label>
-    <select id="opcion5" name="opcion5">
-      <option value="">-- Seleccionar --</option>
-      {% for m in modelos %}
-      <option value="{{ m }}">{{ m }}</option>
-      {% endfor %}
-    </select>
+        <label for="opcion5">Opción 5:</label>
+        <select id="opcion5" name="opcion5">
+          <option value="">-- Seleccionar --</option>
+          {% for m in modelos %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+        </select>
 
-    <label for="total">💵 Total:</label>
-    <input type="text" id="total" name="total" placeholder="Ej: 2000">
+        <label for="total">💵 Total:</label>
+        <input type="text" id="total" name="total" placeholder="Ej: 2000">
 
-    <label for="anticipo">🪙 Anticipo:</label>
-    <input type="text" id="anticipo" name="anticipo" placeholder="Ej: 500">
+        <label for="anticipo">🪙 Anticipo:</label>
+        <input type="text" id="anticipo" name="anticipo" placeholder="Ej: 500">
 
-    <label for="resta">💰 Resta (pendiente):</label>
-    <input type="text" id="resta" name="resta" placeholder="Ej: 1500">
+        <label for="resta">💰 Resta (pendiente):</label>
+        <input type="text" id="resta" name="resta" placeholder="Ej: 1500">
+      </div>
+
+      <div>
+        <label for="fecha_recibido">📅 Fecha que se recibió:</label>
+        <input type="date" id="fecha_recibido" name="fecha_recibido" required>
+
+        <label for="telefono">Teléfono del Cliente:</label>
+        <input type="text" id="telefono" name="telefono" required>
+
+        <label for="tag">🏷️ Tag o Referencia:</label>
+        <input type="text" id="tag" name="tag" placeholder="Ej: Seguro1234">
+
+        <label for="motivo">Motivo (Garantía o Seguro):</label>
+        <select id="motivo" name="motivo" required>
+          <option value="">-- Seleccionar --</option>
+          <option value="garantia">Garantía</option>
+          <option value="seguro">Seguro</option>
+        </select>
+
+        <label for="sucursal">Sucursal que recibe:</label>
+        <select id="sucursal" name="sucursal" required>
+          <option value="">-- Seleccionar --</option>
+          <option value="Hidalgo">CCF#1 Hidalgo</option>
+          <option value="Colinas">CCF#2 Colinas</option>
+          <option value="Reservas">CCF#3 Reservas</option>
+          <option value="Voluntad">CCF#4 Voluntad</option>
+          <option value="Villas">CCF#5 Villas</option>
+        </select>
+
+        <label for="recibido_por">👤 ¿Quién recibió?:</label>
+        <input type="text" id="recibido_por" name="recibido_por" required>
+
+        <label for="descripcion">📝 Descripción del estado del equipo:</label>
+        <textarea id="descripcion" name="descripcion" rows="4" required></textarea>
+
+        <label for="fotos_equipo">📸 Fotos del equipo:</label>
+        <input type="file" id="fotos_equipo" name="fotos_equipo" multiple accept="image/*" required>
+
+        <label for="foto_grupo">🧾 Captura del grupo de WhatsApp:</label>
+        <input type="file" id="foto_grupo" name="foto_grupo" accept="image/*" required>
+
+        <label for="fecha_entrega">📅 Fecha que se entregó:</label>
+        <input type="date" id="fecha_entrega" name="fecha_entrega">
+
+        <label for="entregado_por">👤 ¿Quién entregó?:</label>
+        <input type="text" id="entregado_por" name="entregado_por" required>
+      </div>
+
+      <div style="grid-column: span 2;">
+        <button type="submit" class="btn">✅ Registrar Garantía o Seguro</button>
+      </div>
+    </form>
   </div>
-
-  <div>
-    <label for="fecha_recibido">📅 Fecha que se recibió:</label>
-    <input type="date" id="fecha_recibido" name="fecha_recibido" required>
-
-    <label for="telefono">Teléfono del Cliente:</label>
-    <input type="text" id="telefono" name="telefono" required>
-
-    <label for="tag">🏷️ Tag o Referencia:</label>
-    <input type="text" id="tag" name="tag" placeholder="Ej: Seguro1234">
-
-    <label for="motivo">Motivo (Garantía o Seguro):</label>
-    <select id="motivo" name="motivo" required>
-      <option value="">-- Seleccionar --</option>
-      <option value="garantia">Garantía</option>
-      <option value="seguro">Seguro</option>
-    </select>
-
-    <label for="sucursal">Sucursal que recibe:</label>
-    <select id="sucursal" name="sucursal" required>
-      <option value="">-- Seleccionar --</option>
-      <option value="Hidalgo">CCF#1 Hidalgo</option>
-      <option value="Colinas">CCF#2 Colinas</option>
-      <option value="Reservas">CCF#3 Reservas</option>
-      <option value="Voluntad">CCF#4 Voluntad</option>
-      <option value="Villas">CCF#5 Villas</option>
-    </select>
-
-    <label for="recibido_por">👤 ¿Quién recibió?:</label>
-    <input type="text" id="recibido_por" name="recibido_por" required>
-
-    <label for="descripcion">📝 Descripción del estado del equipo:</label>
-    <textarea id="descripcion" name="descripcion" rows="4" required></textarea>
-
-    <label for="fotos_equipo">📸 Fotos del equipo:</label>
-    <input type="file" id="fotos_equipo" name="fotos_equipo" multiple accept="image/*" required>
-
-    <label for="foto_grupo">🧾 Captura del grupo de WhatsApp:</label>
-    <input type="file" id="foto_grupo" name="foto_grupo" accept="image/*" required>
-
-    <label for="fecha_entrega">📅 Fecha que se entregó:</label>
-    <input type="date" id="fecha_entrega" name="fecha_entrega">
-
-    <label for="entregado_por">👤 ¿Quién entrego?:</label>
-    <input type="text" id="entregado_por" name="entregado_por" required>
-  </div>
-
-  <div style="grid-column: span 2;">
-    <button type="submit" class="btn">✅ Registrar Garantía o Seguro</button>
-  </div>
-</form>
-</div>
 
 <script>
 document.getElementById("imei").addEventListener("blur", function () {
