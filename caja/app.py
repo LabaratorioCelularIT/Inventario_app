@@ -1016,88 +1016,136 @@ def eliminar_venta_admin(id):
         return jsonify(success=False, msg="no-auth")
     try:
         with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
             cur = conn.cursor()
 
             cur.execute("""
                 SELECT id, fecha, sucursal,
-                       IFNULL(precio,0),
-                       IFNULL(tipo_pago,''),
-                       IFNULL(dolar,0),
-                       IFNULL(referencia,'')
+                       IFNULL(precio,0)        AS precio,
+                       IFNULL(tipo_pago,'')    AS tipo_pago,
+                       IFNULL(referencia,'')   AS referencia
                 FROM ventas
                 WHERE id = ?
             """, (id,))
-            row = cur.fetchone()
-            if not row:
+            vw = cur.fetchone()
+            if not vw:
                 return jsonify(success=False, msg="venta-no-encontrada")
 
-            _, fecha_ts, sucursal, precio, tipo_pago, v_tc, v_ref = row
-            fecha_dia = (fecha_ts or "").split(" ")[0]
+            fecha_ts  = (vw["fecha"] or "").strip()
+            sucursal  = (vw["sucursal"] or "").strip()
+            monto_mxn = float(vw["precio"] or 0.0)
+            tipo_pago = (vw["tipo_pago"] or "").strip().lower()
+            ref       = (vw["referencia"] or "").strip()
+            fecha_dia = fecha_ts.split(" ")[0] if " " in fecha_ts else fecha_ts
+            like_fecha = (fecha_dia + "%") if fecha_dia else "%"  
 
-            v_efectivo = 0.0
-            v_tarjeta  = 0.0
-            v_dolares  = 0.0
-            tp = (tipo_pago or "").strip().lower()
-            if tp in ("efectivo", "cash"):
-                v_efectivo = float(precio or 0)
-            elif tp in ("tarjeta", "pos", "tpv", "debito", "crédito", "credito"):
-                v_tarjeta = float(precio or 0)
-            elif tp in ("dolares", "dólares", "dolar", "dólar", "usd"):
-                v_dolares = float(precio or 0)
-            else:
-                v_efectivo = float(precio or 0)
+            prefer = {
+                "efectivo": ["efectivo", "tarjeta", "dolares"],
+                "tarjeta":  ["tarjeta", "efectivo", "dolares"],
+                "dolares":  ["dolares", "efectivo", "tarjeta"],
+            }.get(tipo_pago, ["efectivo", "tarjeta", "dolares"])
 
-            def _quitar(columna, monto, usar_ref=True):
-                if monto <= 0:
+            cur.execute("PRAGMA table_info(ventas_desglose)")
+            cols = {r["name"].lower() for r in cur.fetchall()}
+            rec_col = "id" if "id" in cols else "rowid"
+
+            def _retira_mxn(mxn, con_ref=True):
+                if mxn <= 1e-6:
                     return 0.0
-                params = [f"{fecha_dia}%", sucursal]
-                filtro_ref = ""
-                if usar_ref and (v_ref or "").strip() != "":
-                    filtro_ref = "AND IFNULL(referencia,'') = ?"
-                    params.append(v_ref)
                 retirado = 0.0
-                while monto > 1e-6:
-                    cur.execute(f"""
-                        SELECT rowid, IFNULL({columna},0)
-                        FROM ventas_desglose
-                        WHERE fecha LIKE ?
-                          AND sucursal = ?
-                          {filtro_ref}
-                          AND IFNULL({columna},0) > 0
-                        ORDER BY rowid DESC
-                        LIMIT 1
-                    """, params)
-                    r = cur.fetchone()
-                    if not r:
+                extra = ""
+                params = [like_fecha, sucursal]
+                if con_ref and ref:
+                    extra = "AND IFNULL(referencia,'') = ?"
+                    params.append(ref)
+                while mxn > 1e-6:
+                    try:
+                        cur.execute(f"""
+                            SELECT {rec_col} AS rid,
+                                   IFNULL(efectivo,0)    AS efectivo,
+                                   IFNULL(tarjeta,0)     AS tarjeta,
+                                   IFNULL(dolares,0)     AS dolares,
+                                   IFNULL(tipo_cambio,0) AS tipo_cambio
+                            FROM ventas_desglose
+                            WHERE fecha LIKE ? AND sucursal = ? {extra}
+                              AND (IFNULL(efectivo,0) > 0 OR IFNULL(tarjeta,0) > 0 OR IFNULL(dolares,0) > 0)
+                            ORDER BY rid DESC
+                            LIMIT 1
+                        """, params)
+                        r = cur.fetchone()
+                        if not r:
+                            break
+
+                        rid = r["rid"]
+                        e   = float(r["efectivo"] or 0.0)
+                        t   = float(r["tarjeta"]  or 0.0)
+                        d   = float(r["dolares"]  or 0.0)
+                        tc  = float(r["tipo_cambio"] or 0.0)
+
+                        disp_mxn = {
+                            "efectivo": e,
+                            "tarjeta":  t,
+                            "dolares":  (d * tc if tc > 0 else 0.0),
+                        }
+                        orden = prefer + [c for c in ("efectivo","tarjeta","dolares") if c not in prefer]
+
+                        for col in orden:
+                            if mxn <= 1e-6:
+                                break
+                            disponible = disp_mxn[col]
+                            if disponible <= 1e-6:
+                                continue
+                            tomar_mxn = min(mxn, disponible)
+
+                            if col == "dolares":
+                                if tc <= 0:
+                                    continue
+                                tomar_usd = tomar_mxn / tc
+                                cur.execute(
+                                    f"UPDATE ventas_desglose "
+                                    f"SET dolares = CASE WHEN dolares - ? < 0 THEN 0 ELSE dolares - ? END "
+                                    f"WHERE {rec_col} = ?",
+                                    (tomar_usd, tomar_usd, rid)
+                                )
+                            elif col == "efectivo":
+                                cur.execute(
+                                    f"UPDATE ventas_desglose "
+                                    f"SET efectivo = CASE WHEN efectivo - ? < 0 THEN 0 ELSE efectivo - ? END "
+                                    f"WHERE {rec_col} = ?",
+                                    (tomar_mxn, tomar_mxn, rid)
+                                )
+                            else:
+                                cur.execute(
+                                    f"UPDATE ventas_desglose "
+                                    f"SET tarjeta = CASE WHEN tarjeta - ? < 0 THEN 0 ELSE tarjeta - ? END "
+                                    f"WHERE {rec_col} = ?",
+                                    (tomar_mxn, tomar_mxn, rid)
+                                )
+
+                            mxn      -= tomar_mxn
+                            retirado += tomar_mxn
+
+                            cur.execute(
+                                f"DELETE FROM ventas_desglose "
+                                f"WHERE {rec_col} = ? "
+                                f"AND IFNULL(efectivo,0) <= 1e-6 "
+                                f"AND IFNULL(tarjeta,0)  <= 1e-6 "
+                                f"AND IFNULL(dolares,0)  <= 1e-6",
+                                (rid,)
+                            )
+                    except Exception:
                         break
-                    rid, disponible = r
-                    disponible = float(disponible or 0)
-                    quitar = disponible if disponible < monto else monto
-                    cur.execute(f"UPDATE ventas_desglose SET {columna} = {columna} - ? WHERE rowid = ?", (quitar, rid))
-                    cur.execute("SELECT IFNULL(efectivo,0), IFNULL(tarjeta,0), IFNULL(dolares,0) FROM ventas_desglose WHERE rowid = ?", (rid,))
-                    e, t, d = cur.fetchone()
-                    if abs(e) < 1e-6 and abs(t) < 1e-6 and abs(d) < 1e-6:
-                        cur.execute("DELETE FROM ventas_desglose WHERE rowid = ?", (rid,))
-                    monto -= quitar
-                    retirado += quitar
                 return retirado
 
-            r_e = _quitar("efectivo", v_efectivo, usar_ref=True)
-            if v_efectivo - r_e > 1e-6:
-                r_e += _quitar("efectivo", v_efectivo - r_e, usar_ref=False)
-
-            r_t = _quitar("tarjeta", v_tarjeta, usar_ref=True)
-            if v_tarjeta - r_t > 1e-6:
-                r_t += _quitar("tarjeta", v_tarjeta - r_t, usar_ref=False)
-
-            r_d = _quitar("dolares", v_dolares, usar_ref=True)
-            if v_dolares - r_d > 1e-6:
-                r_d += _quitar("dolares", v_dolares - r_d, usar_ref=False)
+            retirado = _retira_mxn(monto_mxn, con_ref=True)
+            faltante = monto_mxn - retirado
+            if faltante > 1e-6:
+                _retira_mxn(faltante, con_ref=False)
 
             cur.execute("DELETE FROM ventas WHERE id = ?", (id,))
             conn.commit()
 
-        return jsonify(success=True, msg=f"descontado e={r_e} t={r_t} d={r_d}")
+        return jsonify(success=True)
     except Exception as e:
         print("Error al eliminar venta:", repr(e))
         return jsonify(success=False, msg=str(e))
