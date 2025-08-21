@@ -205,6 +205,24 @@ def enviar_codigo_verificacion(destino: str, codigo: str):
 def ahora_mx():
     return datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y %H:%M:%S")
 
+def recalc_desglose_dia(conn, fecha_dia, sucursal):
+    cur = conn.cursor()
+    cur.execute("DELETE FROM ventas_desglose WHERE fecha LIKE ? AND sucursal = ?", (f"{fecha_dia}%", sucursal))
+    cur.execute("""
+        INSERT INTO ventas_desglose (fecha, sucursal, usuario, efectivo, tarjeta, dolares, tipo_cambio, referencia)
+        SELECT
+            ?,
+            ?,
+            COALESCE(MAX(usuario),''),
+            SUM(CASE LOWER(IFNULL(tipo_pago,'')) WHEN 'efectivo' THEN IFNULL(precio,0) ELSE 0 END),
+            SUM(CASE LOWER(IFNULL(tipo_pago,'')) WHEN 'tarjeta'  THEN IFNULL(precio,0) ELSE 0 END),
+            SUM(CASE LOWER(IFNULL(tipo_pago,'')) WHEN 'dolares'  THEN IFNULL(precio,0) ELSE 0 END),
+            0,
+            ''
+        FROM ventas
+        WHERE fecha LIKE ? AND sucursal = ?
+    """, (fecha_dia, sucursal, f"{fecha_dia}%", sucursal))
+
 def crear_pendiente(conn, tipo, referencia="", sucursal="", detalle_dict=None, creado_por=""):
     cur = conn.cursor()
     cur.execute(
@@ -227,6 +245,20 @@ def _destino_panel_caja():
 def ahora_mx():
     return datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y %H:%M:%S")
 
+def get_conn():
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys=ON")
+    return conn
+
+def split_metodo(precio, tipo_pago):
+    p = float(precio or 0)
+    t = (tipo_pago or "").strip().lower()
+    e = p if t == "efectivo" else 0.0
+    tj = p if t == "tarjeta" else 0.0
+    d = p if t == "dolares" else 0.0
+    return e, tj, d
+
 def send_email(to_list, subject, html):
     if not to_list:
         return False
@@ -246,6 +278,17 @@ def get_admin_emails(conn):
     cur = conn.cursor()
     cur.execute("SELECT correo FROM usuarios WHERE tipo='admin' AND correo IS NOT NULL AND correo<>''")
     return [r[0] for r in cur.fetchall()]
+
+def ensure_ventas_desglose_schema(conn):
+    cur = conn.cursor()
+    cur.execute("PRAGMA table_info(ventas_desglose)")
+    cols = {r[1].lower() for r in cur.fetchall()}
+    if "venta_id" not in cols:
+        cur.execute("ALTER TABLE ventas_desglose ADD COLUMN venta_id INTEGER")
+        conn.commit()
+    cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS uq_vd_venta_id ON ventas_desglose(venta_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_vd_fecha_sucursal ON ventas_desglose(fecha, sucursal)")
+    conn.commit()
 
 def get_emails_by_usernames(conn, nombres):
     if not nombres: return []
@@ -1016,138 +1059,14 @@ def eliminar_venta_admin(id):
         return jsonify(success=False, msg="no-auth")
     try:
         with sqlite3.connect(DB_PATH) as conn:
-            conn.row_factory = sqlite3.Row
             cur = conn.cursor()
-
-            cur.execute("""
-                SELECT id, fecha, sucursal,
-                       IFNULL(precio,0)        AS precio,
-                       IFNULL(tipo_pago,'')    AS tipo_pago,
-                       IFNULL(referencia,'')   AS referencia
-                FROM ventas
-                WHERE id = ?
-            """, (id,))
-            vw = cur.fetchone()
-            if not vw:
+            cur.execute("SELECT id FROM ventas WHERE id = ?", (id,))
+            if not cur.fetchone():
                 return jsonify(success=False, msg="venta-no-encontrada")
-
-            fecha_ts  = (vw["fecha"] or "").strip()
-            sucursal  = (vw["sucursal"] or "").strip()
-            monto_mxn = float(vw["precio"] or 0.0)
-            tipo_pago = (vw["tipo_pago"] or "").strip().lower()
-            ref       = (vw["referencia"] or "").strip()
-            fecha_dia = fecha_ts.split(" ")[0] if " " in fecha_ts else fecha_ts
-            like_fecha = (fecha_dia + "%") if fecha_dia else "%"  
-
-            prefer = {
-                "efectivo": ["efectivo", "tarjeta", "dolares"],
-                "tarjeta":  ["tarjeta", "efectivo", "dolares"],
-                "dolares":  ["dolares", "efectivo", "tarjeta"],
-            }.get(tipo_pago, ["efectivo", "tarjeta", "dolares"])
-
-            cur.execute("PRAGMA table_info(ventas_desglose)")
-            cols = {r["name"].lower() for r in cur.fetchall()}
-            rec_col = "id" if "id" in cols else "rowid"
-
-            def _retira_mxn(mxn, con_ref=True):
-                if mxn <= 1e-6:
-                    return 0.0
-                retirado = 0.0
-                extra = ""
-                params = [like_fecha, sucursal]
-                if con_ref and ref:
-                    extra = "AND IFNULL(referencia,'') = ?"
-                    params.append(ref)
-                while mxn > 1e-6:
-                    try:
-                        cur.execute(f"""
-                            SELECT {rec_col} AS rid,
-                                   IFNULL(efectivo,0)    AS efectivo,
-                                   IFNULL(tarjeta,0)     AS tarjeta,
-                                   IFNULL(dolares,0)     AS dolares,
-                                   IFNULL(tipo_cambio,0) AS tipo_cambio
-                            FROM ventas_desglose
-                            WHERE fecha LIKE ? AND sucursal = ? {extra}
-                              AND (IFNULL(efectivo,0) > 0 OR IFNULL(tarjeta,0) > 0 OR IFNULL(dolares,0) > 0)
-                            ORDER BY rid DESC
-                            LIMIT 1
-                        """, params)
-                        r = cur.fetchone()
-                        if not r:
-                            break
-
-                        rid = r["rid"]
-                        e   = float(r["efectivo"] or 0.0)
-                        t   = float(r["tarjeta"]  or 0.0)
-                        d   = float(r["dolares"]  or 0.0)
-                        tc  = float(r["tipo_cambio"] or 0.0)
-
-                        disp_mxn = {
-                            "efectivo": e,
-                            "tarjeta":  t,
-                            "dolares":  (d * tc if tc > 0 else 0.0),
-                        }
-                        orden = prefer + [c for c in ("efectivo","tarjeta","dolares") if c not in prefer]
-
-                        for col in orden:
-                            if mxn <= 1e-6:
-                                break
-                            disponible = disp_mxn[col]
-                            if disponible <= 1e-6:
-                                continue
-                            tomar_mxn = min(mxn, disponible)
-
-                            if col == "dolares":
-                                if tc <= 0:
-                                    continue
-                                tomar_usd = tomar_mxn / tc
-                                cur.execute(
-                                    f"UPDATE ventas_desglose "
-                                    f"SET dolares = CASE WHEN dolares - ? < 0 THEN 0 ELSE dolares - ? END "
-                                    f"WHERE {rec_col} = ?",
-                                    (tomar_usd, tomar_usd, rid)
-                                )
-                            elif col == "efectivo":
-                                cur.execute(
-                                    f"UPDATE ventas_desglose "
-                                    f"SET efectivo = CASE WHEN efectivo - ? < 0 THEN 0 ELSE efectivo - ? END "
-                                    f"WHERE {rec_col} = ?",
-                                    (tomar_mxn, tomar_mxn, rid)
-                                )
-                            else:
-                                cur.execute(
-                                    f"UPDATE ventas_desglose "
-                                    f"SET tarjeta = CASE WHEN tarjeta - ? < 0 THEN 0 ELSE tarjeta - ? END "
-                                    f"WHERE {rec_col} = ?",
-                                    (tomar_mxn, tomar_mxn, rid)
-                                )
-
-                            mxn      -= tomar_mxn
-                            retirado += tomar_mxn
-
-                            cur.execute(
-                                f"DELETE FROM ventas_desglose "
-                                f"WHERE {rec_col} = ? "
-                                f"AND IFNULL(efectivo,0) <= 1e-6 "
-                                f"AND IFNULL(tarjeta,0)  <= 1e-6 "
-                                f"AND IFNULL(dolares,0)  <= 1e-6",
-                                (rid,)
-                            )
-                    except Exception:
-                        break
-                return retirado
-
-            retirado = _retira_mxn(monto_mxn, con_ref=True)
-            faltante = monto_mxn - retirado
-            if faltante > 1e-6:
-                _retira_mxn(faltante, con_ref=False)
-
             cur.execute("DELETE FROM ventas WHERE id = ?", (id,))
             conn.commit()
-
         return jsonify(success=True)
     except Exception as e:
-        print("Error al eliminar venta:", repr(e))
         return jsonify(success=False, msg=str(e))
 
 @app.route("/eliminar-item", methods=["POST"])
@@ -1216,11 +1135,11 @@ def cobrar():
 
     efectivo = safe_float(request.form.get("efectivo"))
     tarjeta  = safe_float(request.form.get("tarjeta"))
-    dolares  = safe_float(request.form.get("dolares"))
-    tipo_cambio = safe_float(request.form.get("dolar"))
+    dolares  = safe_float(request.form.get("dolares"))       
+    tipo_cambio = safe_float(request.form.get("dolar"))      
     referencia_general = request.form.get("referencia", "").strip()
 
-    def a_centavos(x):
+    def a_centavos(x):  
         return int(round(safe_float(x) * 100))
 
     def ensure_column(conn, table, col, ddl):
@@ -1233,8 +1152,13 @@ def cobrar():
 
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.cursor()
-        ensure_ventas_desglose_schema(conn)
+
         ensure_column(conn, "ventas", "imei", "TEXT")
+        ensure_column(conn, "ventas", "tipo_pago", "TEXT")
+        ensure_column(conn, "ventas", "pag_efectivo", "REAL DEFAULT 0")
+        ensure_column(conn, "ventas", "pag_tarjeta",  "REAL DEFAULT 0")
+        ensure_column(conn, "ventas", "pag_dolares",  "REAL DEFAULT 0")  
+        ensure_column(conn, "ventas", "tipo_cambio",  "REAL DEFAULT 0")
 
         cur.execute("SELECT COUNT(*) FROM ventas WHERE fecha LIKE ? AND sucursal = ?", (f"{fecha_dia}%", sucursal))
         ventas_hoy = cur.fetchone()[0]
@@ -1283,7 +1207,6 @@ def cobrar():
                                WHERE fecha = ? AND sucursal = ? AND TRIM(UPPER(motivo)) = 'FERIA'""",
                             (ayer, sucursal))
                 total_feria_ayer = safe_float(cur.fetchone()[0])
-
                 if a_centavos(monto_venta_feria) != a_centavos(total_feria_ayer):
                     cur.execute("""SELECT id FROM bloqueos_feria
                                    WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0
@@ -1299,84 +1222,73 @@ def cobrar():
                 else:
                     carrito[0]["precio"] = round(total_feria_ayer, 2)
 
-        total_venta = sum(safe_float(item.get("precio", 0)) for item in carrito)
-        total_mxn = round(total_venta, 2)
+        total_venta = round(sum(safe_float(item.get("precio", 0)) for item in carrito), 2)
         usd_mxn_entregado = round(dolares * tipo_cambio, 2)
 
-        restante = total_mxn
+        restante = total_venta
         usd_usado_mxn = min(usd_mxn_entregado, restante); restante = round(restante - usd_usado_mxn, 2)
         efectivo_usado  = min(efectivo, restante);        restante = round(restante - efectivo_usado, 2)
         tarjeta_usada   = min(tarjeta, restante);         restante = round(restante - tarjeta_usada, 2)
-        dolares_usados  = round(usd_usado_mxn / tipo_cambio, 2) if tipo_cambio > 0 else 0.0
+        dolares_usados  = round(usd_usado_mxn / tipo_cambio, 2) if tipo_cambio > 0 else 0.0  
 
         total_pago = round(efectivo + tarjeta + usd_mxn_entregado, 2)
-        cambio = round(total_pago - total_mxn, 2)
+        cambio = round(total_pago - total_venta, 2)
         if cambio < 0:
             flash(f"❌ Aún faltan ${abs(cambio):.2f} para completar el pago.")
             return redirect("/ventas")
 
-        for item in carrito:
-            ref_item = (item.get("referencia") or "").strip()
-            cur.execute("""
-                INSERT INTO ventas
-                (usuario, sucursal, descripcion, tipo, concepto, referencia, imei, precio, tipo_pago, fecha)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                usuario, sucursal,
-                item.get("descripcion", ""),
-                item.get("tipo", ""),
-                item.get("concepto", ""),
-                ref_item if ref_item else referencia_general,
-                (item.get("imei") or "").strip(),
-                safe_float(item.get("precio", 0)),
-                item.get("tipo_pago", ""),
-                fecha
-            ))
+        asignaciones = []
+        if total_venta > 0:
+            for item in carrito:
+                p = safe_float(item.get("precio", 0))
+                prop = (p / total_venta) if total_venta else 0.0
+                e_i   = round(efectivo_usado * prop, 2)      
+                t_i   = round(tarjeta_usada  * prop, 2)      
+                usd_i = round(dolares_usados * prop, 2)      
+                asignaciones.append((e_i, t_i, usd_i))
+        else:
+            asignaciones = [(0.0, 0.0, 0.0) for _ in carrito]
 
-            imei = (item.get("imei") or "").strip()
-            if imei:
-                cur.execute("UPDATE articulos SET estado = 'Vendido' WHERE imei = ?", (imei,))
+        with conn:
+            for idx, item in enumerate(carrito):
+                ref_item = (item.get("referencia") or "").strip()
+                e_i, t_i, usd_i = asignaciones[idx]
 
-        cur.execute("""
-            INSERT INTO ventas_desglose
-            (fecha, sucursal, usuario, efectivo, tarjeta, dolares, tipo_cambio, referencia)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            fecha, sucursal, usuario,
-            round(efectivo_usado, 2),
-            round(tarjeta_usada, 2),
-            round(dolares_usados, 2),
-            round(tipo_cambio, 4),
-            referencia_general
-        ))
+                cur.execute("""
+                    INSERT INTO ventas
+                    (usuario, sucursal, descripcion, tipo, concepto, referencia, imei,
+                     precio, tipo_pago, fecha, eliminado,
+                     pag_efectivo, pag_tarjeta, pag_dolares, tipo_cambio)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
+                """, (
+                    usuario, sucursal,
+                    item.get("descripcion", ""),
+                    item.get("tipo", ""),
+                    item.get("concepto", ""),
+                    ref_item if ref_item else referencia_general,
+                    (item.get("imei") or "").strip(),
+                    safe_float(item.get("precio", 0)),
+                    item.get("tipo_pago", ""),
+                    fecha,
+                    e_i, t_i, usd_i, round(tipo_cambio, 4)
+                ))
 
-        conn.commit()
+                imei_val = (item.get("imei") or "").strip()
+                if imei_val:
+                    cur.execute("UPDATE articulos SET estado = 'Vendido' WHERE imei = ?", (imei_val,))
 
     NOMBRES_USUARIOS = {
-        "Litzi": "Litzi",
-        "Brayan": "Brayan",
-        "Jesús": "Jesús",
-        "consulta_abav_5921": "Abigail Avila",
-        "consulta_ftrr_8350": "Fátima Reyes",
-        "consulta_cndz_1043": "Carolina Díaz",
-        "consulta_abcr_6619": "Abigail Corona",
-        "consulta_lzrz_1284": "Lizeth Ruiz",
-        "consulta_lsrv_2390": "Leslie Reservas",
-        "consulta_alnd_7452": "Alondra",
-        "consulta_lrbn_3017": "Lorena",
-        "consulta_brsd_5126": "Briseida",
-        "consulta_evln_6029": "Evelin",
-        "consulta_mnsr_1045": "Monserrath",
-        "consulta_angl_7238": "Angeles",
-        "consulta_dnlv_2096": "Daniel",
-        "consulta_ltzb_8431": "Litzy",
-        "consulta_bryn_9327": "Brayan",
-        "consulta_arln_6235": "Arlen",
-        "consulta_angl_0187": "Angela",
-        "consulta_ajnd_7204": "Alejandrina (consulta)",
-        "admin_dvcd_6497": "David",
-        "admin_vctr_9051": "Victoria",
-        "admin_ajnd_7204": "Alejandrina"
+        "Litzi": "Litzi", "Brayan": "Brayan", "Jesús": "Jesús",
+        "consulta_abav_5921": "Abigail Avila", "consulta_ftrr_8350": "Fátima Reyes",
+        "consulta_cndz_1043": "Carolina Díaz", "consulta_abcr_6619": "Abigail Corona",
+        "consulta_lzrz_1284": "Lizeth Ruiz", "consulta_lsrv_2390": "Leslie Reservas",
+        "consulta_alnd_7452": "Alondra", "consulta_lrbn_3017": "Lorena",
+        "consulta_brsd_5126": "Briseida", "consulta_evln_6029": "Evelin",
+        "consulta_mnsr_1045": "Monserrath", "consulta_angl_7238": "Angeles",
+        "consulta_dnlv_2096": "Daniel", "consulta_ltzb_8431": "Litzy",
+        "consulta_bryn_9327": "Brayan", "consulta_arln_6235": "Arlen",
+        "consulta_angl_0187": "Angela", "consulta_ajnd_7204": "Alejandrina (consulta)",
+        "admin_dvcd_6497": "David", "admin_vctr_9051": "Victoria", "admin_ajnd_7204": "Alejandrina"
     }
 
     nombre_usuario = NOMBRES_USUARIOS.get(usuario, usuario)
@@ -1398,6 +1310,7 @@ def cobrar():
         return redirect("/ventas")
 
     return redirect("/abrir-ticket")
+
 @app.route("/ver-bloqueos")
 def ver_bloqueos():
     return redirect("/pendientes")

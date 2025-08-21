@@ -14,8 +14,9 @@
       --danger:#d9534f;
       --danger-hover:#c9302c;
       --border:#d1d5db;
+      --zebra:#f7f9ff;
+      --hover:#f1f5fb;
     }
-
     *{box-sizing:border-box}
     body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:#000;margin:0}
 
@@ -63,8 +64,10 @@
     table{width:100%; border-collapse:collapse; background:var(--card)}
     th, td{border:1px solid #e6e9ef; padding:12px; text-align:center}
     th{background:var(--accent); color:#fff}
-    tbody tr:nth-child(even){background:#f7f9ff}
-    tbody tr:hover{background:#f1f5fb}
+
+    tbody tr{ background:#fff; transition:background .15s ease}
+    tbody tr.zebra-even{ background:var(--zebra); }
+    tbody tr:hover{ background:var(--hover); }
 
     .modal{
       display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
@@ -76,7 +79,6 @@
     }
     .modal-close{position:absolute; top:12px; right:16px; font-size:24px; cursor:pointer; color:#666}
 
-    /* Línea de acciones bajo filtros */
     .actions-line{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px}
     .actions-line label{display:inline-flex; align-items:center; gap:8px; font-weight:600}
 
@@ -105,21 +107,21 @@
 
       <div class="filters">
         <label>Sucursal
-          <select id="filtroSucursal" onchange="aplicarFiltros()">
+          <select id="filtroSucursal" onchange="refreshTabla()">
             <option value="">Todas</option>
             {% for s in sucursales %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
           </select>
         </label>
 
         <label>Modelo
-          <select id="filtroModelo" onchange="aplicarFiltros()">
+          <select id="filtroModelo" onchange="refreshTabla()">
             <option value="">Todos</option>
             {% for m in modelos %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
           </select>
         </label>
 
         <label>Estado
-          <select id="filtroEstado" onchange="aplicarFiltros()">
+          <select id="filtroEstado" onchange="refreshTabla()">
             <option value="">Todos</option>
             <option value="Nuevo">Nuevo</option>
             <option value="Reparación">Reparación</option>
@@ -159,7 +161,7 @@
         </label>
 
         <label style="align-self:end; display:flex; align-items:center; gap:8px; font-weight:600;">
-          <input type="checkbox" id="ocultarVendidos" checked onchange="ocultarVendidos()"> Ocultar 'Vendido' y 'Perdido'
+          <input type="checkbox" id="ocultarVendidos" checked onchange="refreshTabla()"> Ocultar 'Vendido' y 'Perdido'
         </label>
 
         <div style="align-self:end; display:flex; gap:8px; flex-wrap:wrap">
@@ -237,29 +239,39 @@
   </div>
 
   <script>
-  function aplicarFiltros() {
-    const suc = document.getElementById("filtroSucursal").value.toLowerCase();
-    const mod = document.getElementById("filtroModelo").value.toLowerCase();
-    const est = document.getElementById("filtroEstado").value.toLowerCase();
+  function refreshTabla() {
+    const suc = (document.getElementById("filtroSucursal")?.value || "").toLowerCase();
+    const mod = (document.getElementById("filtroModelo")?.value || "").toLowerCase();
+    const est = (document.getElementById("filtroEstado")?.value || "").toLowerCase();
+    const ocultar = document.getElementById("ocultarVendidos")?.checked ?? false;
+    const qImei = (document.getElementById("busqueda_imei")?.value || "").trim().toLowerCase();
 
     document.querySelectorAll("table tbody tr").forEach(row => {
-      const rs = row.dataset.sucursal?.toLowerCase() || "";
-      const rm = row.dataset.modelo?.toLowerCase() || "";
-      const re = row.dataset.estado?.toLowerCase() || "";
-      const visible = (!suc || rs.includes(suc)) && (!mod || rm.includes(mod)) && (!est || re === est);
+      const rs = (row.dataset.sucursal || "").toLowerCase();
+      const rm = (row.dataset.modelo   || "").toLowerCase();
+      const re = (row.dataset.estado   || "").toLowerCase();
+      const imeiCell = row.querySelector("td:nth-child(4)");
+      const imeiText = (imeiCell?.textContent || "").toLowerCase();
+
+      const matchSuc  = !suc || rs.includes(suc);
+      const matchMod  = !mod || rm.includes(mod);
+      const matchEst  = !est || re === est;
+      const matchImei = !qImei || imeiText.includes(qImei);
+      const pasaOcultar = !(ocultar && (re === "vendido" || re === "perdido"));
+
+      const visible = matchSuc && matchMod && matchEst && matchImei && pasaOcultar;
       row.style.display = visible ? "" : "none";
     });
 
-    ocultarVendidos();
+    repaintZebra();
   }
 
-  function ocultarVendidos() {
-    const ocultar = document.getElementById("ocultarVendidos").checked;
-    document.querySelectorAll("table tbody tr").forEach(row => {
-      const estado = row.dataset.estado?.toLowerCase() || "";
-      if (ocultar && (estado === "vendido" || estado === "perdido")) {
-        row.style.display = "none";
-      }
+  function repaintZebra(){
+    const rows = Array.from(document.querySelectorAll("table tbody tr"))
+      .filter(r => r.style.display !== "none");
+    rows.forEach((r,i)=>{
+      r.classList.toggle("zebra-even", i % 2 === 1);
+      r.classList.toggle("zebra-odd" , i % 2 === 0);
     });
   }
 
@@ -277,6 +289,19 @@
       if (cb) cb.checked = imeis.includes(imei);
     });
     ordenarSeleccionadosArriba();
+    repaintZebra();
+  }
+
+  function ordenarSeleccionadosArriba(){
+    const tbody = document.querySelector("table tbody");
+    const filas = Array.from(tbody.querySelectorAll("tr"));
+    const seleccionadas = filas.filter(f => f.querySelector('input[name="ids"]')?.checked);
+    const noSeleccionadas = filas.filter(f => !f.querySelector('input[name="ids"]')?.checked);
+    noSeleccionadas.sort((a,b)=> (a.dataset.originalIndex|0) - (b.dataset.originalIndex|0));
+    tbody.innerHTML = "";
+    seleccionadas.forEach(f=>tbody.appendChild(f));
+    noSeleccionadas.forEach(f=>tbody.appendChild(f));
+    repaintZebra();
   }
 
   function eliminarSeleccionados() {
@@ -327,8 +352,7 @@
           cont.innerHTML = "<p>Sin historial registrado.</p>";
         }
       })
-      .catch(err => {
-        console.error("Error al obtener historial:", err);
+      .catch(() => {
         document.getElementById("historial-estados").innerHTML = "<p>Error al cargar historial.</p>";
       });
   }
@@ -366,28 +390,11 @@
     });
 
     const campoBusqueda = document.getElementById("busqueda_imei");
-    if (campoBusqueda){
-      campoBusqueda.addEventListener("input", function () {
-        const filtro = this.value.trim().toLowerCase();
-        document.querySelectorAll("table tbody tr").forEach(row => {
-          const imei = row.querySelector("td:nth-child(4)")?.textContent.toLowerCase() || '';
-          row.style.display = imei.includes(filtro) ? "" : "none";
-        });
-        if (!filtro) aplicarFiltros();
-      });
-    }
-  });
+    if (campoBusqueda){ campoBusqueda.addEventListener("input", refreshTabla); }
 
-  function ordenarSeleccionadosArriba(){
-    const tbody = document.querySelector("table tbody");
-    const filas = Array.from(tbody.querySelectorAll("tr"));
-    const seleccionadas = filas.filter(f => f.querySelector('input[name="ids"]')?.checked);
-    const noSeleccionadas = filas.filter(f => !f.querySelector('input[name="ids"]')?.checked);
-    noSeleccionadas.sort((a,b)=> (a.dataset.originalIndex|0) - (b.dataset.originalIndex|0));
-    tbody.innerHTML = "";
-    seleccionadas.forEach(f=>tbody.appendChild(f));
-    noSeleccionadas.forEach(f=>tbody.appendChild(f));
-  }
+    refreshTabla();
+    repaintZebra();
+  });
   </script>
 
 </body>

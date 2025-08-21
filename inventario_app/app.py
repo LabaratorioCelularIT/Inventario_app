@@ -956,7 +956,6 @@ def listado_articulos():
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
-    
     cur.execute("""
         SELECT t.nombre AS tipo, a.sucursal, COUNT(*) as total
         FROM articulos a
@@ -966,10 +965,11 @@ def listado_articulos():
     """)
     resumen = cur.fetchall()
 
-    
     query = """
-        SELECT a.id, COALESCE(t.nombre, 'Tipo eliminado o inválido') AS tipo, a.imei, a.sucursal,
-               a.memoria, a.color, a.proveedor, a.precio, a.factura_id, a.fecha_compra, a.estado
+        SELECT a.id,
+               COALESCE(t.nombre, 'Tipo eliminado o inválido') AS tipo,
+               a.imei, a.sucursal, a.memoria, a.color, a.proveedor,
+               a.precio, a.factura_id, a.fecha_compra, a.estado
         FROM articulos a
         LEFT JOIN tipos_producto t ON a.tipo_id = t.id
         WHERE 1=1
@@ -993,20 +993,21 @@ def listado_articulos():
     cur.execute(query, params)
     articulos = cur.fetchall()
 
-    
     cur.execute("SELECT DISTINCT nombre FROM tipos_producto ORDER BY nombre ASC")
     modelos = [row[0] for row in cur.fetchall()]
 
     conn.close()
 
-    return render_template("listado_articulos.html",
-                           resumen=resumen,
-                           articulos=articulos,
-                           modelos=modelos,
-                           sucursales=SUCURSALES,
-                           sucursal_actual=sucursal,
-                           modelo_actual=modelo,
-                           estado_actual=estado)
+    return render_template(
+        "listado_articulos.html",
+        resumen=resumen,
+        articulos=articulos,
+        modelos=modelos,
+        sucursales=SUCURSALES,
+        sucursal_actual=sucursal,
+        modelo_actual=modelo,
+        estado_actual=estado
+    )
 
 @app.route('/actualizar-estado', methods=['POST'])
 def actualizar_estado():

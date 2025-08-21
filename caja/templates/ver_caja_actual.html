@@ -4,106 +4,189 @@
   <meta charset="UTF-8">
   <title>Caja Actual</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: #e6f0ff;
-      margin: 0;
-      padding: 0;
+    :root{
+      --azul-rey:#003366;
+      --azul:#337ab7;
+      --azul-hover:#286090;
+      --celeste:#e6f0ff;
+      --blanco:#ffffff;
+      --gris:#f5f5f5;
+      --borde:#d9e1ec;
+      --sombra:rgba(0,0,0,.08);
+      --texto:#2c3e50;
+      --rojo:#d9534f;
+      --rojo-hover:#c9302c;
+      --verde:#2e8b57;
     }
 
-    .topbar {
-      background-color: #003366;
-      color: white;
-      padding: 20px;
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:'Segoe UI',sans-serif;
+      background:var(--celeste);
+      color:var(--texto);
     }
 
-    .container {
-      max-width: 600px;
-      margin: 40px auto;
-      background-color: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    .topbar{
+      background:var(--azul-rey);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:12px;
+      padding:16px 20px;
+      font-size:22px;
+      font-weight:700;
+      box-shadow:0 2px 10px rgba(0,0,0,.2);
+      position:sticky;
+      top:0;
+      z-index:50;
+      border-bottom:3px solid #001f3f;
+    }
+    .topbar img{height:70px}
+
+    .volver-fijo{
+      position:fixed;
+      top:16px;
+      left:16px;
+      z-index:60;
     }
 
-    h2 {
-      text-align: center;
-      color: #003366;
-      margin-bottom: 20px;
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:10px 16px;
+      border-radius:10px;
+      font-weight:700;
+      border:2px solid #1c5e8c;
+      text-decoration:none;
+      cursor:pointer;
+      box-shadow:0 4px 10px rgba(0,0,0,.06);
+      transition:background-color .2s ease, transform .1s ease, filter .2s ease;
+      user-select:none;
+      color:#fff;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn-rojo{background:var(--rojo); border-color:#001f3f;}
+    .btn-rojo:hover{background:var(--rojo-hover)}
+
+    .container{
+      max-width:720px;
+      margin:30px auto;
+      background:var(--blanco);
+      border-radius:16px;
+      padding:24px;
+      box-shadow:0 8px 24px var(--sombra);
+      border:1px solid var(--borde);
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    h2{
+      margin:0 0 16px 0;
+      text-align:center;
+      color:var(--azul-rey);
     }
 
-    th, td {
-      border: 1px solid #ccc;
-      padding: 12px;
-      text-align: center;
+    .tabla-wrap{
+      overflow:auto;
+      border-radius:12px;
+      border:1px solid var(--borde);
+      box-shadow:0 4px 14px var(--sombra);
+      background:#fff;
+    }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      font-size:14px;
+      min-width:540px;
+    }
+    thead th{
+      position:sticky; top:0;
+      background:var(--gris);
+      color:#253b56;
+      text-align:center;
+      padding:12px 10px;
+      font-weight:700;
+      border-bottom:1px solid var(--borde);
+    }
+    tbody td{
+      padding:10px;
+      text-align:center;
+      border-bottom:1px solid #edf2f7;
+    }
+    tbody tr:nth-child(even){ background:#fafcff; }
+    tfoot td{
+      font-weight:700;
+      background:#f3f8ff;
+      border-top:1px solid var(--borde);
+      padding:12px 10px;
+    }
+    .total{color:var(--verde)}
+
+    .volver-bottom{
+      text-align:center;
+      margin:16px 0 28px;
+      display:none;
     }
 
-    th {
-      background-color: #f0f8ff;
-    }
-
-    .total-row td {
-      font-weight: bold;
-      background-color: #eef;
-    }
-
-    .volver {
-      text-align: center;
-      margin-top: 30px;
-    }
-
-    .volver a {
-      background-color: #c9302c;
-      color: white;
-      padding: 12px 20px;
-      text-decoration: none;
-      border-radius: 8px;
-      font-weight: bold;
-    }
-
-    .volver a:hover {
-      background-color: #a72824;
+    @media (max-width:720px){
+      .container{margin:20px 14px; padding:18px}
+      .volver-bottom{display:block}
+      .volver-fijo{top:12px; left:12px}
+      .topbar{flex-direction:column; text-align:center}
+      .topbar img{height:60px}
     }
   </style>
 </head>
 <body>
 
-  <div class="topbar">💰 Caja Actual</div>
-
-  <div class="container">
-    <h2>Resumen de Fondo General</h2>
-
-    <table>
-      <tr>
-        <th>Denominación</th>
-        <th>Cantidad</th>
-        <th>Total</th>
-      </tr>
-      {% for d in datos %}
-      <tr>
-        <td>${{ d.denom }}</td>
-        <td>{{ d.cantidad }}</td>
-        <td>${{ "%.2f"|format(d.total) }}</td>
-      </tr>
-      {% endfor %}
-      <tr class="total-row">
-        <td colspan="2">Total General</td>
-        <td>${{ "%.2f"|format(total_general) }}</td>
-      </tr>
-    </table>
+  <div class="topbar">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    <span>Celulares Crédito Fácil – 💰 Caja Actual</span>
   </div>
 
-  <div class="volver">
-    <a href="/panel-admin">⬅ Volver al Panel</a>
+  <div class="volver-fijo">
+    <a href="/panel-admin" class="btn btn-rojo">← Volver</a>
+  </div>
+
+  <div class="container">
+    <h2>🧾 Resumen de Fondo General</h2>
+
+    <div class="tabla-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Denominación</th>
+            <th>Cantidad</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in datos %}
+          <tr>
+            <td>${{ d.denom }}</td>
+            <td>{{ d.cantidad }}</td>
+            <td>${{ "%.2f"|format(d.total) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">Total General</td>
+            <td class="total">${{ "%.2f"|format(total_general) }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="volver-bottom">
+      <a href="/panel-admin" class="btn btn-rojo">← Volver</a>
+    </div>
   </div>
 
 </body>
