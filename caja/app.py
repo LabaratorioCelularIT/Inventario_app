@@ -245,6 +245,12 @@ def _destino_panel_caja():
 def ahora_mx():
     return datetime.now(ZoneInfo("America/Monterrey")).strftime("%d-%m-%Y %H:%M:%S")
 
+def _bloqueo_id(ref: str):
+    if not ref:
+        return None
+    m = re.search(r"\bbloqueo_feria[:=\s]?(\d+)\b", ref.strip().lower())
+    return int(m.group(1)) if m else None
+
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -556,16 +562,68 @@ def mis_pendientes():
 def pendiente_realizado(pid):
     if "usuario" not in session:
         return jsonify(success=False)
-    usuario = session.get("usuario","")
-    with sqlite3.connect(DB_PATH) as conn:
+
+    usuario = session.get("usuario", "")
+
+    with sqlite3.connect(DB_PATH, timeout=10) as conn:
         cur = conn.cursor()
-        cur.execute("UPDATE pendientes_involucrados SET estado='realizado' WHERE pendiente_id=? AND usuario=?", (pid, usuario))
-        conn.commit()
-        cur.execute("SELECT COUNT(*) FROM pendientes_involucrados WHERE pendiente_id=? AND estado='pendiente'", (pid,))
+
+        cur.execute("""
+            UPDATE pendientes_involucrados
+               SET estado='realizado'
+             WHERE pendiente_id=? AND usuario=?
+        """, (pid, usuario))
+
+        cur.execute("""
+            SELECT COUNT(*)
+              FROM pendientes_involucrados
+             WHERE pendiente_id=? AND estado='pendiente'
+        """, (pid,))
         quedan = int(cur.fetchone()[0] or 0)
+
         if quedan == 0:
-            cur.execute("UPDATE pendientes SET estado='autorizado', autorizado_por=?, fecha_autorizacion=? WHERE id=?", (usuario, ahora_mx(), pid))
-            conn.commit()
+            cur.execute("""
+                UPDATE pendientes
+                   SET estado='autorizado',
+                       autorizado_por=?,
+                       fecha_autorizacion=?
+                 WHERE id=?
+            """, (usuario, ahora_mx(), pid))
+
+            cur.execute("SELECT tipo, referencia, sucursal, fecha FROM pendientes WHERE id=?", (pid,))
+            row = cur.fetchone()
+            if row:
+                tipo = (row[0] or "").lower()
+                referencia = row[1] or ""
+                suc = row[2] or ""
+                fecha_p = (row[3] or "")
+                fecha_dia = fecha_p[:10] if len(fecha_p) >= 10 else ""
+
+                if tipo == "feria":
+                    bid = _bloqueo_id(referencia)
+
+                    if bid is not None:
+                        cur.execute("UPDATE bloqueos_feria SET autorizado=1 WHERE id=?", (bid,))
+                    else:
+                        if suc:
+                            if fecha_dia:
+                                cur.execute("""
+                                    SELECT id FROM bloqueos_feria
+                                     WHERE sucursal=? AND fecha=? AND autorizado=0
+                                     ORDER BY id DESC LIMIT 1
+                                """, (suc, fecha_dia))
+                            else:
+                                cur.execute("""
+                                    SELECT id FROM bloqueos_feria
+                                     WHERE sucursal=? AND autorizado=0
+                                     ORDER BY id DESC LIMIT 1
+                                """, (suc,))
+                            r2 = cur.fetchone()
+                            if r2:
+                                cur.execute("UPDATE bloqueos_feria SET autorizado=1 WHERE id=?", (r2[0],))
+
+        conn.commit()
+
     return jsonify(success=True, quedan=quedan)
 
 @app.route("/pendientes-resumen-json")
