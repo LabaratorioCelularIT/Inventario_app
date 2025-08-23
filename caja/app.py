@@ -32,7 +32,7 @@ SMTP_USER = os.getenv("SMTP_USER", "sistemasccfnld@laboratoriocelular.net")
 SMTP_PASS = os.getenv("SMTP_PASS", "qvdhlnigelqevtnm")
 SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Celulares Crédito Fácil")
 SSO_SHARED_SECRET = "cambia_esta_clave_32+caracteres"
-INV_URL_BASE = "http://100.92.172.109:5001"
+INV_URL_BASE = "http://89.117.145.73:5001"
 
 TZ = timezone("America/Monterrey")
 

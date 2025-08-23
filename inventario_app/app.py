@@ -9,7 +9,7 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from urllib.parse import urlencode
 import time
 
-CAJA_URL_BASE = "http://100.92.172.109:5003"
+CAJA_URL_BASE = "http://89.117.145.73:5003"
 SSO_SHARED_SECRET = "cambia_esta_clave_32+caracteres"
 app = Flask(__name__)
 app.secret_key = "inventario_secret_key"
@@ -227,6 +227,7 @@ def logout():
 def ir_caja():
     if "usuario" not in session:
         return redirect("/login")
+
     payload = {
         "usuario": session.get("usuario",""),
         "tipo": session.get("tipo",""),
@@ -234,15 +235,14 @@ def ir_caja():
         "ts": int(time.time())
     }
     token = sso_serializer().dumps(payload)
-    # Por defecto manda a panel según tipo; puedes forzar otro con ?next=/panel-admin
-    q = urlencode({"token": token})
-    return redirect(f"{CAJA_URL_BASE}/sso-login-caja?{q}")
 
-@app.route("/logout-global")
-def logout_global():
-    session.clear()
-    # encadena al logout de Caja:
-    return redirect(f"{CAJA_URL_BASE}/logout")
+    next_map = {"admin": "/panel-admin", "consulta": "/panel-consulta", "reparto": "/panel-reparto"}
+    next_path = next_map.get(session.get("tipo",""), "/dashboard")
+
+    q = urlencode({"token": token, "next": next_path})
+    target = f"{CAJA_URL_BASE}/sso-login-caja?{q}"
+    print("REDIRIGIENDO A:", target)
+    return redirect(target)
 
 @app.route("/chat")
 def chat():
