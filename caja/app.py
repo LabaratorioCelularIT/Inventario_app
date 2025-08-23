@@ -1367,7 +1367,7 @@ def cobrar():
         flash("✅ Venta registrada correctamente.")
         return redirect("/ventas")
 
-    return redirect("/abrir-ticket")
+    return redirect("/ultimo-ticket")
 
 @app.route("/ver-bloqueos")
 def ver_bloqueos():
@@ -1645,7 +1645,7 @@ def caja_actual():
 def acceso_caja():
     if request.method == "POST":
         clave = request.form.get("clave", "")
-        if clave == "262293":
+        if clave == "16129356@1":
             session["acceso_caja"] = True
             return redirect("/caja-actual")
         else:

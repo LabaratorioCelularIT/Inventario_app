@@ -5,35 +5,83 @@
   <title>Registrar Feria - {{ sucursal }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    :root{--azul-rey:#003366;--azul:#337ab7;--azul-hover:#286090;--celeste:#e6f0ff;--blanco:#ffffff;--gris:#f5f5f5;--borde:#d9e1ec;--rojo:#d9534f;--rojo-hover:#c9302c;--verde:#2e8b57;--texto:#2c3e50}
+    :root{
+      --azul-rey:#003366; --azul:#337ab7; --azul-hover:#286090;
+      --celeste:#e6f0ff; --blanco:#ffffff; --gris:#f5f5f5; --borde:#d9e1ec;
+      --rojo:#d9534f; --rojo-hover:#c9302c; --verde:#2e8b57; --texto:#2c3e50;
+      --sombra:rgba(0,0,0,.08);
+    }
     *{box-sizing:border-box}
     body{margin:0;font-family:'Segoe UI',sans-serif;background-color:var(--celeste);color:var(--texto)}
-    .topbar{background-color:var(--azul-rey);color:#fff;display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 20px;font-size:22px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.2);position:sticky;top:0;z-index:50;border-bottom:3px solid #001f3f}
+
+    /* Topbar unificada */
+    .topbar{
+      background-color:var(--azul-rey); color:#fff; display:flex; align-items:center; justify-content:center; gap:12px;
+      padding:16px 20px; font-size:22px; font-weight:700; box-shadow:0 2px 10px rgba(0,0,0,.2);
+      position:sticky; top:0; z-index:50; border-bottom:3px solid #001f3f;
+    }
     .topbar img{height:70px}
-    .volver-fijo{position:fixed;top:16px;left:16px;z-index:60}
-    .container{max-width:1000px;margin:30px auto;background:var(--blanco);padding:28px;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.08);border:1px solid var(--borde)}
-    .filtros-admin{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px;background:var(--gris);padding:12px;border-radius:12px;border:1px solid var(--borde)}
-    .filtros-admin label{font-weight:600;display:block;margin-bottom:6px}
-    .input,.select{padding:10px 12px;border:1px solid #cfd8e3;border-radius:10px;font-size:14px;background:#fff;min-width:180px;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
-    .input:focus,.select:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(51,122,183,.15)}
-    .denominacion{margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--borde)}
-    .denominacion h2{margin:0 0 12px 0;font-size:20px;color:var(--azul-rey)}
+
+    /* Botón Volver fijo */
+    .volver-fijo{position:fixed; top:16px; left:16px; z-index:60}
+
+    /* Contenedor tarjeta */
+    .container{
+      max-width:1000px; margin:30px auto; background:var(--blanco); padding:28px; border-radius:16px;
+      box-shadow:0 8px 24px var(--sombra); border:1px solid var(--borde);
+    }
+
+    /* Filtros admin */
+    .filtros-admin{
+      display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:18px;
+      background:var(--gris); padding:12px; border-radius:12px; border:1px solid var(--borde);
+    }
+    .filtros-admin label{font-weight:600; display:block; margin-bottom:6px}
+    .input,.select{
+      padding:10px 12px; border:1px solid #cfd8e3; border-radius:10px; font-size:14px; background:#fff; min-width:180px;
+      outline:none; transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    .input:focus,.select:focus{border-color:var(--azul); box-shadow:0 0 0 4px rgba(51,122,183,.15)}
+
+    /* Bloques de denominación */
+    .denominacion{margin-bottom:32px; padding-bottom:20px; border-bottom:1px solid var(--borde)}
+    .denominacion h2{margin:0 0 12px 0; font-size:20px; color:var(--azul-rey)}
     .campo{margin:10px 0}
-    .campo label{font-weight:700;display:block;margin-bottom:6px}
-    .numero{width:160px;padding:10px 12px;font-size:16px;border:1px solid #cfd8e3;border-radius:10px;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
-    .numero:focus{border-color:var(--azul);box-shadow:0 0 0 4px rgba(51,122,183,.15)}
-    .resumen{margin-top:10px;font-size:15px}
-    .faltante{color:var(--rojo);font-weight:700}
-    .correcto{color:var(--verde);font-weight:700}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:10px;font-weight:700;border:2px solid #1c5e8c;text-decoration:none;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.06);transition:background-color .2s ease,transform .1s ease,filter .2s ease;user-select:none}
+    .campo label{font-weight:700; display:block; margin-bottom:6px}
+    .numero{
+      width:180px; max-width:100%; padding:10px 12px; font-size:16px; border:1px solid #cfd8e3; border-radius:10px;
+      outline:none; transition:border-color .15s ease, box-shadow .15s ease; background:#fff;
+    }
+    .numero:focus{border-color:var(--azul); box-shadow:0 0 0 4px rgba(51,122,183,.15)}
+
+    .resumen{margin-top:10px; font-size:15px; line-height:1.45}
+    .faltante{color:var(--rojo); font-weight:700}
+    .correcto{color:var(--verde); font-weight:700}
+
+    /* Botones */
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      padding:12px 18px; border-radius:10px; font-weight:700; border:2px solid #1c5e8c;
+      text-decoration:none; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,.06);
+      transition:background-color .2s ease, transform .1s ease, filter .2s ease; user-select:none; color:#fff;
+    }
     .btn:hover{transform:translateY(-1px)}
     .btn:active{transform:translateY(0)}
-    .btn-azul{background:var(--azul);color:#fff}
-    .btn-azul:hover{background:var(--azul-hover)}
-    .btn-rojo{background:var(--rojo);color:#fff;border-color:#001f3f}
-    .btn-rojo:hover{background:var(--rojo-hover)}
-    .acciones{display:flex;gap:10px;align-items:center}
-    @media (max-width:700px){.volver-fijo{top:12px;left:12px}.container{margin:20px 14px;padding:18px}.numero{width:100%}.input,.select{min-width:unset;width:100%}.acciones{flex-direction:column;align-items:stretch}}
+    .btn-azul{background:var(--azul)} .btn-azul:hover{background:var(--azul-hover)}
+    .btn-rojo{background:var(--rojo); border-color:#001f3f} .btn-rojo:hover{background:var(--rojo-hover)}
+    .acciones{display:flex; gap:10px; align-items:center}
+
+    /* Volver extra para móvil */
+    .volver-bottom{display:none; text-align:center; margin-top:12px}
+
+    @media (max-width:700px){
+      .volver-fijo{top:12px; left:12px}
+      .container{margin:20px 14px; padding:18px}
+      .numero{width:100%}
+      .input,.select{min-width:unset; width:100%}
+      .acciones{flex-direction:column; align-items:stretch}
+      .volver-bottom{display:block}
+    }
   </style>
 </head>
 <body>
@@ -44,6 +92,7 @@
     <span>Registrar Feria — {{ sucursal }}</span>
   </div>
 
+  <!-- Volver fijo arriba -->
   <div class="volver-fijo">
     <a class="btn btn-rojo" href="/volver-panel">⬅ Volver al Panel</a>
   </div>
@@ -103,8 +152,14 @@
         <button type="submit" class="btn btn-azul">Continuar</button>
       </div>
     </form>
+
+    <!-- Volver extra para móviles -->
+    <div class="volver-bottom">
+      <a class="btn btn-rojo" href="/volver-panel" style="width:100%;">⬅ Volver al Panel</a>
+    </div>
   </div>
 
+  <!-- ⚠ Mantengo tus funciones tal cual -->
   <script>
     const objetivos = {{ objetivos|tojson }};
     const denom = {{ denom|tojson }};
