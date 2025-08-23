@@ -108,6 +108,48 @@ def init_db():
         ''')
         conn.commit()
 
+def _bloqueo_id(ref: str):
+    if not ref:
+        return None
+    m = re.search(r"\bbloqueo_feria[:=\s]?(\d+)\b", ref.strip().lower())
+    return int(m.group(1)) if m else None
+
+def crear_pendiente(conn, tipo, referencia="", sucursal="", detalle_dict=None, creado_por="", involucrados=None):
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO pendientes (tipo, referencia, sucursal, fecha, detalle, estado, creado_por) VALUES (?, ?, ?, ?, ?, 'pendiente', ?)",
+        (tipo, referencia, sucursal, ahora_mx(), json.dumps(detalle_dict or {}), creado_por)
+    )
+    pid = cur.lastrowid
+    for u in (involucrados or []):
+        cur.execute("INSERT INTO pendientes_involucrados (pendiente_id, usuario, estado) VALUES (?, ?, 'pendiente')", (pid, u))
+    conn.commit()
+
+    try:
+        mails_invol = get_emails_by_usernames(conn, involucrados or [])
+        mails_admin = get_admin_emails(conn)
+        mails_watch = get_watchers_emails(conn)
+        to_list = list({*mails_invol, *mails_admin, *mails_watch})
+        asunto = f"[PENDIENTE] {tipo} — {referencia or 's/ ref'}"
+        html = f"""
+        <div style="font-family:Segoe UI,Arial,sans-serif">
+          <h2>Nuevo pendiente</h2>
+          <p><b>Tipo:</b> {tipo} | <b>Ref:</b> {referencia or '-'} | <b>Sucursal:</b> {sucursal or '-'}</p>
+          <p><b>Creado por:</b> {creado_por or '-'} | <b>Fecha:</b> {ahora_mx()}</p>
+          <p><b>Involucrados:</b> {", ".join(involucrados or []) or "-"}</p>
+          <pre style="background:#f6f6f6;padding:10px;border-radius:8px">{json.dumps(detalle_dict or {}, ensure_ascii=False, indent=2)}</pre>
+          <p><a href="{request.url_root.rstrip('/')}/pendientes" target="_blank">Abrir PENDIENTES</a></p>
+        </div>
+        """
+        if to_list:
+            send_email(to_list, asunto, html)
+        cur.execute("UPDATE pendientes_involucrados SET ultimo_correo=?, recordatorios=COALESCE(recordatorios,0)+1 WHERE pendiente_id=?", (ahora_mx(), pid))
+        conn.commit()
+    except Exception:
+        pass
+
+    return pid
+
 def registrar_log(usuario, tipo, accion):
     fecha_hora = fecha_hora_actual()
     origen = "Caja"
@@ -590,18 +632,18 @@ def pendiente_realizado(pid):
                  WHERE id=?
             """, (usuario, ahora_mx(), pid))
 
+            # Liberar el bloqueo si era de feria
             cur.execute("SELECT tipo, referencia, sucursal, fecha FROM pendientes WHERE id=?", (pid,))
             row = cur.fetchone()
             if row:
                 tipo = (row[0] or "").lower()
                 referencia = row[1] or ""
-                suc = row[2] or ""
+                suc = (row[2] or "").strip()
                 fecha_p = (row[3] or "")
                 fecha_dia = fecha_p[:10] if len(fecha_p) >= 10 else ""
 
                 if tipo == "feria":
                     bid = _bloqueo_id(referencia)
-
                     if bid is not None:
                         cur.execute("UPDATE bloqueos_feria SET autorizado=1 WHERE id=?", (bid,))
                     else:
@@ -812,43 +854,85 @@ def enviar_codigo():
 @app.route("/pendiente/autorizar/<int:pid>", methods=["POST"])
 def autorizar_pendiente(pid):
     if "usuario" not in session or session.get("tipo") != "admin":
-        return jsonify(success=False)
+        return jsonify(success=False, msg="no-auth")
+
     admin = session.get("usuario","")
-    with sqlite3.connect(DB_PATH) as conn:
-        cur = conn.cursor()
-        cur.execute("SELECT id, tipo, detalle, estado FROM pendientes WHERE id = ?", (pid,))
-        row = cur.fetchone()
-        if not row:
-            return jsonify(success=False, msg="No existe")
-        if row[3] != "pendiente":
-            return jsonify(success=False, msg="Ya procesado")
-        tipo = row[1]
-        detalle = {}
-        try:
-            detalle = json.loads(row[2] or "{}")
-        except:
-            detalle = {}
 
-        if tipo == "registro_usuario":
-            nombre = detalle.get("nombre_generado","")
-            contrasena = detalle.get("contrasena","")
-            tipo_u = detalle.get("tipo","consulta")
-            correo = detalle.get("correo","")
-            telefono = detalle.get("telefono","")
-            with conn:
-                c2 = conn.cursor()
-                c2.execute("SELECT 1 FROM usuarios WHERE nombre = ?", (nombre,))
-                if c2.fetchone():
-                    pass
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT id, tipo, detalle, estado, referencia, sucursal, fecha
+                  FROM pendientes
+                 WHERE id = ?
+            """, (pid,))
+            row = cur.fetchone()
+            if not row:
+                return jsonify(success=False, msg="pendiente-no-existe")
+            if row[3] != "pendiente":
+                return jsonify(success=False, msg="pendiente-ya-procesado")
+
+            tipo        = (row[1] or "").lower()
+            detalle_raw = row[2] or "{}"
+            referencia  = row[4] or ""
+            sucursal    = (row[5] or "").strip()
+            fecha_pend  = row[6] or ""
+            try:
+                detalle = json.loads(detalle_raw)
+            except Exception:
+                detalle = {}
+
+            if tipo == "registro_usuario":
+                nombre     = detalle.get("nombre_generado","")
+                contrasena = detalle.get("contrasena","")
+                tipo_u     = detalle.get("tipo","consulta")
+                correo     = detalle.get("correo","")
+                telefono   = detalle.get("telefono","")
+                with conn:
+                    c2 = conn.cursor()
+                    c2.execute("SELECT 1 FROM usuarios WHERE nombre = ?", (nombre,))
+                    if not c2.fetchone():
+                        c2.execute("""
+                            INSERT INTO usuarios (nombre, contraseña, tipo, correo, telefono, aprobado)
+                            VALUES (?, ?, ?, ?, ?, 1)
+                        """, (nombre, contrasena, tipo_u, correo, telefono))
+
+            if tipo == "feria":
+                bid = _bloqueo_id(referencia)  # <-- ESTA LÍNEA FALTABA
+                if bid is not None:
+                    cur.execute("UPDATE bloqueos_feria SET autorizado=1 WHERE id=?", (bid,))
                 else:
-                    c2.execute("INSERT INTO usuarios (nombre, contraseña, tipo, correo, telefono, aprobado) VALUES (?, ?, ?, ?, ?, 1)", (nombre, contrasena, tipo_u, correo, telefono))
+                    suc = (detalle.get("sucursal") or sucursal or "").strip()
+                    fec = (detalle.get("fecha") or (fecha_pend[:10] if len(fecha_pend) >= 10 else "") or "").strip()
+                    if suc:
+                        if fec:
+                            cur.execute("""
+                                SELECT id FROM bloqueos_feria
+                                 WHERE sucursal=? AND fecha=? AND autorizado=0
+                                 ORDER BY id DESC LIMIT 1
+                            """, (suc, fec))
+                        else:
+                            cur.execute("""
+                                SELECT id FROM bloqueos_feria
+                                 WHERE sucursal=? AND autorizado=0
+                                 ORDER BY id DESC LIMIT 1
+                            """, (suc,))
+                        r2 = cur.fetchone()
+                        if r2:
+                            cur.execute("UPDATE bloqueos_feria SET autorizado=1 WHERE id=?", (r2[0],))
 
-        if tipo == "feria":
-            pass
+            cur.execute("""
+                UPDATE pendientes
+                   SET estado='autorizado',
+                       autorizado_por=?,
+                       fecha_autorizacion=?
+                 WHERE id=?
+            """, (admin, ahora_mx(), pid))
+            conn.commit()
 
-        cur.execute("UPDATE pendientes SET estado='autorizado', autorizado_por=?, fecha_autorizacion=? WHERE id=?", (admin, ahora_mx(), pid))
-        conn.commit()
-    return jsonify(success=True)
+        return jsonify(success=True)
+    except Exception as e:
+        return jsonify(success=False, msg=f"ex:{type(e).__name__}:{e}")
 
 @app.route("/pendiente/rechazar/<int:pid>", methods=["POST"])
 def rechazar_pendiente(pid):
@@ -1193,11 +1277,11 @@ def cobrar():
 
     efectivo = safe_float(request.form.get("efectivo"))
     tarjeta  = safe_float(request.form.get("tarjeta"))
-    dolares  = safe_float(request.form.get("dolares"))       
-    tipo_cambio = safe_float(request.form.get("dolar"))      
+    dolares  = safe_float(request.form.get("dolares"))
+    tipo_cambio = safe_float(request.form.get("dolar"))
     referencia_general = request.form.get("referencia", "").strip()
 
-    def a_centavos(x):  
+    def a_centavos(x):
         return int(round(safe_float(x) * 100))
 
     def ensure_column(conn, table, col, ddl):
@@ -1215,8 +1299,44 @@ def cobrar():
         ensure_column(conn, "ventas", "tipo_pago", "TEXT")
         ensure_column(conn, "ventas", "pag_efectivo", "REAL DEFAULT 0")
         ensure_column(conn, "ventas", "pag_tarjeta",  "REAL DEFAULT 0")
-        ensure_column(conn, "ventas", "pag_dolares",  "REAL DEFAULT 0")  
+        ensure_column(conn, "ventas", "pag_dolares",  "REAL DEFAULT 0")
         ensure_column(conn, "ventas", "tipo_cambio",  "REAL DEFAULT 0")
+
+        def crear_bloqueo_y_pendiente(motivo_txt):
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS bloqueos_feria (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    sucursal TEXT,
+                    fecha TEXT,
+                    motivo TEXT,
+                    autorizado INTEGER DEFAULT 0
+                )
+            """)
+            cur.execute("""SELECT id FROM bloqueos_feria
+                           WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0
+                           ORDER BY id DESC LIMIT 1""",
+                        (fecha_dia, sucursal, motivo_txt))
+            row_b = cur.fetchone()
+            if row_b:
+                bid = row_b[0]
+            else:
+                cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)",
+                            (sucursal, fecha_dia, motivo_txt))
+                bid = cur.lastrowid
+                conn.commit()
+            ref = f"bloqueo_feria:{bid}"
+            cur.execute("CREATE TABLE IF NOT EXISTS pendientes (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT, referencia TEXT, sucursal TEXT, fecha TEXT, detalle TEXT, estado TEXT, creado_por TEXT, autorizado_por TEXT, fecha_autorizacion TEXT)")
+            cur.execute("SELECT 1 FROM pendientes WHERE tipo='feria' AND referencia=? AND estado='pendiente' LIMIT 1", (ref,))
+            ya_p = cur.fetchone()
+            if not ya_p:
+                detalle = {
+                    "motivo": motivo_txt,
+                    "sucursal": sucursal,
+                    "fecha": fecha_dia,
+                    "origen": "caja:/cobrar",
+                    "usuario": usuario
+                }
+                crear_pendiente(conn, "feria", ref, sucursal, detalle, usuario, involucrados=None)
 
         cur.execute("SELECT COUNT(*) FROM ventas WHERE fecha LIKE ? AND sucursal = ?", (f"{fecha_dia}%", sucursal))
         ventas_hoy = cur.fetchone()[0]
@@ -1246,15 +1366,7 @@ def cobrar():
             autorizado_hoy = (fila_bloqueo and int(fila_bloqueo[0]) == 1)
 
             if not es_feria and not autorizado_hoy:
-                cur.execute("""SELECT id FROM bloqueos_feria
-                               WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0
-                               ORDER BY id DESC LIMIT 1""",
-                            (fecha_dia, sucursal, "Primera venta no fue FERIA"))
-                ya = cur.fetchone()
-                if not ya:
-                    cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)",
-                                (sucursal, fecha_dia, "Primera venta no fue FERIA"))
-                    conn.commit()
+                crear_bloqueo_y_pendiente("Primera venta no fue FERIA")
                 return render_template("venta_bloqueada.html",
                                        mensaje="❌ La primera venta del día debe ser FERIA. Espera autorización de un administrador.")
 
@@ -1266,15 +1378,7 @@ def cobrar():
                             (ayer, sucursal))
                 total_feria_ayer = safe_float(cur.fetchone()[0])
                 if a_centavos(monto_venta_feria) != a_centavos(total_feria_ayer):
-                    cur.execute("""SELECT id FROM bloqueos_feria
-                                   WHERE fecha = ? AND sucursal = ? AND motivo = ? AND autorizado = 0
-                                   ORDER BY id DESC LIMIT 1""",
-                                (fecha_dia, sucursal, "Feria no coincide con la salida de ayer"))
-                    ya = cur.fetchone()
-                    if not ya:
-                        cur.execute("INSERT INTO bloqueos_feria (sucursal, fecha, motivo, autorizado) VALUES (?, ?, ?, 0)",
-                                    (sucursal, fecha_dia, "Feria no coincide con la salida de ayer"))
-                        conn.commit()
+                    crear_bloqueo_y_pendiente("Feria no coincide con la salida de ayer")
                     return render_template("venta_bloqueada.html",
                                            mensaje="❌ El monto de la FERIA no coincide con la salida registrada ayer. Espera autorización de un administrador.")
                 else:
@@ -1287,7 +1391,7 @@ def cobrar():
         usd_usado_mxn = min(usd_mxn_entregado, restante); restante = round(restante - usd_usado_mxn, 2)
         efectivo_usado  = min(efectivo, restante);        restante = round(restante - efectivo_usado, 2)
         tarjeta_usada   = min(tarjeta, restante);         restante = round(restante - tarjeta_usada, 2)
-        dolares_usados  = round(usd_usado_mxn / tipo_cambio, 2) if tipo_cambio > 0 else 0.0  
+        dolares_usados  = round(usd_usado_mxn / tipo_cambio, 2) if tipo_cambio > 0 else 0.0
 
         total_pago = round(efectivo + tarjeta + usd_mxn_entregado, 2)
         cambio = round(total_pago - total_venta, 2)
@@ -1300,9 +1404,9 @@ def cobrar():
             for item in carrito:
                 p = safe_float(item.get("precio", 0))
                 prop = (p / total_venta) if total_venta else 0.0
-                e_i   = round(efectivo_usado * prop, 2)      
-                t_i   = round(tarjeta_usada  * prop, 2)      
-                usd_i = round(dolares_usados * prop, 2)      
+                e_i   = round(efectivo_usado * prop, 2)
+                t_i   = round(tarjeta_usada  * prop, 2)
+                usd_i = round(dolares_usados * prop, 2)
                 asignaciones.append((e_i, t_i, usd_i))
         else:
             asignaciones = [(0.0, 0.0, 0.0) for _ in carrito]
@@ -1367,7 +1471,7 @@ def cobrar():
         flash("✅ Venta registrada correctamente.")
         return redirect("/ventas")
 
-    return redirect("/abrir-ticket")
+    return redirect("/ultimo-ticket")
 
 @app.route("/ver-bloqueos")
 def ver_bloqueos():
@@ -1645,7 +1749,7 @@ def caja_actual():
 def acceso_caja():
     if request.method == "POST":
         clave = request.form.get("clave", "")
-        if clave == "262293":
+        if clave == "16129356@1":
             session["acceso_caja"] = True
             return redirect("/caja-actual")
         else:
