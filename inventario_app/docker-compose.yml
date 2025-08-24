@@ -8,7 +8,7 @@ services:
       - "5001:5001"
     volumes:
       - .:/app
-      - "C:/proyectos/servidor-celulares/inventario.sqlite3:/app/inventario.sqlite3"
+      - "../inventario.sqlite3:/app/inventario.sqlite3"
     environment:
       INVENTARIO_DB: /app/inventario.sqlite3
       FLASK_ENV: development
