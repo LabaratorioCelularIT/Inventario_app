@@ -1059,20 +1059,20 @@ def listado_articulos():
         return redirect('/')
 
     sucursal = request.args.get("sucursal", "Todas")
-    modelo = request.args.get("modelo", "Todos")
-    estado = request.args.get("estado", "Todos")
+    modelo   = request.args.get("modelo", "Todos")
+    estado   = request.args.get("estado", "Todos")
 
     conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT t.nombre AS tipo, a.sucursal, COUNT(*) as total
+        SELECT t.nombre AS tipo, a.sucursal, COUNT(*) AS total
         FROM articulos a
         JOIN tipos_producto t ON a.tipo_id = t.id
         GROUP BY t.nombre, a.sucursal
         ORDER BY t.nombre, a.sucursal
     """)
-    resumen = cur.fetchall()
+    resumen = [dict(r) for r in cur.fetchall()]
 
     query = """
         SELECT a.id,
@@ -1100,7 +1100,7 @@ def listado_articulos():
     query += " ORDER BY a.fecha_registro DESC"
 
     cur.execute(query, params)
-    articulos = cur.fetchall()
+    articulos = [dict(r) for r in cur.fetchall()]   # <- clave: jsonify-able
 
     cur.execute("SELECT DISTINCT nombre FROM tipos_producto ORDER BY nombre ASC")
     modelos = [row[0] for row in cur.fetchall()]
