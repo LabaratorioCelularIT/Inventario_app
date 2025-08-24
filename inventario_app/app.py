@@ -1,19 +1,32 @@
-from flask import Flask, render_template, request, redirect, session, send_file, flash, abort, jsonify
-import sqlite3, os, csv
+from flask import Flask, render_template, request, redirect, session, send_file, flash, abort, jsonify, url_for
+from werkzeug.utils import secure_filename
+import sqlite3, os, csv, json, time, uuid, shutil
 from io import StringIO
 from datetime import datetime, timedelta
-import uuid
 from PIL import Image
-import shutil
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from urllib.parse import urlencode
-import time
+from sqlite3 import OperationalError
 
 CAJA_URL_BASE = "http://89.117.145.73:5003"
 SSO_SHARED_SECRET = "cambia_esta_clave_32+caracteres"
+
 app = Flask(__name__)
 app.secret_key = "inventario_secret_key"
-DB_PATH = os.path.join(os.path.dirname(__file__), "inventario.sqlite3")
+
+DB_PATH = os.getenv("INVENTARIO_DB", "/app/inventario.sqlite3")
+
+def get_conn():
+    if not os.path.exists(DB_PATH):
+        raise RuntimeError(f"❌ Base de datos no encontrada: {DB_PATH}")
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+print("Usando base de datos en:", DB_PATH, "| existe:", os.path.exists(DB_PATH))
+
+def now_iso():
+    return (datetime.utcnow() - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S")
 
 REDES_LOCALES = [
     '138.84.61.202',  # Villas
@@ -75,49 +88,8 @@ NOMBRES_REALES = {
     "consulta_ajnd_7204": "Alejandrina (consulta)",
 }
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS tipos_producto (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nombre TEXT UNIQUE NOT NULL,
-        stock_minimo INTEGER DEFAULT 0
-    );""")
-    c.execute("""CREATE TABLE IF NOT EXISTS articulos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tipo_id INTEGER,
-        memoria TEXT,
-        color TEXT,
-        proveedor TEXT,
-        precio TEXT,
-        factura_id TEXT,
-        fecha_compra TEXT,
-        sucursal TEXT,
-        estado TEXT,
-        imei TEXT UNIQUE,
-        imei2 TEXT,
-        fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );""")
-    c.execute("""CREATE TABLE IF NOT EXISTS log_actividad (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        usuario TEXT,
-        tipo TEXT,
-        descripcion TEXT,
-        fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );""")
-    c.execute("""CREATE TABLE IF NOT EXISTS transferencias (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        articulo_id INTEGER,
-        sucursal_origen TEXT,
-        sucursal_destino TEXT,
-        fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        usuario TEXT
-    );""")
-    conn.commit()
-    conn.close()
-
 def registrar_log(usuario, tipo, descripcion):
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     ahora_local = (datetime.utcnow() - timedelta(hours=5)).strftime("%d-%m-%Y %H:%M:%S")
     conn.execute("INSERT INTO log_actividad (usuario, tipo, descripcion, fecha) VALUES (?, ?, ?, ?)",
                  (usuario, tipo, descripcion, ahora_local))
@@ -126,6 +98,143 @@ def registrar_log(usuario, tipo, descripcion):
 
 def sso_serializer():
     return URLSafeTimedSerializer(SSO_SHARED_SECRET, salt="sso-inv-5001")
+
+def init_db():
+    with get_conn() as conn:
+        c = conn.cursor()
+
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS tipos_producto(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE NOT NULL,
+            stock_minimo INTEGER DEFAULT 0
+        )""")
+
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS articulos(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo_id INTEGER,
+            memoria TEXT,
+            color TEXT,
+            proveedor TEXT,
+            precio TEXT,
+            factura_id TEXT,
+            fecha_compra TEXT,
+            sucursal TEXT,
+            estado TEXT,
+            imei TEXT UNIQUE,
+            imei2 TEXT,
+            fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS log_actividad(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario TEXT,
+            tipo TEXT,
+            descripcion TEXT,
+            fecha TEXT,
+            accion TEXT,
+            origen TEXT
+        )""")
+
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS transferencias(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            articulo_id INTEGER,
+            sucursal_origen TEXT,
+            sucursal_destino TEXT,
+            fecha TEXT DEFAULT (datetime('now','-5 hours')),
+            usuario TEXT
+        )""")
+
+        cols = [r[1] for r in c.execute("PRAGMA table_info(transferencias)").fetchall()]
+        if "estatus" not in cols:
+            c.execute("ALTER TABLE transferencias ADD COLUMN estatus TEXT DEFAULT 'pendiente-envío'")
+        if "id_lote" not in cols:
+            c.execute("ALTER TABLE transferencias ADD COLUMN id_lote TEXT")
+
+        c.execute("""CREATE TABLE IF NOT EXISTS usuarios(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE,
+            contraseña TEXT,
+            tipo TEXT
+        )""")
+
+        c.execute("""CREATE TABLE IF NOT EXISTS mensajes_chat(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            remitente TEXT,
+            destinatario TEXT,
+            tipo_destinatario TEXT,
+            mensaje TEXT,
+            archivo TEXT,
+            fecha TEXT,
+            leido INTEGER DEFAULT 0,
+            modulo TEXT DEFAULT 'General'
+        )""")
+
+        c.execute("""CREATE TABLE IF NOT EXISTS stickers_usuarios(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario TEXT,
+            archivo TEXT
+        )""")
+
+        c.execute("""CREATE TABLE IF NOT EXISTS stickers_favoritos(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario TEXT,
+            sticker TEXT
+        )""")
+
+        c.execute("""CREATE TABLE IF NOT EXISTS grupos_chat(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT,
+            miembros TEXT,
+            creado_por TEXT,
+            fecha TEXT
+        )""")
+
+        c.execute("""CREATE TABLE IF NOT EXISTS inventarios_pendientes(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sucursal TEXT,
+            fecha TEXT,
+            generado_por TEXT,
+            imei TEXT,
+            confirmado TEXT
+        )""")
+
+        c.execute("""CREATE TABLE IF NOT EXISTS inventario_respuesta(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sucursal TEXT,
+            fecha TEXT,
+            imei TEXT,
+            tipo TEXT,
+            memoria TEXT,
+            color TEXT,
+            estado_actual TEXT,
+            encontrado TEXT,
+            confirmado_por TEXT
+        )""")
+
+        c.execute("""CREATE TABLE IF NOT EXISTS garantias_recibidas(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cliente TEXT,
+            recibido_por TEXT,
+            imei TEXT,
+            modelo TEXT,
+            fecha_venta TEXT,
+            condiciones TEXT,
+            accesorios TEXT,
+            faltante TEXT,
+            daños TEXT,
+            problema TEXT,
+            tipo_recepcion TEXT,
+            pagos TEXT,
+            fotos TEXT,
+            captura_grupo TEXT,
+            fecha_registro TEXT
+        )""")
+
+        conn.commit()
 
 def _destino_valido():
     try:
@@ -145,7 +254,7 @@ def login():
     password = request.form.get('password', '').strip()
     sucursal = request.form.get('sucursal', '').strip()
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT nombre, tipo FROM usuarios WHERE nombre = ? AND contraseña = ?", (usuario, password))
     row = cur.fetchone()
@@ -608,7 +717,7 @@ def transferencias():
     if 'usuario' not in session or session.get('tipo') not in ['admin', 'reparto', 'consulta']:
         return redirect('/')
     
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
     mensaje = ""
 
@@ -692,7 +801,7 @@ def reportes_transferencias():
     if "usuario" not in session:
         return redirect("/login")
 
-    conn = sqlite3.connect("inventario.sqlite3")
+    conn = get_conn()
     cursor = conn.cursor()
 
     if request.method == "POST":
@@ -764,7 +873,7 @@ def confirmar_transferencias():
 
     sucursal_usuario = session.get('sucursal')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     if request.method == 'POST':
@@ -801,7 +910,7 @@ def confirmar_envio_lote():
     if not id_lote:
         return "ID de lote no proporcionado.", 400
 
-    conn = sqlite3.connect("inventario.sqlite3")
+    conn = get_conn()
     cursor = conn.cursor()
 
     
@@ -838,7 +947,7 @@ def eliminar_transferencia(transferencia_id):
     if 'usuario' not in session or session.get('tipo') != 'admin':
         return redirect('/')
     
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("DELETE FROM transferencias WHERE id = ?", (transferencia_id,))
     conn.commit()
@@ -861,7 +970,7 @@ def transferencias_masivas():
     
     id_lote = f"lote_{datetime.now().strftime('%d%m%Y_%H%M%S')}_{uuid.uuid4().hex[:6]}"
 
-    conn = sqlite3.connect("inventario.sqlite3")
+    conn = get_conn()
     cursor = conn.cursor()
 
     for art_id in ids:
@@ -885,7 +994,7 @@ def resumen_general():
     if 'usuario' not in session or session.get('tipo') != 'admin':
         return redirect('/')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     
@@ -953,7 +1062,7 @@ def listado_articulos():
     modelo = request.args.get("modelo", "Todos")
     estado = request.args.get("estado", "Todos")
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("""
@@ -1018,7 +1127,7 @@ def actualizar_estado():
     nuevo_estado = request.form.get('nuevo_estado')
 
     if ids and nuevo_estado:
-        conn = sqlite3.connect('inventario.sqlite3')
+        conn = get_conn()
         cur = conn.cursor()
 
         for id_articulo in ids:
@@ -1060,7 +1169,7 @@ def inventario_sucursal():
     color_filtro = request.args.get('color', '')
     memoria_filtro = request.args.get('memoria', '')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     # Verificar si hay inventario pendiente
@@ -1116,7 +1225,7 @@ def agregar_articulo():
     if 'usuario' not in session or session.get('tipo') != 'admin':
         return redirect('/')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
     mensaje = ""
 
@@ -1177,7 +1286,7 @@ def ver_log():
     if 'usuario' not in session or session.get('tipo') != 'admin':
         return redirect('/')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     query = "SELECT * FROM log_actividad WHERE 1=1"
@@ -1223,7 +1332,7 @@ def eliminar_log(log_id):
     if 'usuario' not in session or session.get('tipo') != 'admin':
         return redirect('/')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT * FROM log_actividad WHERE id = ?", (log_id,))
     log = cur.fetchone()
@@ -1241,7 +1350,7 @@ def descargar_log():
     if 'usuario' not in session or session.get('tipo') != 'admin':
         return redirect('/')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT * FROM log_actividad")
     registros = cur.fetchall()
@@ -1284,13 +1393,9 @@ def restaurar():
 
     return render_template("restaurar.html", usuario=session['usuario'])
 
-from flask import Response
-from datetime import datetime
-import sqlite3
-
 @app.route('/reporte-inventario', methods=['GET', 'POST'])
 def reporte_inventario():
-    conn = sqlite3.connect('inventario.sqlite3')
+    conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("""
@@ -1506,7 +1611,7 @@ def recibir_garantia():
             captura_grupo.save(captura_path)
 
         
-        conn = sqlite3.connect("inventario.sqlite3")
+        conn = get_conn()
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO garantias_recibidas 
@@ -1529,7 +1634,7 @@ def tipos_producto():
     if 'usuario' not in session or session.get('tipo') != 'admin':
         return redirect('/')
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
     mensaje = ""
 
@@ -1578,7 +1683,7 @@ def eliminar_tipo(tipo_id):
     if 'usuario' not in session or session.get('tipo') != 'admin':
         return redirect('/')
     
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT nombre FROM tipos_producto WHERE id = ?", (tipo_id,))
     tipo = cur.fetchone()
@@ -1598,7 +1703,7 @@ def eliminar_articulos():
     if not ids:
         return "Error: No se seleccionaron artículos.", 400
 
-    conn = sqlite3.connect("inventario.sqlite3")
+    conn = get_conn()
     cursor = conn.cursor()
     cursor.executemany("DELETE FROM articulos WHERE id = ?", [(art_id,) for art_id in ids])
     conn.commit()
@@ -1665,7 +1770,7 @@ def generar_inventario():
     fecha = datetime.now().strftime("%d-%m-%Y")
     generado_por = session.get("nombre_real", session.get("usuario", "Admin"))
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("""
@@ -1691,7 +1796,7 @@ def generar_inventario_panel():
     if "usuario" not in session or session.get("tipo") != "admin":
         return redirect("/")
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT DISTINCT sucursal FROM articulos")
     sucursales = [row[0] for row in cur.fetchall()]
@@ -1706,7 +1811,7 @@ def hacer_inventario():
 
     sucursal = session.get("sucursal")
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     # Traer todos los IMEIs pendientes de esa sucursal
@@ -1731,7 +1836,7 @@ def finalizar_inventario():
     confirmado_por = session.get("nombre_real")
     fecha = datetime.now().strftime("%d-%m-%Y")
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     # Traer los imeis pendientes de esa sucursal
@@ -1766,7 +1871,7 @@ def resultados_inventario():
     if "usuario" not in session or session.get("tipo") != "admin":
         return redirect("/")
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     # Filtros (opcional)
@@ -1813,7 +1918,7 @@ def cancelar_inventario():
 
     sucursal = request.form["sucursal"]
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("""
@@ -1837,7 +1942,6 @@ def error_404(e):
 def error_500(e):
     return render_template('error.html', mensaje="Error interno del servidor (500)"), 500
 
-# Inicializar la base de datos
 init_db()
 
 if __name__ == '__main__':

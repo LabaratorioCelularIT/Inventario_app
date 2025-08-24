@@ -1,9 +1,18 @@
+version: '3.8'
+
 services:
-  app:
+  inventario:
     build: .
+    container_name: inventario_app
     ports:
       - "5001:5001"
     volumes:
-      - ../inventario.sqlite3:/app/inventario.sqlite3  # ✅ montar la base desde fuera
       - .:/app
-    restart: unless-stopped
+      - "C:/proyectos/servidor-celulares/inventario.sqlite3:/app/inventario.sqlite3"
+    environment:
+      INVENTARIO_DB: /app/inventario.sqlite3
+      FLASK_ENV: development
+    restart: always
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
