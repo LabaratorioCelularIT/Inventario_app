@@ -6,82 +6,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root{
-      --bg:#e6f0ff;
-      --fg:#003366;
-      --card:#ffffff;
-      --accent:#337ab7;
-      --accent-hover:#286090;
-      --danger:#d9534f;
-      --danger-hover:#c9302c;
-      --border:#d1d5db;
-      --zebra:#f7f9ff;
-      --hover:#f1f5fb;
+      --bg:#e6f0ff; --fg:#003366; --card:#ffffff; --accent:#337ab7; --accent-hover:#286090;
+      --danger:#d9534f; --danger-hover:#c9302c; --border:#d1d5db; --zebra:#f7f9ff; --hover:#f1f5fb;
     }
     *{box-sizing:border-box}
     body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:#000;margin:0}
-
-    .topbar{
-      background:var(--fg); color:#fff; padding:20px;
-      display:flex; justify-content:center; align-items:center;
-      border-bottom:3px solid #001f3f; box-shadow:0 2px 8px rgba(0,0,0,.2); position:relative;
-    }
+    .topbar{background:var(--fg); color:#fff; padding:20px; display:flex; justify-content:center; align-items:center;
+      border-bottom:3px solid #001f3f; box-shadow:0 2px 8px rgba(0,0,0,.2); position:relative;}
     .topbar .title{display:flex; align-items:center; gap:12px; font-size:26px; font-weight:700}
     .topbar .title img{height:70px}
-
-    .volver-btn{
-      position:absolute; top:20px; right:20px;
-      background:var(--danger); color:#fff; text-decoration:none;
-      padding:10px 16px; border-radius:6px; font-weight:700; z-index:2;
-    }
+    .volver-btn{position:absolute; top:20px; right:20px; background:var(--danger); color:#fff; text-decoration:none;
+      padding:10px 16px; border-radius:6px; font-weight:700; z-index:2;}
     .volver-btn:hover{background:var(--danger-hover)}
-
-    .container{
-      max-width:1300px; margin:30px auto; background:var(--card);
-      padding:30px; border-radius:12px; box-shadow:0 0 12px rgba(0,0,0,.1);
-    }
-
-    .filters{
-      display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-      gap:15px; margin-bottom:20px;
-    }
+    .container{max-width:1300px; margin:30px auto; background:var(--card); padding:30px; border-radius:12px; box-shadow:0 0 12px rgba(0,0,0,.1);}
+    .filters{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:15px; margin-bottom:20px;}
     .filters label{display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1f2d3d}
-    select, textarea, input[type="text"]{
-      width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
-      background:#fff; font-size:16px; height:44px;
-    }
+    select, textarea, input[type="text"]{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+      background:#fff; font-size:16px; height:44px;}
     textarea{height:auto; min-height:100px; resize:vertical}
-
-    .btn{
-      padding:10px 16px; border:none; border-radius:6px; cursor:pointer; font-size:16px; font-weight:700;
-    }
+    .btn{padding:10px 16px; border:none; border-radius:6px; cursor:pointer; font-size:16px; font-weight:700;}
     .btn-transfer{background:var(--accent); color:#fff}
     .btn-transfer:hover{background:var(--accent-hover)}
     .btn-delete{background:var(--danger); color:#fff}
     .btn-delete:hover{background:var(--danger-hover)}
     .btn-ghost{background:#f3f4f6; color:#111}
-
     .table-wrap{overflow:auto; border:1px solid #e6e9ef; border-radius:10px}
     table{width:100%; border-collapse:collapse; background:var(--card)}
     th, td{border:1px solid #e6e9ef; padding:12px; text-align:center}
     th{background:var(--accent); color:#fff}
-
     tbody tr{ background:#fff; transition:background .15s ease}
     tbody tr.zebra-even{ background:var(--zebra); }
     tbody tr:hover{ background:var(--hover); }
-
-    .modal{
-      display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
-      z-index:9999; justify-content:center; align-items:center; padding:16px;
-    }
-    .modal-content{
-      background:#fff; padding:24px; border-radius:12px; width:min(520px, 95vw);
-      box-shadow:0 8px 20px rgba(0,0,0,.3); position:relative;
-    }
+    .modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; justify-content:center; align-items:center; padding:16px;}
+    .modal-content{background:#fff; padding:24px; border-radius:12px; width:min(520px, 95vw); box-shadow:0 8px 20px rgba(0,0,0,.3); position:relative;}
     .modal-close{position:absolute; top:12px; right:16px; font-size:24px; cursor:pointer; color:#666}
-
     .actions-line{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px}
     .actions-line label{display:inline-flex; align-items:center; gap:8px; font-weight:600}
-
     @media (max-width:600px){
       .topbar{flex-direction:column; text-align:center}
       .topbar .title{flex-direction:column; font-size:20px}
@@ -191,33 +151,25 @@
           </thead>
           <tbody>
             {% for art in articulos %}
-            <tr data-sucursal="{{ art[3] }}" data-modelo="{{ art[1] }}" data-imei="{{ art[2] }}" data-estado="{{ art[10] }}" data-original-index="{{ loop.index0 }}">
-              <td><input type="checkbox" name="ids" value="{{ art[0] }}"></td>
-              <td>{{ art[0] }}</td>
-              <td>{{ art[1] }}</td>
-              <td>{{ art[2] }}</td>
-              <td>{{ art[3] }}</td>
-              <td>{{ art[10] }}</td>
+            <tr data-sucursal="{{ art.sucursal }}" data-modelo="{{ art.tipo }}" data-imei="{{ art.imei }}" data-estado="{{ art.estado }}" data-original-index="{{ loop.index0 }}">
+              <td><input type="checkbox" name="ids" value="{{ art.id }}"></td>
+              <td>{{ art.id }}</td>
+              <td>{{ art.tipo }}</td>
+              <td>{{ art.imei }}</td>
+              <td>{{ art.sucursal }}</td>
+              <td>{{ art.estado }}</td>
               <td>
-                <span id="color-{{ art[0] }}">{{ art[5] }}</span>
-                <button type="button" class="btn btn-ghost" style="padding:6px 10px" onclick="editarColor({{ art[0] }})">🖊️</button>
-                <div id="form-color-{{ art[0] }}" style="display:none; margin-top:6px;">
-                  <select id="input-color-{{ art[0] }}" style="width:140px; height:44px; padding:8px 10px; border-radius:10px; border:1px solid var(--border)">
+                <span id="color-{{ art.id }}">{{ art.color }}</span>
+                <button type="button" class="btn btn-ghost" style="padding:6px 10px" onclick="editarColor({{ art.id }})">🖊️</button>
+                <div id="form-color-{{ art.id }}" style="display:none; margin-top:6px;">
+                  <select id="input-color-{{ art.id }}" style="width:140px; height:44px; padding:8px 10px; border-radius:10px; border:1px solid var(--border)">
                     <option value="">-- Selecciona un color --</option>
-                    <option value="Naranja" {% if art[5] == "Naranja" %}selected{% endif %}>Naranja</option>
-                    <option value="Azul" {% if art[5] == "Azul" %}selected{% endif %}>Azul</option>
-                    <option value="Negro" {% if art[5] == "Negro" %}selected{% endif %}>Negro</option>
-                    <option value="Blanco" {% if art[5] == "Blanco" %}selected{% endif %}>Blanco</option>
-                    <option value="Morado" {% if art[5] == "Morado" %}selected{% endif %}>Morado</option>
-                    <option value="Rosa" {% if art[5] == "Rosa" %}selected{% endif %}>Rosa</option>
-                    <option value="Amarillo" {% if art[5] == "Amarillo" %}selected{% endif %}>Amarillo</option>
-                    <option value="Verde" {% if art[5] == "Verde" %}selected{% endif %}>Verde</option>
-                    <option value="Celeste" {% if art[5] == "Celeste" %}selected{% endif %}>Celeste</option>
-                    <option value="Plata" {% if art[5] == "Plata" %}selected{% endif %}>Plata</option>
-                    <option value="Gris" {% if art[5] == "Gris" %}selected{% endif %}>Gris</option>
-                    <option value="Dorado" {% if art[5] == "Dorado" %}selected{% endif %}>Dorado</option>
+                    {% set colores = ["Naranja","Azul","Negro","Blanco","Morado","Rosa","Amarillo","Verde","Celeste","Plata","Gris","Dorado"] %}
+                    {% for c in colores %}
+                      <option value="{{ c }}" {% if art.color == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
                   </select>
-                  <button type="button" class="btn btn-transfer" style="padding:8px 12px" onclick="guardarColor({{ art[0] }})">Guardar</button>
+                  <button type="button" class="btn btn-transfer" style="padding:8px 12px" onclick="guardarColor({{ art.id }})">Guardar</button>
                 </div>
               </td>
               <td>
@@ -262,7 +214,6 @@
       const visible = matchSuc && matchMod && matchEst && matchImei && pasaOcultar;
       row.style.display = visible ? "" : "none";
     });
-
     repaintZebra();
   }
 
@@ -324,24 +275,24 @@
   function mostrarDetalles(art) {
     document.getElementById("detallesContenido").innerHTML = `
       <h3 style="margin:0 0 8px;color:#003366;">📄 Detalles</h3>
-      <p><strong>ID:</strong> ${art[0]}</p>
-      <p><strong>Tipo:</strong> ${art[1]}</p>
-      <p><strong>IMEI:</strong> ${art[2]}</p>
-      <p><strong>Sucursal:</strong> ${art[3]}</p>
-      <p><strong>Memoria:</strong> ${art[4]}</p>
-      <p><strong>Color:</strong> ${art[5]}</p>
-      <p><strong>Proveedor:</strong> ${art[6]}</p>
-      <p><strong>Precio:</strong> $${art[7]}</p>
-      <p><strong>ID Factura:</strong> ${art[8]}</p>
-      <p><strong>Fecha Compra:</strong> ${art[9]}</p>
-      <p><strong>Estado:</strong> ${art[10]}</p>
+      <p><strong>ID:</strong> ${art.id ?? ""}</p>
+      <p><strong>Tipo:</strong> ${art.tipo ?? ""}</p>
+      <p><strong>IMEI:</strong> ${art.imei ?? ""}</p>
+      <p><strong>Sucursal:</strong> ${art.sucursal ?? ""}</p>
+      <p><strong>Memoria:</strong> ${art.memoria ?? ""}</p>
+      <p><strong>Color:</strong> ${art.color ?? ""}</p>
+      <p><strong>Proveedor:</strong> ${art.proveedor ?? ""}</p>
+      <p><strong>Precio:</strong> $${art.precio ?? ""}</p>
+      <p><strong>ID Factura:</strong> ${art.factura_id ?? ""}</p>
+      <p><strong>Fecha Compra:</strong> ${art.fecha_compra ?? ""}</p>
+      <p><strong>Estado:</strong> ${art.estado ?? ""}</p>
       <hr>
-      <h4 style="margin:8px 0;color:#003366;">📜 Historial de cambios</h4>
+      <h4 style="margin:8px 0;color:#00366;">📜 Historial de cambios</h4>
       <div id="historial-estados">Cargando...</div>
     `;
     document.getElementById("modalDetalles").style.display = "flex";
 
-    fetch(`/historial-estados-imei/${encodeURIComponent(art[2])}`)
+    fetch(`/historial-estados-imei/${encodeURIComponent(art.imei ?? "")}`)
       .then(res => { if (!res.ok) throw new Error("Error de red o ruta incorrecta"); return res.json(); })
       .then(data => {
         const cont = document.getElementById("historial-estados");
