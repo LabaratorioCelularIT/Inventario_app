@@ -8,7 +8,7 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from urllib.parse import urlencode
 from sqlite3 import OperationalError
 
-CAJA_URL_BASE = "http://89.117.145.73:5003"
+CAJA_URL_BASE = "https://inventario-app-ndojw.ondigitalocean.app:5003"
 SSO_SHARED_SECRET = "cambia_esta_clave_32+caracteres"
 
 app = Flask(__name__)
