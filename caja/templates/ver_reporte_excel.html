@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte Diario de Corte | Celulares Crédito Fácil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+  <style>
+    :root{
+      --bg:#e6f0ff;
+      --fg:#003366;
+      --card:#ffffff;
+      --accent:#337ab7;
+      --accent-hover:#286090;
+      --danger:#d9534f;
+      --danger-hover:#c9302c;
+      --b:#e6e9ef;
+      --ok:#2ecc71;
+      --warn:#f1c40f;
+      --bad:#e74c3c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:#000}
+
+    .topbar{
+      background:var(--fg);
+      padding:20px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      border-bottom:3px solid #001f3f;
+      box-shadow:0 2px 8px rgba(0,0,0,.2);
+      position:relative;
+      color:#fff;
+    }
+    .topbar .title{font-size:26px;font-weight:bold;display:flex;align-items:center;color:#fff}
+    .topbar img{height:70px;margin-right:15px}
+
+    .volver-btn{
+      position:absolute;top:20px;right:20px;
+      background:var(--danger);color:#fff;
+      padding:10px 16px;border-radius:6px;
+      text-decoration:none;font-weight:bold;z-index:2;
+    }
+    .volver-btn:hover{background:var(--danger-hover)}
+
+    .wrap{max-width:980px;margin:26px auto;padding:0 16px}
+    .card{
+      background:var(--card);
+      border:1px solid var(--b);
+      border-radius:14px;
+      box-shadow:0 4px 14px rgba(0,0,0,.06);
+      padding:18px;
+    }
+
+    .filters{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    select,input[type="date"]{
+      border:1px solid var(--b);
+      border-radius:10px;
+      padding:10px 12px;
+      background:#fff;
+      font-size:16px;
+      height:44px;
+    }
+    .btn{
+      border:0;background:var(--accent);color:#fff;
+      border-radius:6px;padding:10px 16px;
+      font-weight:700;cursor:pointer;font-size:16px;
+    }
+    .btn:hover{background:var(--accent-hover)}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+
+    .row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .kpi{
+      background:#f8fbff;
+      border:1px solid var(--b);
+      border-radius:12px;
+      padding:14px;
+    }
+    .kpi h4{margin:0 0 6px 0;font-size:13px;color:#406080;font-weight:600}
+    .kpi .v{font-size:22px;font-weight:800}
+    .kpi.ok .v{color:var(--ok)}
+    .kpi.bad .v{color:var(--bad)}
+    .kpi.warn .v{color:#8a6d3b}
+    .sub{font-size:13px;color:#6b7a90;margin-top:4px}
+
+    .section{margin-top:14px}
+    .table{margin-top:12px;border:1px solid var(--b);border-radius:10px;overflow:hidden}
+    .table .rowh,.table .rowb{display:grid;grid-template-columns:repeat(3,1fr);padding:10px 12px}
+    .table .rowh{background:#f3f7ff;font-weight:700}
+    .table .rowb{border-top:1px solid var(--b)}
+
+    .footer-btns{display:flex;gap:8px;margin-top:14px}
+    a.link{display:inline-block;background:var(--fg);color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;font-weight:700}
+    a.link:hover{opacity:.9}
+
+    @media(max-width:600px){
+      .topbar{flex-direction:column;text-align:center}
+      .topbar .title{flex-direction:column;font-size:20px}
+      .topbar img{height:60px;margin-bottom:10px}
+      .volver-btn{font-size:14px;padding:8px 12px;top:15px;right:15px}
+      .row{grid-template-columns:1fr}
+    }
+    @media(max-width:850px){ .row{grid-template-columns:repeat(2,1fr)} }
+  </style>
+</head>
+<body>
+
+  <a class="volver-btn"
+     href="{% if tipo_usuario == 'admin' %}/panel-admin{% elif tipo_usuario == 'consulta' %}/panel-consulta{% else %}/panel-reparto{% endif %}">
+     ← Volver al Panel
+  </a>
+
+  <div class="topbar">
+    <div class="title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="logo">
+      Celulares Crédito Fácil – Reporte Diario de Corte
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="filters">
+        <label>Sucursal:</label>
+        {% if tipo_usuario == 'admin' %}
+          <select id="sucursal">
+            {% for s in sucursales %}
+              <option value="{{ s }}" {{ 'selected' if s==sucursal else '' }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        {% else %}
+          <input id="sucursal" value="{{ sucursal }}" hidden>
+          <strong>{{ sucursal }}</strong>
+        {% endif %}
+
+        <label>Fecha:</label>
+        <input type="date" id="fecha" value="{{ fecha }}">
+        <button id="btnFiltrar" type="button" class="btn">Filtrar</button>
+      </div>
+
+      <div class="row">
+        <div class="kpi"><h4>Ventas Totales</h4><div class="v" id="k_ventas">$0.00</div><div class="sub" id="k_ventas_sub">0 ventas</div></div>
+        <div class="kpi"><h4>Efectivo</h4><div class="v" id="k_efectivo">$0.00</div><div class="sub">Incluido en ventas</div></div>
+        <div class="kpi"><h4>Tarjeta</h4><div class="v" id="k_tarjeta">$0.00</div><div class="sub">Incluido en ventas</div></div>
+        <div class="kpi"><h4>Dólar (MXN)</h4><div class="v" id="k_dolar_mxn">$0.00</div><div class="sub">Incluido en ventas</div></div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div class="kpi"><h4>Mixto</h4><div class="v" id="k_mixto">$0.00</div><div class="sub">Incluido en ventas</div></div>
+        <div class="kpi warn"><h4>Gastos</h4><div class="v" id="k_gastos">$0.00</div><div class="sub" id="k_gastos_sub">0 registros</div></div>
+        <div class="kpi"><h4>Anticipos</h4><div class="v" id="k_anticipos">$0.00</div><div class="sub" id="k_anticipos_sub">0 registros</div></div>
+        <div class="kpi"><h4>Dólares (monto)</h4><div class="v" id="k_dolares">$0.00</div><div class="sub" id="k_dolares_sub">0 pzas</div></div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div class="kpi"><h4>Fondo de Caja</h4><div class="v" id="k_fondo">$0.00</div><div class="sub">Último del día</div></div>
+        <div class="kpi"><h4>Notas con $</h4><div class="v" id="k_notas">$0.00</div><div class="sub">Suma detectada</div></div>
+        <div class="kpi ok"><h4>Balance del Día</h4><div class="v" id="k_balance">$0.00</div><div class="sub">Ventas − Gastos</div></div>
+        <div class="kpi"><h4>Fecha/Sucursal</h4><div class="v" id="k_meta">—</div><div class="sub">Referencia</div></div>
+      </div>
+
+      <div class="section">
+        <div class="table">
+          <div class="rowh"><div>Caja</div><div>Ingresos</div><div>Egresos</div></div>
+          <div class="rowb"><div>Ventas</div><div id="t_ventas">$0.00</div><div>—</div></div>
+          <div class="rowb"><div>Gastos</div><div>—</div><div id="t_gastos">$0.00</div></div>
+          <div class="rowb"><div>Anticipos</div><div id="t_anticipos">$0.00</div><div>—</div></div>
+          <div class="rowb"><div>Dólares (MXN)</div><div id="t_dolares">$0.00</div><div>—</div></div>
+          <div class="rowb"><div>Balance</div><div id="t_balance" style="font-weight:700">$0.00</div><div>—</div></div>
+        </div>
+      </div>
+
+      <div class="footer-btns">
+        <a class="link" id="btnDescargar" href="#">Descargar Excel</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function f(n){return new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',minimumFractionDigits:2}).format(Number(n||0))}
+    async function cargar(){
+      const sucEl=document.getElementById('sucursal');
+      const suc=sucEl.value;
+      const fecha=document.getElementById('fecha').value;
+      const btn=document.getElementById('btnFiltrar');
+
+      if(!suc||!fecha){alert('Selecciona sucursal y fecha.');return;}
+
+      btn.disabled=true; const oldTxt=btn.textContent; btn.textContent='Cargando…';
+      try{
+        const r=await fetch(`/api/reporte-excel-resumen?sucursal=${encodeURIComponent(suc)}&fecha=${encodeURIComponent(fecha)}`,{cache:'no-store'});
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        const j=await r.json();
+        if(!j.ok) throw new Error(j.msg||'Respuesta no OK');
+
+        document.getElementById('k_ventas').textContent=f(j.ventas_total);
+        document.getElementById('k_ventas_sub').textContent=`${j.ventas_count} ventas`;
+        document.getElementById('k_efectivo').textContent=f(j.efectivo);
+        document.getElementById('k_tarjeta').textContent=f(j.tarjeta);
+        document.getElementById('k_dolar_mxn').textContent=f(j.dolar_en_mxn);
+        document.getElementById('k_mixto').textContent=f(j.mixto);
+        document.getElementById('k_gastos').textContent=f(j.gastos_total);
+        document.getElementById('k_gastos_sub').textContent=`${j.gastos_count} registros`;
+        document.getElementById('k_anticipos').textContent=f(j.anticipos_total);
+        document.getElementById('k_anticipos_sub').textContent=`${j.anticipos_count} registros`;
+        document.getElementById('k_dolares').textContent=f(j.dolares_mxn);
+        document.getElementById('k_dolares_sub').textContent=`${j.dolares_pzas} pzas`;
+        document.getElementById('k_fondo').textContent=f(j.fondo_caja);
+        document.getElementById('k_notas').textContent=f(j.notas_total);
+        document.getElementById('k_balance').textContent=f(j.balance_dia);
+        document.getElementById('k_meta').textContent=`${j.sucursal} • ${j.fecha}`;
+
+        document.getElementById('t_ventas').textContent=f(j.ventas_total);
+        document.getElementById('t_gastos').textContent=f(j.gastos_total);
+        document.getElementById('t_anticipos').textContent=f(j.anticipos_total);
+        document.getElementById('t_dolares').textContent=f(j.dolares_mxn);
+        document.getElementById('t_balance').textContent=f(j.balance_dia);
+
+        document.getElementById('btnDescargar').href=`/reporte-excel?sucursal=${encodeURIComponent(j.sucursal)}&fecha=${encodeURIComponent(j.fecha)}`;
+      }catch(err){
+        console.error('Error cargando resumen:',err);
+        alert('No se pudo cargar el resumen.');
+      }finally{
+        btn.textContent=oldTxt; btn.disabled=false;
+      }
+    }
+
+    document.getElementById('btnFiltrar').addEventListener('click',cargar);
+    document.getElementById('fecha').addEventListener('change',cargar);
+    const sucEl=document.getElementById('sucursal');
+    if(sucEl && sucEl.tagName==='SELECT'){sucEl.addEventListener('change',cargar);}
+    window.addEventListener('DOMContentLoaded',cargar);
+  </script>
+
+</body>
+</html>

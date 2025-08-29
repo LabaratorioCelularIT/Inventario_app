@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Backup y Restauración</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root{
+      --bg:#e6f0ff;
+      --fg:#003366;
+      --card:#ffffff;
+      --accent:#337ab7;
+      --accent-hover:#286090;
+      --danger:#d9534f;
+      --danger-hover:#c9302c;
+      --borde:#d9e1ec;
+      --sombra:rgba(0,0,0,.08);
+    }
+
+    *{box-sizing:border-box}
+    body{
+      font-family:'Segoe UI',sans-serif;
+      background-color:var(--bg);
+      color:#2c3e50;
+      margin:0;
+    }
+
+    .topbar{
+      background-color:var(--fg);
+      color:#fff;
+      padding:16px 20px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:12px;
+      box-shadow:0 2px 10px rgba(0,0,0,.2);
+      border-bottom:3px solid #001f3f;
+      position:relative;
+    }
+    .topbar img{height:70px}
+    .topbar .title{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-size:22px;
+      font-weight:700;
+      text-align:center;
+    }
+    .actions-right{
+      position:absolute;
+      right:20px;
+      top:16px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:10px 16px;
+      border-radius:8px;
+      font-weight:700;
+      border:2px solid transparent;
+      text-decoration:none;
+      cursor:pointer;
+      transition:background-color .2s ease, transform .1s ease, filter .2s ease;
+      user-select:none;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn-azul{ background:var(--accent); color:#fff; }
+    .btn-azul:hover{ background:var(--accent-hover); }
+    .btn-rojo{ background:var(--danger); color:#fff; border-color:#001f3f; }
+    .btn-rojo:hover{ background:var(--danger-hover); }
+
+    .container{
+      max-width:720px;
+      margin:30px auto;
+      background:var(--card);
+      padding:24px;
+      border-radius:14px;
+      box-shadow:0 8px 24px var(--sombra);
+      border:1px solid var(--borde);
+    }
+    h2{
+      text-align:center;
+      margin:0 0 20px 0;
+      color:var(--fg);
+    }
+
+    .section{ margin-bottom:28px; }
+    .section h3{
+      margin:0 0 12px 0;
+      color:#34495e;
+      font-size:18px;
+    }
+
+    input[type="file"]{
+      margin-top:10px;
+      width:100%;
+    }
+
+    .btn-block{ width:100%; }
+
+    .volver-bottom{
+      display:inline-block;
+      margin-top:6px;
+      text-decoration:none;
+      background:var(--fg);
+      color:#fff;
+      padding:10px 16px;
+      border-radius:8px;
+      font-weight:700;
+    }
+    .volver-bottom:hover{ filter:brightness(.95); }
+
+    @media (max-width:600px){
+      .topbar .title{ flex-direction:column; font-size:18px; }
+      .topbar img{ height:60px; }
+      .actions-right{ right:12px; top:12px; }
+      .btn{ padding:8px 12px; font-size:14px; }
+      .container{ margin:20px 14px; padding:18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="actions-right">
+      <a href="/dashboard" class="btn btn-rojo">← Volver</a>
+      <form method="post" action="/logout" style="margin:0">
+        <button type="submit" class="btn btn-azul">Cerrar sesión</button>
+      </form>
+    </div>
+    <div class="title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      <span>Celulares Crédito Fácil — Backup y Restauración</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>Backup y Restauración</h2>
+
+    <div class="section">
+      <h3>📥 Descargar respaldo</h3>
+      <a class="btn btn-azul btn-block" href="{{ url_for('descargar_backup') }}">Descargar Base de Datos</a>
+    </div>
+
+    <div class="section">
+      <h3>📤 Restaurar respaldo</h3>
+      <form action="{{ url_for('restaurar_backup') }}" method="POST" enctype="multipart/form-data">
+        <input type="file" name="backup_file" accept=".sqlite3" required>
+        <br><br>
+        <button type="submit" class="btn btn-azul btn-block">Restaurar Base de Datos</button>
+      </form>
+    </div>
+
+    <a href="/dashboard" class="volver-bottom">← Volver al panel</a>
+  </div>
+
+</body>
+</html>

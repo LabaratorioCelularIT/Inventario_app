@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Hacer Inventario</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root{
+      --bg:#e6f0ff;
+      --fg:#003366;
+      --card:#ffffff;
+      --accent:#337ab7;
+      --accent-hover:#286090;
+      --danger:#d9534f;
+      --danger-hover:#c9302c;
+      --borde:#d9e1ec;
+      --sombra:rgba(0,0,0,.08);
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:'Segoe UI',sans-serif;
+      background-color:var(--bg);
+      color:#2c3e50;
+    }
+
+    .topbar{
+      background-color:var(--fg);
+      color:#fff;
+      padding:16px 20px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      border-bottom:3px solid #001f3f;
+      box-shadow:0 2px 8px rgba(0,0,0,.2);
+      position:relative;
+    }
+    .topbar img{height:70px;margin-right:12px}
+    .topbar .title{
+      font-size:24px;
+      font-weight:700;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      text-align:center;
+    }
+    .actions-right{
+      position:absolute;
+      right:20px;
+      top:16px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:10px 16px;
+      border-radius:10px;
+      font-weight:700;
+      border:2px solid transparent;
+      text-decoration:none;
+      cursor:pointer;
+      transition:background-color .2s ease, transform .1s ease;
+      user-select:none;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn-azul{background:var(--accent);color:#fff;}
+    .btn-azul:hover{background:var(--accent-hover);}
+    .btn-rojo{background:var(--danger);color:#fff;border-color:#001f3f;}
+    .btn-rojo:hover{background:var(--danger-hover);}
+
+    .container{
+      max-width:1100px;
+      margin:30px auto;
+      background:var(--card);
+      padding:28px;
+      border-radius:14px;
+      border:1px solid var(--borde);
+      box-shadow:0 8px 24px var(--sombra);
+    }
+    h2{
+      margin:0 0 14px 0;
+      text-align:center;
+      color:var(--fg);
+    }
+
+    .table-wrap{
+      margin-top:10px;
+      border:1px solid var(--borde);
+      border-radius:12px;
+      overflow:auto;
+      box-shadow:0 4px 14px var(--sombra);
+      background:#fff;
+    }
+    table{
+      width:100%;
+      min-width:820px;
+      border-collapse:collapse;
+      font-size:14px;
+    }
+    th, td{
+      padding:12px 10px;
+      border-bottom:1px solid #e6e9ef;
+      text-align:center;
+    }
+    th{
+      background-color:var(--accent);
+      color:#fff;
+      font-weight:700;
+      position:sticky; top:0;
+    }
+    tr:hover td{background:#f7fbff;}
+
+    .opciones{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+    }
+    .opciones label{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border:1px solid #dfe6ef;
+      border-radius:999px;
+      background:#f8fbff;
+      cursor:pointer;
+      font-weight:600;
+    }
+
+    .acciones{
+      margin-top:18px;
+      text-align:center;
+    }
+
+    @media (max-width:720px){
+      .topbar .title{flex-direction:column;font-size:18px}
+      .topbar img{height:60px;margin-right:0}
+      .actions-right{right:12px;top:12px}
+      .btn{padding:8px 12px;font-size:14px}
+      .container{margin:20px 14px;padding:18px}
+      th, td{padding:10px 8px}
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="actions-right">
+      <a class="btn btn-rojo" href="/inventario-sucursal">← Volver</a>
+    </div>
+    <div class="title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      <span>Celulares Crédito Fácil — Hacer Inventario</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>Revisión de Inventario en {{ sucursal }}</h2>
+
+    <form action="/finalizar-inventario" method="post">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Memoria</th>
+              <th>Color</th>
+              <th>IMEI</th>
+              <th>Estado</th>
+              <th>¿Está en tienda?</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for eq in equipos %}
+            <tr>
+              <td>{{ eq[1] }}</td>
+              <td>{{ eq[2] }}</td>
+              <td>{{ eq[3] }}</td>
+              <td>{{ eq[0] }}</td>
+              <td>{{ eq[4] }}</td>
+              <td>
+                <div class="opciones">
+                  <label>
+                    <input type="radio" name="imei_{{ eq[0] }}" value="Sí" required>
+                    ✅ Sí
+                  </label>
+                  <label>
+                    <input type="radio" name="imei_{{ eq[0] }}" value="No">
+                    ❌ No
+                  </label>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <input type="hidden" name="sucursal" value="{{ sucursal }}">
+      <div class="acciones">
+        <button type="submit" class="btn btn-azul">✅ Finalizar Revisión</button>
+      </div>
+    </form>
+  </div>
+
+</body>
+</html>

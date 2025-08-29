@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Verificar Código - Recuperar Contraseña</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --azul: #003366;
+      --celeste: #e6f0ff;
+      --blanco: #ffffff;
+      --rojo: #e74c3c;
+      --verde: #2ecc71;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--celeste);
+      margin: 0;
+      padding: 0;
+    }
+
+    .topbar {
+      background-color: var(--azul);
+      color: white;
+      text-align: center;
+      padding: 15px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 450px;
+      margin: 40px auto;
+      background-color: var(--blanco);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: var(--azul);
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 5px;
+      color: #333;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .btn {
+      margin-top: 20px;
+      background-color: var(--azul);
+      color: white;
+      padding: 12px;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .btn:hover {
+      background-color: #001f4d;
+    }
+
+    .error {
+      margin-top: 15px;
+      color: var(--rojo);
+      text-align: center;
+    }
+
+    .requisitos {
+      font-size: 14px;
+      color: #555;
+      margin-top: 10px;
+    }
+
+    .volver {
+      display: block;
+      margin-top: 25px;
+      text-align: center;
+      color: var(--azul);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    Celulares Crédito Fácil – Recuperar Contraseña
+  </div>
+
+  <div class="container">
+    <h2>Verificar Código</h2>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+      <input type="hidden" name="usuario" value="{{ usuario }}">
+
+      <label for="codigo">Código de verificación:</label>
+      <input type="text" id="codigo" name="codigo" required>
+
+      <label for="nueva_contrasena">Nueva contraseña:</label>
+      <input type="password" id="nueva_contrasena" name="nueva_contrasena" required>
+
+      <div class="requisitos">
+        La contraseña debe tener:<br>
+        • Al menos 1 mayúscula<br>
+        • Al menos 1 minúscula<br>
+        • Al menos 1 número<br>
+        • Al menos 1 carácter especial
+      </div>
+
+      <button type="submit" class="btn">Cambiar Contraseña</button>
+    </form>
+
+    <a href="/login" class="volver">⬅ Volver al inicio de sesión</a>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,41 @@
+body.dark-mode {
+  background-color: #121212;
+  color: #f0f0f0;
+}
+
+.dark-mode .header {
+  background-color: #1e1e1e;
+  color: #fff;
+}
+
+.dark-mode .container {
+  background-color: #1c1c1c;
+  color: #f0f0f0;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode table {
+  background-color: #1c1c1c;
+  color: #fff;
+}
+
+.dark-mode th {
+  background-color: #333;
+}
+
+.dark-mode tr:nth-child(even) {
+  background-color: #2a2a2a;
+}
+
+.dark-mode tr:hover {
+  background-color: #3a3a3a;
+}
+
+.dark-mode select,
+.dark-mode textarea,
+.dark-mode input,
+.dark-mode button {
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #555;
+}

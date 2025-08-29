@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gastos - Caja</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --card: #ffffff;
+      --fg: #003366;
+      --accent: #337ab7;
+      --accent-hover: #286090;
+      --danger: #d9534f;
+      --danger-hover: #c9302c;
+    }
+
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg); margin: 0; color: #000; }
+
+    .topbar {
+      background-color: var(--fg);
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-bottom: 3px solid #001f3f;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+      position: relative;
+      color: #fff;
+    }
+    .topbar img { height: 70px; margin-right: 15px; }
+    .topbar .title { font-size: 26px; font-weight: bold; display: flex; align-items: center; color: #fff; }
+
+    /* Botón Volver al Panel a la derecha (consistente) */
+    .volver-btn {
+      position: absolute; top: 20px; right: 20px;
+      background-color: var(--danger); color: #fff;
+      padding: 10px 16px; text-decoration: none; border-radius: 6px;
+      font-weight: bold; z-index: 999;
+    }
+    .volver-btn:hover { background-color: var(--danger-hover); }
+
+    .container { padding: 30px 20px; max-width: 1000px; margin: auto; }
+
+    h2 { text-align: center; color: var(--fg); font-size: 24px; margin-bottom: 20px; }
+
+    form {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    label { display: block; margin-top: 10px; font-weight: bold; }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+      height: 44px; /* igual que en otras vistas */
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    .btn {
+      margin-top: 20px;
+      padding: 10px 16px; /* igual que ventas/corte */
+      background-color: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn:hover { background-color: var(--accent-hover); }
+
+    /* Reutiliza estilo de botón rojo consistente */
+    .btn-red {
+      background-color: var(--danger);
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .btn-red:hover { background-color: var(--danger-hover); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    }
+    th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
+    th { background-color: var(--accent); color: #fff; }
+
+    .filter {
+      margin-bottom: 30px;
+      background: var(--card);
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .filter label { font-weight: bold; margin-bottom: 8px; display: block; }
+
+    @media (max-width: 600px) {
+      .topbar { flex-direction: column; text-align: center; }
+      .topbar .title { flex-direction: column; font-size: 20px; }
+      .topbar img { height: 60px; margin-bottom: 10px; }
+      th, td { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <a class="volver-btn" href="{{ '/panel-admin' if tipo == 'admin' else '/panel-consulta' }}">⬅ Volver al Panel</a>
+
+  <div class="topbar">
+    <div class="title">
+      <img src="/static/logo.png" alt="Logo">
+      Celulares Crédito Fácil - Registrar Gastos
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>Registrar gasto</h2>
+    <form method="POST">
+      <label>Motivo</label>
+      <input type="text" name="motivo" required>
+
+      <label>Cantidad</label>
+      <input type="number" step="0.01" name="monto" required>
+
+      {% if tipo == 'admin' %}
+      <label>Fecha</label>
+      <input type="date" name="fecha" value="{{ fecha_filtro|default('') }}">
+
+      <label>Sucursal</label>
+      <select name="sucursal">
+        {% for s in sucursales %}
+          <option value="{{ s }}" {% if sucursal_filtro == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+
+      <button type="submit" class="btn">Guardar gasto</button>
+    </form>
+
+    {% if tipo == 'admin' %}
+    <div class="filter">
+      <label><strong>Sucursal:</strong></label>
+      <select id="sucursalSelect">
+        {% for s in sucursales %}
+          <option value="{{ s }}" {% if sucursal_filtro == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+
+      <label><strong>Fecha:</strong></label>
+      <input type="date" id="fechaInput" value="{{ fecha_filtro|default('') }}">
+    </div>
+    {% endif %}
+
+    <h2>Gastos registrados</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Motivo</th>
+          <th>Cantidad</th>
+          <th>Fecha</th>
+          <th>Sucursal</th>
+          {% if tipo == 'admin' %}<th>Acciones</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in gastos %}
+        <tr>
+          <td>{{ g[1] }}</td>
+          <td>${{ "%.2f"|format(g[2]) }}</td>
+          <td>{{ g[3] }}</td>
+          <td>{{ g[4] }}</td>
+          {% if tipo == 'admin' %}
+          <td>
+            <form method="POST" action="/eliminar-gasto" onsubmit="return confirm('¿Eliminar este gasto?')">
+              <input type="hidden" name="id" value="{{ g[0] }}">
+              <button class="btn-red">Eliminar</button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if tipo == 'admin' %}
+  <script>
+    const sucursalSelect = document.getElementById('sucursalSelect');
+    const fechaInput = document.getElementById('fechaInput');
+
+    function actualizarFiltros() {
+      const sucursal = encodeURIComponent(sucursalSelect.value || '');
+      const fecha = fechaInput.value || '';
+      const qs = fecha ? `?sucursal=${sucursal}&fecha=${fecha}` : `?sucursal=${sucursal}`;
+      window.location.href = `/gastos${qs}`;
+    }
+
+    if (sucursalSelect) sucursalSelect.addEventListener("change", actualizarFiltros);
+    if (fechaInput) fechaInput.addEventListener("change", actualizarFiltros);
+  </script>
+  {% endif %}
+</body>
+</html>

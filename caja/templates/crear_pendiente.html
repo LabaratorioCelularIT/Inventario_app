@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Crear Pendiente | Celulares Crédito Fácil</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root{
+  --bg:#e6f0ff;
+  --card:#ffffff;
+  --fg:#003366;
+  --accent:#337ab7;
+  --accent-hover:#286090;
+  --danger:#d9534f;
+  --danger-hover:#c9302c;
+  --border:#d1d5db;
+  --muted:#6b7280;
+}
+
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:#000}
+
+.topbar{
+  background:var(--fg);
+  padding:20px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  border-bottom:3px solid #001f3f;
+  box-shadow:0 2px 10px rgba(0,0,0,.25);
+  position:relative;
+  color:#fff;
+}
+.topbar .title{font-size:26px;font-weight:bold;display:flex;align-items:center;color:#fff}
+.topbar img{height:70px;margin-right:15px}
+
+.volver-btn{
+  position:absolute; top:20px; right:20px;
+  background:var(--danger); color:#fff;
+  padding:10px 16px; border-radius:6px; text-decoration:none;
+  font-weight:bold; z-index:2;
+}
+.volver-btn:hover{background:var(--danger-hover)}
+
+.wrap{
+  max-width:900px; margin:26px auto; background:var(--card);
+  padding:24px; border-radius:14px; box-shadow:0 8px 18px rgba(0,0,0,.08);
+}
+
+h2{margin:0 0 14px 0; color:var(--fg); font-size:24px; text-align:center}
+
+label{font-weight:600;margin-top:10px;display:block;color:var(--fg)}
+input, select:not([multiple]), textarea{
+  width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px;
+  background:#fff; font-size:16px; height:44px;
+}
+textarea{height:auto; min-height:120px; resize:vertical;}
+
+select[multiple]{
+  width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px;
+  background:#fff; font-size:15px; min-height:240px; height:auto;
+}
+
+.btn{
+  background:var(--accent); color:#fff; border:0; border-radius:6px;
+  padding:10px 16px; margin-top:14px; cursor:pointer; font-weight:700; font-size:16px;
+}
+.btn:hover{background:var(--accent-hover)}
+.btn-ghost{background:#f3f4f6; color:#111}
+.btn-danger{background:var(--danger); color:#fff}
+.btn-danger:hover{background:var(--danger-hover)}
+
+.helper{font-size:12px;color:var(--muted);margin-top:6px}
+#inv-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#inv-count{margin-left:auto;font-weight:600}
+#inv-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.inv-chip{
+  background:#e6f0ff; border:1px solid #c9d7f2; padding:4px 8px; border-radius:999px;
+  font-size:12px; display:inline-flex; gap:6px; align-items:center; color:#1f2937;
+}
+.inv-chip button{background:transparent;border:none;color:#1f2937;cursor:pointer;padding:0;margin:0;font-weight:700}
+
+@media (max-width:600px){
+  .topbar{flex-direction:column;text-align:center}
+  .topbar .title{flex-direction:column;font-size:20px}
+  .topbar img{height:60px;margin-bottom:10px}
+  .volver-btn{font-size:14px;padding:8px 12px;top:15px;right:15px}
+  .wrap{margin:20px;padding:18px}
+}
+</style>
+</head>
+<body>
+
+<a class="volver-btn" href="{{ '/panel-admin' if session.get('tipo') == 'admin' else '/panel-consulta' }}">⬅ Volver al Panel</a>
+
+<div class="topbar">
+  <div class="title">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    Celulares Crédito Fácil - Crear Pendiente
+  </div>
+</div>
+
+<div class="wrap">
+  <h2>Crear pendiente</h2>
+
+  <form method="post">
+    <label for="tipo">Tipo</label>
+    <select name="tipo" id="tipo">
+      <option value="otro">Otro</option>
+      <option value="registro_usuario">Registro de usuario</option>
+      <option value="feria">Feria</option>
+    </select>
+
+    <label for="referencia">Referencia</label>
+    <input id="referencia" name="referencia">
+
+    <label for="sucursal">Sucursal</label>
+    <select name="sucursal" id="sucursal" required>
+      {% for s in sucursales %}
+        <option value="{{ s }}" {% if s == sucursal_default %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="detalle">Detalle (texto o JSON)</label>
+    <textarea id="detalle" name="detalle" rows="6" placeholder='Ej. {"nota":"texto"} o texto libre'></textarea>
+
+    <label for="involucrados">Involucrados</label>
+    <div style="display:grid;gap:8px">
+      <input id="filtro-inv" type="text" placeholder="Buscar… (por nombre o usuario)">
+      <select id="involucrados" name="involucrados" multiple size="10">
+        {% for u in usuarios %}
+          <option value="{{ u.usuario }}" data-username="{{ u.usuario }}">{{ u.nombre }}</option>
+        {% endfor %}
+      </select>
+
+      <div id="inv-actions">
+        <button type="button" id="btn-select-all" class="btn btn-ghost">Seleccionar todos</button>
+        <button type="button" id="btn-clear-all" class="btn btn-ghost">Limpiar selección</button>
+        <span id="inv-count">0 seleccionados</span>
+      </div>
+
+      <div id="inv-chips"></div>
+      <div class="helper">Consejo: usa <b>Ctrl</b> (Win/Linux) o <b>Cmd</b> (Mac) para elegir varios.</div>
+    </div>
+
+    <button type="submit" class="btn">Crear</button>
+  </form>
+</div>
+
+<script>
+(function () {
+  const sel   = document.getElementById('involucrados');
+  const chips = document.getElementById('inv-chips');
+  const count = document.getElementById('inv-count');
+  const filtro= document.getElementById('filtro-inv');
+  const btnAll= document.getElementById('btn-select-all');
+  const btnClr= document.getElementById('btn-clear-all');
+
+  function updateChips(){
+    chips.innerHTML = '';
+    const selected = Array.from(sel.selectedOptions).map(o => ({
+      v: o.value, t: o.textContent.trim()
+    }));
+    count.textContent = `${selected.length} seleccionados`;
+    selected.forEach(({v,t})=>{
+      const pill = document.createElement('span');
+      pill.className = 'inv-chip';
+      pill.textContent = t + ' ';
+      const x = document.createElement('button');
+      x.type = 'button'; x.textContent = '✕';
+      x.onclick = () => {
+        const opt = Array.from(sel.options).find(o=>o.value===v);
+        if (opt){ opt.selected = false; sel.dispatchEvent(new Event('change')); }
+      };
+      pill.appendChild(x);
+      chips.appendChild(pill);
+    });
+  }
+
+  sel.addEventListener('change', updateChips);
+
+  filtro.addEventListener('input', ()=>{
+    const q = filtro.value.toLowerCase().trim();
+    Array.from(sel.options).forEach(o=>{
+      const nameMatch = o.textContent.toLowerCase().includes(q);
+      const userMatch = (o.dataset.username || o.value).toLowerCase().includes(q);
+      o.hidden = !(nameMatch || userMatch);
+    });
+  });
+
+  btnAll.addEventListener('click', ()=>{
+    Array.from(sel.options).forEach(o=>{ if(!o.hidden) o.selected = true; });
+    sel.dispatchEvent(new Event('change'));
+  });
+
+  btnClr.addEventListener('click', ()=>{
+    Array.from(sel.options).forEach(o=> o.selected = false);
+    sel.dispatchEvent(new Event('change'));
+  });
+
+  updateChips();
+})();
+</script>
+</body>
+</html>

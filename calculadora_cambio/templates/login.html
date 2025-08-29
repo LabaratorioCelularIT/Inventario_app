@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Acceso de Administrador</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- Encabezado con logo y nombre de empresa -->
+  <div class="header">
+    <img src="{{ url_for('static', filename='logo_empresa.jpeg') }}" alt="Logo">
+    <h1>Celulares Crédito Fácil</h1>
+  </div>
+
+  <div class="container" style="text-align: center;">
+    <h2>🔒 Acceso de Administrador</h2>
+    <p>Ingresa la contraseña para continuar</p>
+
+    <form method="post">
+      <input type="password" name="pass" placeholder="Contraseña" style="padding: 0.6rem; width: 60%; max-width: 300px; font-size: 1rem; border-radius: 8px; border: 1px solid #ccc;" required>
+      <div class="actions" style="margin-top: 1.5rem;">
+        <button type="submit">Entrar</button>
+      </div>
+    </form>
+
+    <p style="margin-top: 1rem;">
+      <a href="/" style="color: #2c7be5;">← Volver al inicio</a>
+    </p>
+  </div>
+
+</body>
+</html>

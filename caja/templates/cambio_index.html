@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora de Cambio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --azul: #003366;
+      --celeste: #e6f0ff;
+      --blanco: #ffffff;
+      --gris: #f5f5f5;
+      --resaltado: #d0e6ff;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background-color: var(--celeste);
+    }
+
+    .topbar {
+      background-color: var(--azul);
+      color: white;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      text-align: center;
+      color: var(--azul);
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .denominacion {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--gris);
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .denominacion label {
+      flex: 1 0 100%;
+      font-weight: bold;
+    }
+
+    .denominacion input {
+      width: 30%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 12px;
+      font-size: 18px;
+      background-color: var(--azul);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #002244;
+    }
+
+    .volver {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .volver a {
+      color: var(--azul);
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    Celulares Crédito Fácil – Calculadora de Cambio
+  </div>
+
+  <div class="container">
+    <h2>Registrar Ciclo del Día</h2>
+    <form method="POST" action="/ciclo-calculo">
+      {% for den in [1, 2, 5, 10, 20, 50, 100] %}
+      <div class="denominacion">
+        <label>Denominación: ${{ den }}</label>
+        <input type="number" name="objetivo_{{ den }}" placeholder="Objetivo" min="0" value="0">
+        <input type="number" name="actual_{{ den }}" placeholder="Actual" min="0" value="0">
+        <input type="number" name="repuesto_{{ den }}" placeholder="Repuesto" min="0" value="0">
+      </div>
+      {% endfor %}
+
+      <button type="submit">¿Está correcto el ciclo?</button>
+    </form>
+
+    <div class="volver">
+      <a href="/panel-admin">⬅ Volver al Panel</a>
+    </div>
+  </div>
+</body>
+</html>

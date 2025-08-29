@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Corte del Día | Celulares Crédito Fácil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --fg: #003366;
+      --card: #ffffff;
+      --accent: #337ab7;
+      --accent-hover: #286090;
+      --danger: #d9534f;
+      --danger-hover: #c9302c;
+    }
+    body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg); color: var(--fg); }
+    .topbar { background-color: var(--fg); padding: 20px; display: flex; justify-content: center; align-items: center; border-bottom: 3px solid #001f3f; box-shadow: 0 2px 8px rgba(0,0,0,.2); position: relative; }
+    .topbar img { height: 70px; margin-right: 15px; }
+    .topbar .title { font-size: 26px; font-weight: bold; color: white; display: flex; align-items: center; }
+    /* Botón volver al panel igual que en ventas */
+    .volver-btn { position: absolute; top: 20px; right: 20px; background-color: var(--danger); color: white; padding: 10px 16px; text-decoration: none; border-radius: 6px; font-weight: bold; z-index: 999; }
+    .volver-btn:hover { background-color: var(--danger-hover); }
+    .container { max-width: 1000px; margin: 30px auto; padding: 20px; }
+    .filtros { text-align: center; margin-bottom: 20px; }
+    .filtros input, .filtros select { padding: 10px 12px; margin: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 16px; }
+    .filtros button { background-color: var(--accent); color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .filtros button:hover { background-color: var(--accent-hover); }
+    .corte-contenido { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+    .card { background-color: var(--card); padding: 20px; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,.08); width: 45%; min-width: 280px; transition: transform .2s ease; }
+    .card:hover { transform: translateY(-5px); }
+    .card h3 { border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 15px; font-size: 20px; color: var(--fg); text-align: center; }
+    .card p { font-size: 16px; margin: 8px 0; }
+    .total { font-weight: bold; font-size: 18px; color: green; text-align: center; margin-top: 10px; }
+    @media (max-width: 600px){
+      .topbar { flex-direction: column; text-align: center; }
+      .topbar .title { font-size: 20px; flex-direction: column; }
+      .topbar img { height: 60px; margin-bottom: 10px; }
+      .card { width: 100%; }
+      .filtros input, .filtros select { width: 90%; margin: 8px auto; display: block; }
+    }
+  </style>
+</head>
+<body>
+  <a class="volver-btn" href="{{ '/panel-admin' if session['tipo'] == 'admin' else '/panel-consulta' }}">⬅ Volver al Panel</a>
+
+  <div class="topbar">
+    <div class="title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      Corte del Día - {{ fecha }} | {{ sucursal }}
+    </div>
+  </div>
+
+  <div class="container">
+    {% if tipo == 'admin' %}
+    <form method="get" class="filtros">
+      <input type="date" name="fecha" value="{{ fecha }}">
+      <select name="sucursal">
+        {% for s in sucursales %}
+          <option value="{{ s }}" {% if s == sucursal %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Consultar Corte</button>
+    </form>
+    {% endif %}
+
+    <div class="corte-contenido">
+      <div class="card">
+        <h3>Entradas de Efectivo</h3>
+        <p>Dinero Inicial en Caja: ${{ "{:,.2f}".format(fondo_inicial) }}</p>
+        <p>Ventas en efectivo: ${{ "{:,.2f}".format(ventas_efectivo) }}</p>
+        <p>Ventas del día (efectivo + tarjeta): ${{ "{:,.2f}".format(ventas_total_dia) }}</p>
+        <p class="total">Total: ${{ "{:,.2f}".format(total_entradas_efectivo) }}</p>
+      </div>
+
+      <div class="card">
+        <h3>Pagos y Gastos</h3>
+        <p>Gastos del día: ${{ "{:,.2f}".format(gastos) }}</p>
+        <p>Pagos con Tarjeta: ${{ "{:,.2f}".format(ventas_tarjeta) }}</p>
+        <p class="total">
+          Dinero en caja actual:
+          ${{ "{:,.2f}".format(ventas_total_dia - gastos - ventas_tarjeta) }}
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fondo Actual</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h2>🧾 Detalle del Fondo Principal</h2>
+    <ul>
+      {% for d in denom %}
+        <li>
+          {{ "Monedas de" if d < 20 else "Billetes de" }} ${{ d }}: 
+          <strong>{{ fondo[d] }} {{ "monedas" if d < 20 else "billetes" }}</strong> 
+          (Valor total: ${{ fondo[d] * d }})
+        </li>
+      {% endfor %}
+    </ul>
+
+    <p><strong>💰 Total general del fondo: ${{ total_fondo }}</strong></p>
+
+    <a href="/" style="display:block; margin-top:1rem;">⬅️ Volver</a>
+  </div>
+</body>
+</html>

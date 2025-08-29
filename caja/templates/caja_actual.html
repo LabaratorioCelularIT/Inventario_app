@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Editar Caja Actual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+  <style>
+    :root{--azul:#003366;--celeste:#e6f0ff;--blanco:#ffffff;--borde:#ccc;--sombra:rgba(0,0,0,.1);--ok:#2ecc71;--bad:#e74c3c}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'Segoe UI',sans-serif;background-color:var(--celeste);color:#000}
+    .topbar{background-color:var(--azul);padding:20px;color:#fff;text-align:center;font-size:22px;font-weight:bold}
+    .container{max-width:680px;margin:30px auto;background:var(--blanco);border-radius:12px;box-shadow:0 4px 10px var(--sombra);padding:20px}
+    h2{text-align:center;margin-bottom:20px}
+    form{display:flex;flex-direction:column;gap:12px}
+    .row{display:grid;grid-template-columns:1fr 120px;gap:14px;align-items:center}
+    .row label{font-weight:700}
+    input[type="number"]{padding:8px 10px;width:100%;border:1px solid var(--borde);border-radius:8px;text-align:right}
+    .acciones{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px}
+    .btn{background-color:var(--azul);color:#fff;padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-weight:700;text-decoration:none}
+    .btn:hover{background-color:#00264d}
+    .btn-ok{background:var(--ok)}
+    .btn-ok:hover{background:#239b56}
+    .volver-container{text-align:center;margin-top:14px}
+    .badge{display:inline-block;background:#eef3ff;border:1px solid #cdd8ff;padding:4px 8px;border-radius:999px;font-size:12px;color:#0f1b3d}
+
+    .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+    .modal{width:100%;max-width:760px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .modal header{padding:16px 18px;border-bottom:1px solid #e6e9ef;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+    .modal .body{padding:16px 18px}
+    .modal .grid{display:grid;grid-template-columns:90px 1fr 1fr;gap:10px;align-items:center}
+    .modal .grid .th{font-size:12px;text-transform:uppercase;color:#666;font-weight:700}
+    .modal .grid input{padding:10px;border:1px solid #e6e9ef;border-radius:10px;text-align:right}
+    .modal footer{padding:14px 18px;border-top:1px solid #e6e9ef;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+    .btn-ghost{background:#f4f7ff;color:#0f1b3d}
+    .btn-bad{background:var(--bad);color:#fff}
+    .note{font-size:12px;color:#555;margin-top:8px}
+    @media(max-width:560px){.row{grid-template-columns:1fr 110px}.modal .grid{grid-template-columns:70px 1fr 1fr}}
+  </style>
+</head>
+<body>
+  <div class="topbar">Editar Fondo de Caja</div>
+
+  <div class="container">
+    <form method="POST" id="formFondo">
+      {% for row in fondo %}
+        <div class="row">
+          <label>${{ row["denom"] }}</label>
+          <input id="den_{{ row['denom'] }}" data-denom="{{ row['denom'] }}" type="number" name="{{ row['denom'] }}" value="{{ row['cantidad'] }}" min="0">
+        </div>
+      {% endfor %}
+
+      <div class="acciones">
+        <button type="submit" class="btn">Guardar Cambios</button>
+
+        {% if session['tipo'] == 'admin' %}
+          <a href="{{ url_for('panel_admin') }}" class="btn">⬅️ Volver</a>
+        {% elif session['tipo'] == 'consulta' %}
+          <a href="{{ url_for('panel_consulta') }}" class="btn">⬅️ Volver</a>
+        {% elif session['tipo'] == 'reparto' %}
+          <a href="{{ url_for('panel_reparto') }}" class="btn">⬅️ Volver</a>
+        {% endif %}
+
+        <button type="button" class="btn btn-ok" id="btnAbrirModal">➕ Añadir por cantidad</button>
+      </div>
+
+      <div style="text-align:center;margin-top:8px">
+        <span class="badge">El lote suma a los conteos actuales (no borra).</span>
+      </div>
+    </form>
+
+    <div class="modal-back" id="loteBack">
+      <div class="modal">
+        <header>
+          <span>Añadir por cantidad</span>
+          <button type="button" class="btn btn-ghost" id="btnCerrarModal">✕</button>
+        </header>
+
+        <div class="body">
+          <div class="grid" style="margin-bottom:8px">
+            <div class="th">Denom</div>
+            <div class="th">Piezas a añadir</div>
+            <div class="th">Monto a añadir</div>
+          </div>
+
+          <div class="grid">
+            {% for row in fondo %}
+              <div>${{ row['denom'] }}</div>
+              <input id="p_{{ row['denom'] }}" type="number" min="0" placeholder="pzs">
+              <input id="m_{{ row['denom'] }}" type="number" min="0" placeholder="$">
+            {% endfor %}
+          </div>
+
+          <div class="acciones" style="justify-content:flex-start">
+            <button type="button" class="btn btn-ghost" id="btnEjemplo">Autollenar ejemplo</button>
+            <span class="note">Si escribes piezas y monto en la misma fila, se usarán las piezas.</span>
+          </div>
+        </div>
+
+        <footer>
+          <button type="button" class="btn btn-bad" id="btnLimpiar">Limpiar</button>
+          <button type="button" class="btn btn-ok" id="btnAplicar">Aplicar al fondo</button>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const denoms = Array.from(document.querySelectorAll('input[data-denom]'))
+      .map(i => parseInt(i.dataset.denom, 10))
+      .filter(n => !isNaN(n))
+      .sort((a,b)=>a-b);
+
+    const $ = s => document.querySelector(s);
+    const openModal = show => { $('#loteBack').style.display = show ? 'flex' : 'none'; };
+
+    $('#btnAbrirModal').onclick = () => openModal(true);
+    $('#btnCerrarModal').onclick = () => openModal(false);
+
+    $('#btnLimpiar').onclick = () => {
+      denoms.forEach(d => {
+        const p = $('#p_'+d), m = $('#m_'+d);
+        if (p) p.value = '';
+        if (m) m.value = '';
+      });
+    };
+
+    $('#btnEjemplo').onclick = () => {
+      const sets = {2:400, 5:100, 20:100, 50:50};
+      Object.entries(sets).forEach(([d,pcs])=>{
+        const p = $('#p_'+d); if (p) p.value = pcs;
+      });
+    };
+
+    $('#btnAplicar').onclick = () => {
+      const errores = [];
+      denoms.forEach(d => {
+        const pEl = $('#p_'+d), mEl = $('#m_'+d);
+        const piezasStr = pEl ? (pEl.value || '').trim() : '';
+        const montoStr  = mEl ? (mEl.value || '').trim() : '';
+        let piezas = 0;
+
+        if (piezasStr !== '') {
+          piezas = parseInt(piezasStr, 10) || 0;
+        } else if (montoStr !== '') {
+          const monto = parseInt(montoStr, 10) || 0;
+          if (monto % d !== 0) {
+            errores.push('$'+d+': monto $'+monto+' no es múltiplo');
+            return;
+          }
+          piezas = monto / d;
+        }
+
+        if (piezas > 0) {
+          const base = $('#den_'+d);
+          if (base) {
+            const actual = parseInt(base.value, 10) || 0;
+            base.value = actual + piezas; // Sumar al conteo actual
+          }
+        }
+      });
+
+      if (errores.length) {
+        alert('Revisa:\n' + errores.join('\n'));
+        return;
+      }
+      openModal(false);
+    };
+  </script>
+</body>
+</html>

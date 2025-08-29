@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Listado de Artículos | Celulares Crédito Fácil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{
+      --bg:#e6f0ff; --fg:#003366; --card:#ffffff; --accent:#337ab7; --accent-hover:#286090;
+      --danger:#d9534f; --danger-hover:#c9302c; --border:#d1d5db; --zebra:#f7f9ff; --hover:#f1f5fb;
+    }
+    *{box-sizing:border-box}
+    body{font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:#000;margin:0}
+    .topbar{background:var(--fg); color:#fff; padding:20px; display:flex; justify-content:center; align-items:center;
+      border-bottom:3px solid #001f3f; box-shadow:0 2px 8px rgba(0,0,0,.2); position:relative;}
+    .topbar .title{display:flex; align-items:center; gap:12px; font-size:26px; font-weight:700}
+    .topbar .title img{height:70px}
+    .volver-btn{position:absolute; top:20px; right:20px; background:var(--danger); color:#fff; text-decoration:none;
+      padding:10px 16px; border-radius:6px; font-weight:700; z-index:2;}
+    .volver-btn:hover{background:var(--danger-hover)}
+    .container{max-width:1300px; margin:30px auto; background:var(--card); padding:30px; border-radius:12px; box-shadow:0 0 12px rgba(0,0,0,.1);}
+    .filters{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:15px; margin-bottom:20px;}
+    .filters label{display:flex; flex-direction:column; gap:6px; font-weight:600; color:#1f2d3d}
+    select, textarea, input[type="text"]{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+      background:#fff; font-size:16px; height:44px;}
+    textarea{height:auto; min-height:100px; resize:vertical}
+    .btn{padding:10px 16px; border:none; border-radius:6px; cursor:pointer; font-size:16px; font-weight:700;}
+    .btn-transfer{background:var(--accent); color:#fff}
+    .btn-transfer:hover{background:var(--accent-hover)}
+    .btn-delete{background:var(--danger); color:#fff}
+    .btn-delete:hover{background:var(--danger-hover)}
+    .btn-ghost{background:#f3f4f6; color:#111}
+    .table-wrap{overflow:auto; border:1px solid #e6e9ef; border-radius:10px}
+    table{width:100%; border-collapse:collapse; background:var(--card)}
+    th, td{border:1px solid #e6e9ef; padding:12px; text-align:center}
+    th{background:var(--accent); color:#fff}
+    tbody tr{ background:#fff; transition:background .15s ease}
+    tbody tr.zebra-even{ background:var(--zebra); }
+    tbody tr:hover{ background:var(--hover); }
+    .modal{display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:9999; justify-content:center; align-items:center; padding:16px;}
+    .modal-content{background:#fff; padding:24px; border-radius:12px; width:min(520px, 95vw); box-shadow:0 8px 20px rgba(0,0,0,.3); position:relative;}
+    .modal-close{position:absolute; top:12px; right:16px; font-size:24px; cursor:pointer; color:#666}
+    .actions-line{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px}
+    .actions-line label{display:inline-flex; align-items:center; gap:8px; font-weight:600}
+    @media (max-width:600px){
+      .topbar{flex-direction:column; text-align:center}
+      .topbar .title{flex-direction:column; font-size:20px}
+      .topbar .title img{height:60px}
+      .volver-btn{font-size:14px; padding:8px 12px; top:15px; right:15px}
+      .container{margin:20px; padding:20px}
+    }
+  </style>
+</head>
+<body>
+
+  <a class="volver-btn" href="/dashboard">⬅ Volver al Panel</a>
+
+  <div class="topbar">
+    <div class="title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      Celulares Crédito Fácil — Listado de Artículos
+    </div>
+  </div>
+
+  <div class="container">
+    <form method="POST" action="/transferencias-masivas" id="formTransfer">
+
+      <div class="filters">
+        <label>Sucursal
+          <select id="filtroSucursal" onchange="refreshTabla()">
+            <option value="">Todas</option>
+            {% for s in sucursales %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+          </select>
+        </label>
+
+        <label>Modelo
+          <select id="filtroModelo" onchange="refreshTabla()">
+            <option value="">Todos</option>
+            {% for m in modelos %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+          </select>
+        </label>
+
+        <label>Estado
+          <select id="filtroEstado" onchange="refreshTabla()">
+            <option value="">Todos</option>
+            <option value="Nuevo">Nuevo</option>
+            <option value="Reparación">Reparación</option>
+            <option value="Reparado">Reparado</option>
+            <option value="Vendido">Vendido</option>
+            <option value="Liquidación">Liquidación</option>
+            <option value="Perdido">Perdido</option>
+          </select>
+        </label>
+
+        <label>Sucursal destino
+          <select name="destino_masivo" required>
+            <option value="">-- Selecciona una sucursal --</option>
+            {% for suc in sucursales %}<option value="{{ suc }}">{{ suc }}</option>{% endfor %}
+          </select>
+        </label>
+
+        <label>Nuevo Estado
+          <select name="nuevo_estado" required>
+            <option value="">-- Selecciona estado --</option>
+            <option value="Nuevo">Nuevo</option>
+            <option value="Reparación">Reparación</option>
+            <option value="Reparado">Reparado</option>
+            <option value="Vendido">Vendido</option>
+            <option value="Liquidación">Liquidación</option>
+            <option value="Perdido">Perdido</option>
+          </select>
+        </label>
+
+        <label>📋 IMEIs
+          <textarea id="listaImeis" rows="3" placeholder="Pega una lista de IMEIs..."></textarea>
+          <button type="button" class="btn btn-ghost" onclick="seleccionarPorImeis()">Seleccionar</button>
+        </label>
+
+        <label>🔍 Buscar IMEI
+          <input type="text" id="busqueda_imei" placeholder="Escribe parte del IMEI...">
+        </label>
+
+        <label style="align-self:end; display:flex; align-items:center; gap:8px; font-weight:600;">
+          <input type="checkbox" id="ocultarVendidos" checked onchange="refreshTabla()"> Ocultar 'Vendido' y 'Perdido'
+        </label>
+
+        <div style="align-self:end; display:flex; gap:8px; flex-wrap:wrap">
+          <button type="button" class="btn btn-transfer" onclick="actualizarEstado()">Actualizar Estado</button>
+          <button type="submit" class="btn btn-transfer">Transferir</button>
+        </div>
+      </div>
+
+      <div class="actions-line">
+        <button type="button" class="btn btn-delete" onclick="eliminarSeleccionados()">Eliminar Seleccionados</button>
+        <label><input type="checkbox" onclick="seleccionarTodos(this)"> Seleccionar todos</label>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>✔</th>
+              <th>ID</th>
+              <th>Tipo</th>
+              <th>IMEI</th>
+              <th>Sucursal</th>
+              <th>Estado</th>
+              <th>Color</th>
+              <th>Detalles</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for art in articulos %}
+            <tr data-sucursal="{{ art.sucursal }}" data-modelo="{{ art.tipo }}" data-imei="{{ art.imei }}" data-estado="{{ art.estado }}" data-original-index="{{ loop.index0 }}">
+              <td><input type="checkbox" name="ids" value="{{ art.id }}"></td>
+              <td>{{ art.id }}</td>
+              <td>{{ art.tipo }}</td>
+              <td>{{ art.imei }}</td>
+              <td>{{ art.sucursal }}</td>
+              <td>{{ art.estado }}</td>
+              <td>
+                <span id="color-{{ art.id }}">{{ art.color }}</span>
+                <button type="button" class="btn btn-ghost" style="padding:6px 10px" onclick="editarColor({{ art.id }})">🖊️</button>
+                <div id="form-color-{{ art.id }}" style="display:none; margin-top:6px;">
+                  <select id="input-color-{{ art.id }}" style="width:140px; height:44px; padding:8px 10px; border-radius:10px; border:1px solid var(--border)">
+                    <option value="">-- Selecciona un color --</option>
+                    {% set colores = ["Naranja","Azul","Negro","Blanco","Morado","Rosa","Amarillo","Verde","Celeste","Plata","Gris","Dorado"] %}
+                    {% for c in colores %}
+                      <option value="{{ c }}" {% if art.color == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="button" class="btn btn-transfer" style="padding:8px 12px" onclick="guardarColor({{ art.id }})">Guardar</button>
+                </div>
+              </td>
+              <td>
+                <button type="button" class="btn btn-ghost" onclick='mostrarDetalles({{ art|tojson|safe }})'>Ver</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </div>
+
+  <div id="modalDetalles" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="cerrarModal()">&times;</span>
+      <div id="detallesContenido"></div>
+    </div>
+  </div>
+
+  <script>
+  function refreshTabla() {
+    const suc = (document.getElementById("filtroSucursal")?.value || "").toLowerCase();
+    const mod = (document.getElementById("filtroModelo")?.value || "").toLowerCase();
+    const est = (document.getElementById("filtroEstado")?.value || "").toLowerCase();
+    const ocultar = document.getElementById("ocultarVendidos")?.checked ?? false;
+    const qImei = (document.getElementById("busqueda_imei")?.value || "").trim().toLowerCase();
+
+    document.querySelectorAll("table tbody tr").forEach(row => {
+      const rs = (row.dataset.sucursal || "").toLowerCase();
+      const rm = (row.dataset.modelo   || "").toLowerCase();
+      const re = (row.dataset.estado   || "").toLowerCase();
+      const imeiCell = row.querySelector("td:nth-child(4)");
+      const imeiText = (imeiCell?.textContent || "").toLowerCase();
+
+      const matchSuc  = !suc || rs.includes(suc);
+      const matchMod  = !mod || rm.includes(mod);
+      const matchEst  = !est || re === est;
+      const matchImei = !qImei || imeiText.includes(qImei);
+      const pasaOcultar = !(ocultar && (re === "vendido" || re === "perdido"));
+
+      const visible = matchSuc && matchMod && matchEst && matchImei && pasaOcultar;
+      row.style.display = visible ? "" : "none";
+    });
+    repaintZebra();
+  }
+
+  function repaintZebra(){
+    const rows = Array.from(document.querySelectorAll("table tbody tr"))
+      .filter(r => r.style.display !== "none");
+    rows.forEach((r,i)=>{
+      r.classList.toggle("zebra-even", i % 2 === 1);
+      r.classList.toggle("zebra-odd" , i % 2 === 0);
+    });
+  }
+
+  function seleccionarTodos(box) {
+    document.querySelectorAll('input[name="ids"]').forEach(chk => chk.checked = box.checked);
+    ordenarSeleccionadosArriba();
+  }
+
+  function seleccionarPorImeis() {
+    const texto = document.getElementById("listaImeis").value;
+    const imeis = texto.split(/[\s,;\n\r]+/).map(i => i.trim()).filter(i => i !== "");
+    document.querySelectorAll("table tbody tr").forEach(row => {
+      const imei = row.dataset.imei?.trim();
+      const cb = row.querySelector('input[name="ids"]');
+      if (cb) cb.checked = imeis.includes(imei);
+    });
+    ordenarSeleccionadosArriba();
+    repaintZebra();
+  }
+
+  function ordenarSeleccionadosArriba(){
+    const tbody = document.querySelector("table tbody");
+    const filas = Array.from(tbody.querySelectorAll("tr"));
+    const seleccionadas = filas.filter(f => f.querySelector('input[name="ids"]')?.checked);
+    const noSeleccionadas = filas.filter(f => !f.querySelector('input[name="ids"]')?.checked);
+    noSeleccionadas.sort((a,b)=> (a.dataset.originalIndex|0) - (b.dataset.originalIndex|0));
+    tbody.innerHTML = "";
+    seleccionadas.forEach(f=>tbody.appendChild(f));
+    noSeleccionadas.forEach(f=>tbody.appendChild(f));
+    repaintZebra();
+  }
+
+  function eliminarSeleccionados() {
+    const form = document.getElementById("formTransfer");
+    form.action = "/eliminar-articulos";
+    if (confirm("¿Estás seguro de eliminar los seleccionados?")) form.submit();
+  }
+
+  function actualizarEstado() {
+    const form = document.getElementById("formTransfer");
+    const nuevoEstado = form.querySelector('select[name="nuevo_estado"]').value;
+    const seleccionados = form.querySelectorAll('input[name="ids"]:checked');
+    if (!nuevoEstado || seleccionados.length === 0) return alert("Selecciona estado y artículos");
+    if (confirm("¿Actualizar estado?")) {
+      form.action = "/actualizar-estado";
+      form.submit();
+    }
+  }
+
+  function mostrarDetalles(art) {
+    document.getElementById("detallesContenido").innerHTML = `
+      <h3 style="margin:0 0 8px;color:#003366;">📄 Detalles</h3>
+      <p><strong>ID:</strong> ${art.id ?? ""}</p>
+      <p><strong>Tipo:</strong> ${art.tipo ?? ""}</p>
+      <p><strong>IMEI:</strong> ${art.imei ?? ""}</p>
+      <p><strong>Sucursal:</strong> ${art.sucursal ?? ""}</p>
+      <p><strong>Memoria:</strong> ${art.memoria ?? ""}</p>
+      <p><strong>Color:</strong> ${art.color ?? ""}</p>
+      <p><strong>Proveedor:</strong> ${art.proveedor ?? ""}</p>
+      <p><strong>Precio:</strong> $${art.precio ?? ""}</p>
+      <p><strong>ID Factura:</strong> ${art.factura_id ?? ""}</p>
+      <p><strong>Fecha Compra:</strong> ${art.fecha_compra ?? ""}</p>
+      <p><strong>Estado:</strong> ${art.estado ?? ""}</p>
+      <hr>
+      <h4 style="margin:8px 0;color:#00366;">📜 Historial de cambios</h4>
+      <div id="historial-estados">Cargando...</div>
+    `;
+    document.getElementById("modalDetalles").style.display = "flex";
+
+    fetch(`/historial-estados-imei/${encodeURIComponent(art.imei ?? "")}`)
+      .then(res => { if (!res.ok) throw new Error("Error de red o ruta incorrecta"); return res.json(); })
+      .then(data => {
+        const cont = document.getElementById("historial-estados");
+        if (data.success && data.historial.length > 0) {
+          const lista = data.historial.map(h => `<li><strong>${h.fecha}</strong>: ${h.accion}</li>`).join("");
+          cont.innerHTML = `<ul style="padding-left:20px;">${lista}</ul>`;
+        } else {
+          cont.innerHTML = "<p>Sin historial registrado.</p>";
+        }
+      })
+      .catch(() => {
+        document.getElementById("historial-estados").innerHTML = "<p>Error al cargar historial.</p>";
+      });
+  }
+
+  function cerrarModal(){ document.getElementById("modalDetalles").style.display="none"; }
+
+  function editarColor(id){
+    document.getElementById('form-color-'+id).style.display='inline';
+  }
+
+  function guardarColor(id){
+    const nuevoColor = document.getElementById('input-color-'+id).value;
+    fetch('/actualizar-color',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id, color:nuevoColor})
+    })
+    .then(res=>res.json())
+    .then(data=>{
+      if(data.success){
+        document.getElementById('color-'+id).innerText = nuevoColor || '';
+        document.getElementById('form-color-'+id).style.display='none';
+      }else{
+        alert("Error al actualizar el color");
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    const tbody = document.querySelector("table tbody");
+    const filas = Array.from(tbody.querySelectorAll("tr"));
+    filas.forEach((row, index) => { row.dataset.originalIndex = index; });
+
+    tbody.addEventListener("change", (e) => {
+      if (e.target.matches("input[type='checkbox']")) ordenarSeleccionadosArriba();
+    });
+
+    const campoBusqueda = document.getElementById("busqueda_imei");
+    if (campoBusqueda){ campoBusqueda.addEventListener("input", refreshTabla); }
+
+    refreshTabla();
+    repaintZebra();
+  });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ver Ciclos Registrados</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .filtros form {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+
+    .detalle {
+      margin-top: 1rem;
+    }
+
+    .detalle .entregar {
+      color: green;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+
+    .detalle .reponer {
+      color: red;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+
+    .detalle ul {
+      padding-left: 1.2rem;
+    }
+
+    .acciones {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .acciones button {
+      background-color: #e74c3c;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .acciones a {
+      text-decoration: none;
+      background: #f0c000;
+      color: black;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    .header img {
+      height: 40px;
+      margin-right: 1rem;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      color: #3a3a3a;
+    }
+
+    .total-linea {
+      margin-top: 1rem;
+      font-weight: bold;
+      color: #444;
+    }
+
+    .volver {
+      margin: 1rem 0;
+    }
+
+    .volver a {
+      background: #2980b9;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <img src="{{ url_for('static', filename='logo_empresa.jpeg') }}" alt="Logo">
+    <h1>Ver Ciclos Registrados</h1>
+  </div>
+
+  <div class="container">
+
+    <div class="volver">
+      <a href="/">🏠 Volver al Inicio</a>
+    </div>
+
+    <form method="get" class="filtros">
+      <label for="sucursal">Sucursal:</label>
+      <select name="sucursal" id="sucursal">
+        <option value="">Todas</option>
+        {% for suc in sucursales %}
+          <option value="{{ suc }}" {% if suc == filtro_sucursal %}selected{% endif %}>{{ suc }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="fecha">Fecha:</label>
+      <input type="date" name="fecha" id="fecha" value="{{ filtro_fecha }}">
+
+      <button type="submit">🔍 Filtrar</button>
+    </form>
+
+    {% if registros %}
+      {% for r in registros %}
+        <div class="card">
+          <h2>📍 Sucursal: {{ r.sucursal }} | 📅 Fecha: {{ r.fecha }}</h2>
+
+          <div class="total-linea">💰 Total Objetivo: ${{ r.datos.total_objetivo }} | 💵 Total Actual: ${{ r.datos.total_actual }} | 🏦 Total en Caja: ${{ r.datos.recibir }} | 📦 Total a Reponer: ${{ r.datos.dar }}</div>
+
+          <div class="detalle">
+            {% if r.datos.recibir > 0 %}
+              <div class="entregar">✅ Entregar (Sobrante)</div>
+              <ul>
+                {% for d in [1, 2, 5, 10, 20, 50, 100] %}
+                  {% set diff = r.datos.diferencias[d] %}
+                  {% if diff < 0 %}
+                    <li>{{ diff|abs }} monedas de ${{ d }} (Valor: ${{ diff|abs * d }})</li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+              <strong>Total a Entregar: ${{ r.datos.recibir }}</strong>
+            {% endif %}
+
+            {% if r.datos.dar > 0 %}
+              <div class="reponer">🔴 Repuesto desde Fondo</div>
+              <ul>
+                {% for d in [1, 2, 5, 10, 20, 50, 100] %}
+                  {% set rep = r.datos.repuesto[d] %}
+                  {% if rep > 0 %}
+                    <li>{{ rep }} monedas de ${{ d }} (Valor: ${{ rep * d }})</li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+              <strong>Total a Reponer: ${{ r.datos.dar }}</strong>
+            {% endif %}
+          </div>
+
+          <div class="acciones">
+            <form method="post" onsubmit="return confirmarEliminacion({{ r.id }})">
+              <input type="hidden" name="eliminar" value="{{ r.id }}">
+              <button type="submit">🗑️ Eliminar</button>
+            </form>
+            <a href="/modificar_ciclo/{{ r.id }}" onclick="return confirm('¿Modificar este ciclo?')">✏️ Modificar</a>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>No hay registros con los filtros seleccionados.</p>
+    {% endif %}
+  </div>
+
+  <script>
+    function confirmarEliminacion(id) {
+      const pass = prompt("🔒 Ingresa la contraseña para eliminar:");
+      if (pass === "262293") {
+        return true;
+      } else {
+        alert("❌ Contraseña incorrecta. No se eliminó.");
+        return false;
+      }
+    }
+  </script>
+
+</body>
+</html>

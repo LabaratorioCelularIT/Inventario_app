@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Modificar Ciclo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    .header img {
+      height: 40px;
+      margin-right: 1rem;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 20px;
+      color: #3a3a3a;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+
+    .info {
+      background: #f9f9f9;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.5rem;
+      border-left: 6px solid #663399;
+    }
+
+    .tarjeta {
+      background: #ffffff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    .tarjeta h3 {
+      margin-top: 0;
+      margin-bottom: 0.8rem;
+      font-size: 18px;
+      color: #444;
+    }
+
+    .tarjeta label {
+      display: block;
+      margin-top: 6px;
+      font-size: 14px;
+    }
+
+    .tarjeta input {
+      width: 100%;
+      padding: 6px;
+      margin-top: 2px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    .acciones {
+      text-align: center;
+      margin-top: 2rem;
+    }
+
+    .acciones button {
+      padding: 10px 20px;
+      background-color: #663399;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .acciones a {
+      margin-left: 15px;
+      text-decoration: none;
+      color: #555;
+      font-size: 15px;
+    }
+
+    .acciones a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <img src="{{ url_for('static', filename='logo_empresa.jpeg') }}" alt="Logo">
+    <h1>Modificar Ciclo</h1>
+  </div>
+
+  <div class="container">
+    <div class="info">
+      <strong>📍 Sucursal:</strong> {{ datos['sucursal'] }}<br>
+      <strong>📅 Fecha:</strong> {{ datos['fecha'] }}
+    </div>
+
+    <form method="post">
+      {% for d in denom %}
+        <div class="tarjeta">
+          <h3>Denominación: ${{ d }}</h3>
+
+          <label for="actual_{{ d }}">Cantidad Actual:</label>
+          <input type="number" name="actual_{{ d }}" id="actual_{{ d }}" value="{{ datos['actuales'][d] }}" min="0" required>
+
+          <label for="repuesto_{{ d }}">Cantidad Repuesto:</label>
+          <input type="number" name="repuesto_{{ d }}" id="repuesto_{{ d }}" value="{{ datos['repuesto'][d] }}" min="0">
+        </div>
+      {% endfor %}
+
+      <div class="acciones">
+        <button type="submit">💾 Guardar Cambios</button>
+        <a href="/ver_ciclos">Cancelar</a>
+      </div>
+    </form>
+  </div>
+
+</body>
+</html>
+

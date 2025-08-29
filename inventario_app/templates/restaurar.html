@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Restaurar Backup</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --fg: #003366;
+      --card: #ffffff;
+      --accent: #e67e22;
+      --accent-hover: #d35400;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      margin: 0;
+      padding: 0;
+    }
+
+    .header {
+      background-color: #003366;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: var(--card);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    h2 {
+      margin: 0;
+    }
+
+    p {
+      font-size: 15px;
+      margin-bottom: 25px;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    .btn {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .volver {
+      display: inline-block;
+      margin-top: 30px;
+      text-decoration: none;
+      color: var(--fg);
+      font-weight: bold;
+    }
+
+    .volver:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2>Restaurar Backup de Base de Datos</h2>
+  </div>
+
+  <div class="container">
+    <p><strong>⚠️ Precaución:</strong> Al restaurar un backup, se sobrescribirá toda la información actual.</p>
+
+    <form method="POST" enctype="multipart/form-data">
+      <input type="file" name="archivo" accept=".sqlite3" required>
+      <br>
+      <button type="submit" class="btn">🔁 Restaurar Backup</button>
+    </form>
+
+    <a href="/dashboard" class="volver">← Volver al panel</a>
+  </div>
+
+</body>
+</html>

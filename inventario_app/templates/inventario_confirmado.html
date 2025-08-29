@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventario Confirmado</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background-color: #e6f0ff;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+
+    .card {
+      background: white;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .card h2 {
+      color: #003366;
+      margin-bottom: 20px;
+    }
+
+    .card p {
+      font-size: 16px;
+      color: #333;
+    }
+
+    .btn {
+      display: inline-block;
+      margin-top: 30px;
+      background-color: #003366;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .btn:hover {
+      background-color: #001f4d;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>✅ Inventario Confirmado</h2>
+    <p>Tu revisión de inventario para la sucursal <strong>{{ sucursal }}</strong> fue registrada correctamente.</p>
+    <a href="/inventario-sucursal" class="btn">Volver al inventario</a>
+  </div>
+</body>
+</html>

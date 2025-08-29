@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Error</title>
+  <style>
+    body {
+      background-color: #f2f2f2;
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
+    img {
+      max-width: 300px;
+      margin-top: 50px;
+    }
+    h1 {
+      color: #c0392b;
+    }
+  </style>
+</head>
+<body>
+  <h1>{{ mensaje }}</h1>
+  <img src="{{ url_for('static', filename='error_img.png') }}" alt="Error">
+</body>
+</html>

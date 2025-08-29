@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Resumen Detallado del Ciclo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 1rem;
+      background: #f9f9f9;
+      color: #333;
+    }
+    .container {
+      max-width: 520px;
+      margin: auto;
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .header img {
+      width: 36px;
+      margin-right: 10px;
+    }
+    .header h1 {
+      font-size: 18px;
+      margin: 0;
+      color: #3366cc;
+    }
+    h2 {
+      font-size: 1.2rem;
+      color: #663399;
+      margin-bottom: 0.6rem;
+    }
+    h3 {
+      font-size: 1rem;
+      margin-top: 1.5rem;
+      border-top: 1px solid #ccc;
+      padding-top: 0.5rem;
+    }
+    .info-line { font-size: 14px; margin: 0.3rem 0; }
+    .verde { color: green; }
+    .rojo { color: red; }
+    .resumen-final {
+      font-weight: bold;
+      margin-top: 0.5rem;
+      font-size: 15px;
+    }
+    ul {
+      margin: 0.5rem 0 0 1rem;
+      padding: 0;
+      font-size: 14px;
+    }
+    ul li {
+      margin-bottom: 0.3rem;
+    }
+    .acciones {
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+    .acciones button {
+      background: #27ae60;
+      color: white;
+      padding: 0.5rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .acciones a {
+      color: crimson;
+      text-decoration: none;
+      margin-left: 1rem;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <img src="{{ url_for('static', filename='logo_empresa.jpeg') }}" alt="Logo">
+    <h1>Celulares Crédito Fácil</h1>
+  </div>
+
+  <h2>📋 Resumen Detallado del Ciclo</h2>
+  <p class="info-line">📍 <strong>Para:</strong> {{ data.sucursal }}</p>
+  <p class="info-line">🗓️ <strong>Fecha del Ciclo:</strong> {{ data.fecha }}</p>
+
+  <h3>📊 Balance General</h3>
+  <p class="info-line"><strong>Total Objetivo:</strong> ${{ total_objetivo }}</p>
+  <p class="info-line"><strong>Total Actual:</strong> ${{ total_actual }}</p>
+  <p class="info-line"><strong>Total Repuesto:</strong> ${{ total_repuesto }}</p>
+  <p class="info-line"><strong>Total en Caja:</strong> ${{ total_actual + total_repuesto }}</p>
+
+  {% set diferencia = (total_actual + total_repuesto) - total_objetivo %}
+  {% set hay_repuesto = total_repuesto > 0 %}
+  {% if diferencia == 0 and not hay_repuesto %}
+    <p class="resumen-final verde">✅ Exacto. No hay faltante ni sobrante.</p>
+  {% elif diferencia == 0 and hay_repuesto %}
+    <p class="resumen-final rojo">⚠️ Se utilizarán ${{ total_repuesto }} del fondo para alcanzar el objetivo.</p>
+  {% elif diferencia > 0 %}
+    <p class="resumen-final verde">✅ Sobran en total (neto): ${{ diferencia }}</p>
+  {% elif diferencia < 0 %}
+    <p class="resumen-final rojo">⚠️ Faltan en total (neto): ${{ diferencia | abs }}</p>
+  {% endif %}
+
+  {% set tiene_sobrantes = data.diferencias.values() | select('lt', 0) | list | length > 0 %}
+  {% if tiene_sobrantes %}
+    <h3 class="verde">✅ Entregar (Sobrante)</h3>
+    <ul>
+      {% for d in denom %}
+        {% if data.diferencias[d] < 0 %}
+          <li>{{ data.diferencias[d] | abs }} {{ "moneda" if d < 20 else "billete" }}{{ "s" if data.diferencias[d] | abs > 1 }} de ${{ d }} (Valor: ${{ data.diferencias[d] | abs * d }})</li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+    <p class="resumen-final verde">Total a Entregar: ${{ data.recibir }}</p>
+  {% endif %}
+
+  {% set tiene_repuesto = data.repuesto.values() | select('gt', 0) | list | length > 0 %}
+  {% if tiene_repuesto %}
+    <h3 class="rojo">🔴 Repuesto desde Fondo</h3>
+    <ul>
+      {% for d in denom %}
+        {% if data.diferencias[d] > 0 and data.repuesto[d] > 0 %}
+          {% set usado = [data.repuesto[d], data.diferencias[d]] | min %}
+          <li style="color:red;">{{ usado }} {{ "moneda" if d < 20 else "billete" }}{{ "s" if usado > 1 }} de ${{ d }} (Valor: ${{ usado * d }})</li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+    <p class="resumen-final rojo">Total a Reponer: ${{ total_repuesto }}</p>
+  {% endif %}
+
+  <div class="acciones">
+    {% if not ya_registrado %}
+      <form method="post" style="display:inline;">
+        <button type="submit">✅ Confirmar</button>
+      </form>
+    {% else %}
+      <p style="text-align:center; color: gray; font-size: 14px;">⚠️ Este ciclo ya fue registrado anteriormente.</p>
+    {% endif %}
+    <a href="/">❌ Volver</a>
+  </div>
+</div>
+
+</body>
+</html>

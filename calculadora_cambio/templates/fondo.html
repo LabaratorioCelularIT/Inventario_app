@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Caja Actual</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <div class="header">
+    <img src="{{ url_for('static', filename='logo_empresa.jpeg') }}" alt="Logo">
+    <h1>Celulares Crédito Fácil</h1>
+  </div>
+
+  <div class="container">
+    <h2>Fondo de Caja General</h2>
+    <form method="post">
+      {% for d in denom %}
+        <div class="card">
+          <h2>${{ d }} pesos</h2>
+          <label>
+            Cantidad Actual:
+            <input type="number" name="nuevo_{{ d }}" value="{{ fondo[d] }}" min="0" required>
+          </label>
+        </div>
+      {% endfor %}
+      <div class="actions">
+        <button type="submit">💾 Guardar Cambios</button>
+        <a href="/" class="button">🏠 Volver al Inicio</a>
+      </div>
+    </form>
+  </div>
+
+</body>
+</html>

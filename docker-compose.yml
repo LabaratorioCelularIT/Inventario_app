@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  inventario:
+    build: ./inventario_app
+    container_name: inventario_app
+    # Si no quieres tocar app.py, ejecuta Gunicorn importando app:app o wsgi:app
+    # command: gunicorn -b 0.0.0.0:5001 app:app
+    # Si prefieres flask dev server (no recomendado en prod):
+    # command: flask run --host=0.0.0.0 --port=5001
+    environment:
+      FLASK_APP: app.py
+      FLASK_RUN_HOST: 0.0.0.0
+      FLASK_RUN_PORT: 5001
+      FLASK_ENV: production
+      INVENTARIO_DB: /app/inventario.sqlite3
+    volumes:
+      - ./inventario_app:/app
+      - ./inventario.sqlite3:/app/inventario.sqlite3
+    command: flask run
+    ports:
+      - "127.0.0.1:5001:5001"
+    restart: unless-stopped
+    dns: [8.8.8.8, 1.1.1.1]
+
+  caja:
+    build: ./caja
+    container_name: caja_app
+    # command: gunicorn -b 0.0.0.0:5003 app:app
+    # command: flask run --host=0.0.0.0 --port=5003
+    environment:
+      FLASK_APP: app.py
+      FLASK_RUN_HOST: 0.0.0.0
+      FLASK_RUN_PORT: 5003
+      FLASK_ENV: production
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: "587"
+      SMTP_USER: sistemasccfnld@laboratoriocelular.net
+      SMTP_PASS: "********"
+      SMTP_FROM_NAME: "Celulares Crédito Fácil"
+    volumes:
+      - ./caja:/app
+      - ./inventario.sqlite3:/app/inventario.sqlite3
+    command: flask run
+    ports:
+      - "127.0.0.1:5003:5003"
+    restart: unless-stopped
+    dns: [8.8.8.8, 1.1.1.1]

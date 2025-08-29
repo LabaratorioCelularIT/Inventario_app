@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Confirmar Transferencias</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #e6f0ff;
+      --card: #ffffff;
+      --text: #003366;
+      --primary: #3498db;
+      --primary-hover: #2980b9;
+      --success: #27ae60;
+      --danger: #e74c3c;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+    }
+
+    .navbar {
+      background-color: var(--text);
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: white;
+      position: relative;
+    }
+
+    .navbar-left img {
+      height: 42px;
+    }
+
+    .navbar-center {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .navbar-center span {
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .navbar-right button {
+      background-color: var(--danger);
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      font-size: 13px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      background: var(--card);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: var(--text);
+      font-size: 24px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+      text-align: center;
+    }
+
+    th {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .boton {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .boton:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .confirmado {
+      color: var(--success);
+      font-weight: bold;
+    }
+
+    .volver {
+      text-align: center;
+      margin-top: 25px;
+    }
+
+    .volver a {
+      text-decoration: none;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .volver a:hover {
+      color: var(--primary-hover);
+    }
+
+    @media (max-width: 768px) {
+      .navbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .navbar-center {
+        position: static;
+        transform: none;
+        margin-top: 10px;
+      }
+
+      .container {
+        margin: 20px;
+        padding: 20px;
+      }
+
+      table {
+        font-size: 14px;
+      }
+
+      th, td {
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="navbar">
+    <div class="navbar-left">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+    </div>
+    <div class="navbar-center">
+      <span>Celulares Crédito Fácil</span>
+    </div>
+    <div class="navbar-right">
+      <form method="get" action="/dashboard">
+        <button type="submit">← Volver</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="container">
+    <h2>Confirmar Transferencias Recibidas</h2>
+
+    {% if transferencias %}
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>IMEI</th>
+          <th>Origen</th>
+          <th>Destino</th>
+          <th>Fecha</th>
+          <th>Confirmar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transferencias %}
+        <tr>
+          <td>{{ t[0] }}</td>
+          <td>{{ t[1] }}</td>
+          <td>{{ t[2] }}</td>
+          <td>{{ t[3] }}</td>
+          <td>{{ t[4] }}</td>
+          <td>
+            {% if "(confirmado)" in t[4] %}
+              <span class="confirmado">✅ Confirmado</span>
+            {% else %}
+              <form method="POST">
+                <input type="hidden" name="transferencia_id" value="{{ t[0] }}">
+                <button type="submit" class="boton">✔ Confirmar</button>
+              </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p style="text-align: center;">No hay transferencias pendientes para tu sucursal.</p>
+    {% endif %}
+
+    <div class="volver">
+      <a href="/dashboard">&larr; Volver al panel</a>
+    </div>
+  </div>
+
+</body>
+</html>

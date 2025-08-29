@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transferencia de Artículos | Celulares Crédito Fácil</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root{
+      --bg:#e6f0ff;
+      --fg:#003366;
+      --card:#ffffff;
+      --accent:#337ab7;
+      --accent-hover:#286090;
+      --danger:#d9534f;
+      --danger-hover:#c9302c;
+      --border:#d1d5db;
+    }
+
+    *{box-sizing:border-box}
+    body{margin:0;font-family:'Segoe UI',Tahoma,sans-serif;background:var(--bg);color:#000}
+
+    .topbar{
+      background:var(--fg); color:#fff; padding:20px;
+      display:flex; justify-content:center; align-items:center;
+      border-bottom:3px solid #001f3f; box-shadow:0 2px 8px rgba(0,0,0,.2);
+      position:relative;
+    }
+    .topbar .title{display:flex; align-items:center; gap:12px; font-size:26px; font-weight:700}
+    .topbar img{height:70px}
+
+    .volver-btn{
+      position:absolute; top:20px; right:20px;
+      background:var(--danger); color:#fff; text-decoration:none;
+      padding:10px 16px; border-radius:6px; font-weight:700; z-index:2;
+    }
+    .volver-btn:hover{background:var(--danger-hover)}
+
+    .container{
+      max-width:720px; margin:28px auto 40px; background:var(--card);
+      padding:28px; border-radius:12px; box-shadow:0 0 12px rgba(0,0,0,.1);
+    }
+
+    .header{ text-align:center; margin:10px 0 16px }
+    h2{ margin:0; color:var(--fg); font-size:24px }
+
+    label{display:block; margin:10px 0 6px; font-weight:600; color:var(--fg)}
+    select{
+      width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px;
+      background:#fff; font-size:16px; height:44px; margin-bottom:14px;
+    }
+
+    .btn{
+      background:var(--accent); color:#fff; border:0; border-radius:6px;
+      padding:10px 16px; cursor:pointer; font-size:16px; font-weight:700;
+    }
+    .btn:hover{ background:var(--accent-hover) }
+
+    @media (max-width:600px){
+      .topbar{flex-direction:column; text-align:center}
+      .topbar .title{flex-direction:column; font-size:20px}
+      .topbar img{height:60px}
+      .volver-btn{font-size:14px; padding:8px 12px; top:15px; right:15px}
+      .container{margin:20px; padding:20px}
+    }
+  </style>
+</head>
+<body>
+
+  <a class="volver-btn" href="/dashboard">⬅ Volver al Panel</a>
+
+  <div class="topbar">
+    <div class="title">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo">
+      Celulares Crédito Fácil — Transferencia de Artículos
+    </div>
+  </div>
+
+  <div class="header">
+    <h2>Transferencia de Artículos</h2>
+  </div>
+
+  <div class="container">
+    <form method="POST">
+      <label for="imei">Selecciona IMEI</label>
+      <select name="imei" id="imei" required>
+        <option value="">-- Selecciona un IMEI --</option>
+        {% for i in imeis %}
+          <option value="{{ i }}">{{ i }}</option>
+        {% endfor %}
+      </select>
+
+      <label for="destino">Sucursal Destino</label>
+      <select name="destino" id="destino" required>
+        <option value="">-- Selecciona una sucursal --</option>
+        {% for s in sucursales %}
+          <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="submit" class="btn">Transferir</button>
+    </form>
+  </div>
+
+</body>
+</html>
