@@ -20,6 +20,10 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import ast
 from email.mime.text import MIMEText
 from email.utils import formataddr
+from contextlib import contextmanager
+
+DB_PATH = os.getenv("INVENTARIO_DB", "/app/inventario.sqlite3")
+
 
 app = Flask(__name__)
 app.secret_key = 'clave-secreta-caja'
@@ -293,11 +297,49 @@ def _bloqueo_id(ref: str):
     m = re.search(r"\bbloqueo_feria[:=\s]?(\d+)\b", ref.strip().lower())
     return int(m.group(1)) if m else None
 
-def get_conn():
+@contextmanager
+def db_conn():
+    """Transacción de lectura/escritura con commit/rollback y cierre garantizado."""
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+    try:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
+        # Puedes dejar que SQLite abra la tx implícitamente al primer write
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+@contextmanager
+def read_conn():
+    """Solo lectura: cierra siempre."""
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
+        yield conn
+        # sin commit
+    finally:
+        conn.close()
+
+@contextmanager
+def write_tx():
+    """Transacción explícita (BEGIN) para escrituras en bloque."""
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute("BEGIN")
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 def split_metodo(precio, tipo_pago):
     p = float(precio or 0)
@@ -1244,7 +1286,7 @@ def cobrar():
     tipo_usuario = session.get("tipo", "")
     tz = TZ
     ahora = datetime.now(tz)
-
+    print("Llega a la funcion de cobrar y obtiene datos de sesion")
     if tipo_usuario == "admin":
         sucursal = (request.form.get("sucursal_manual") or session.get("sucursal", "")).strip()
         fecha_manual = (request.form.get("fecha_manual") or "").strip()
@@ -1280,7 +1322,7 @@ def cobrar():
 
     def a_centavos(x): return int(round(safe_float(x) * 100))
 
-    with get_conn() as conn:
+    with db_conn() as conn:
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM ventas WHERE fecha LIKE ? AND sucursal = ?", (f"{fecha_dia}%", sucursal))
         ventas_hoy = cur.fetchone()[0] or 0

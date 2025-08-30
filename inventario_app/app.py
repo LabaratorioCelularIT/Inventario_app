@@ -235,6 +235,8 @@ def init_db():
         )""")
 
         conn.commit()
+        conn.close()
+        
 
 def _destino_valido():
     try:
@@ -1941,8 +1943,6 @@ def error_404(e):
 @app.errorhandler(500)
 def error_500(e):
     return render_template('error.html', mensaje="Error interno del servidor (500)"), 500
-
-init_db()
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5001, debug=True)

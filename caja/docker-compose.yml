@@ -11,6 +11,7 @@ services:
       - ../inventario.sqlite3:/app/inventario.sqlite3
     restart: always
     environment:
+      INVENTARIO_DB: /app/inventario.sqlite3
       FLASK_ENV: development
       SMTP_HOST: smtp.gmail.com
       SMTP_PORT: "587"
