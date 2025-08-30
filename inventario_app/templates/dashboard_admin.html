@@ -14,50 +14,29 @@
       --shadow: rgba(0,0,0,.1);
     }
     body{font-family:'Segoe UI',sans-serif;margin:0;background:var(--bg);color:var(--fg)}
-
     .topbar{
-      background:var(--accent);
-      color:#fff;
-      padding:18px 20px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:12px;
-      border-bottom:3px solid #001f3f;
-      box-shadow:0 2px 10px rgba(0,0,0,.25);
-      position:relative;
+      background:var(--accent); color:#fff; padding:18px 20px;
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      border-bottom:3px solid #001f3f; box-shadow:0 2px 10px rgba(0,0,0,.25); position:relative;
     }
     .topbar img{height:60px}
     .topbar .title{font-size:22px;font-weight:700;display:flex;align-items:center;gap:12px}
-    .top-actions{
-      position:absolute; right:20px; top:16px;
-      display:flex; gap:10px; align-items:center;
-    }
-    .badge{
-      display:inline-block; background:#e11d48; color:#fff;
-      border-radius:999px; padding:0 6px; font-size:12px; margin-left:6px;
-    }
+    .top-actions{position:absolute; right:20px; top:16px; display:flex; gap:10px; align-items:center;}
+    .badge{display:inline-block; background:#e11d48; color:#fff; border-radius:999px; padding:0 6px; font-size:12px; margin-left:6px;}
     .btn{
       background:var(--primary); color:#fff; border:0; border-radius:8px;
-      padding:10px 14px; font-weight:700; text-decoration:none;
-      cursor:pointer; display:inline-flex; align-items:center; gap:6px;
-      transition:background-color .2s ease, transform .1s ease; box-shadow:0 4px 10px rgba(0,0,0,.06);
+      padding:10px 14px; font-weight:700; text-decoration:none; cursor:pointer;
+      display:inline-flex; align-items:center; gap:6px; transition:background-color .2s ease, transform .1s ease;
+      box-shadow:0 4px 10px rgba(0,0,0,.06);
     }
     .btn:hover{background:var(--primary-dark); transform:translateY(-1px)}
     .btn:active{transform:translateY(0)}
-    .btn-danger{background:var(--danger)}
-    .btn-danger:hover{background:var(--danger-dark)}
-    .btn-secondary{background:var(--accent-2)}
-    .btn-secondary:hover{background:var(--accent-2h)}
-
-    .content{
-      max-width:1000px; margin:30px auto; background:var(--card);
-      padding:30px; border-radius:12px; box-shadow:0 0 10px var(--shadow);
-    }
+    .btn-danger{background:var(--danger)} .btn-danger:hover{background:var(--danger-dark)}
+    .btn-secondary{background:var(--accent-2)} .btn-secondary:hover{background:var(--accent-2h)}
+    .content{max-width:1000px; margin:30px auto; background:var(--card); padding:30px; border-radius:12px; box-shadow:0 0 10px var(--shadow);}
     h2,h3{margin:0 0 12px}
     .section{margin-top:28px}
     .link-btn{display:inline-block; margin:8px 10px 8px 0}
-
     @media (max-width:768px){
       .topbar{flex-direction:column;text-align:center}
       .top-actions{position:static; margin-top:10px}
@@ -75,13 +54,13 @@
       <a href="/chat" class="btn">
         💬 Chat <span id="notif" class="badge" style="display:none;">!</span>
       </a>
-      <form method="post" action="/logout">
-        <button type="submit" class="btn btn-danger">Cerrar sesión</button>
-      </form>
+      <a href="/logout" class="btn btn-danger">Cerrar sesión</a>
     </div>
   </div>
 
   <div class="content">
+    <h2>Bienvenido {{ usuario }}</h2>
+
     <div class="section">
       <h3>Resumen General del Inventario</h3>
       <a href="/resumen_general" class="btn link-btn">📊 Ver Resumen General</a>
@@ -108,14 +87,14 @@
     <div class="section">
       <h3>Backup y Restauración</h3>
       <a href="/backup" class="btn link-btn">💾 Realizar Backup</a>
-      <a href="/restaurar" class="btn link-btn">♻️ Restaurar Backup</a>
+      <a href="/restaurar" class="btn link-btn"♻️ Restaurar Backup</a>
     </div>
 
     <div class="section">
       <h3>Información Adicional</h3>
       <p>📌 Próximamente más funcionalidades aquí.</p>
       <a href="{{ url_for('ir_caja') }}" class="btn btn-secondary link-btn">↩ Volver a Caja</a>
-      <a href="/logout-global" class="btn btn-danger link-btn">Cerrar sesión (ambas)</a>
+      <a href="/logout-global" class="btn btn-danger link-btn">Cerrar sesión (ambas)</a>     
     </div>
   </div>
 

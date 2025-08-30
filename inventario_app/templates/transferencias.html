@@ -13,6 +13,7 @@
       --accent-hover:#286090;
       --danger:#d9534f;
       --danger-hover:#c9302c;
+      --ok:#2e8b57;
       --border:#d1d5db;
     }
 
@@ -55,6 +56,20 @@
     }
     .btn:hover{ background:var(--accent-hover) }
 
+    .modal-overlay{position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:9999; padding:16px}
+    .modal{width:100%; max-width:560px; background:#fff; border-radius:16px; border:1px solid var(--border); box-shadow:0 12px 28px rgba(0,0,0,.18); overflow:hidden}
+    .modal-h{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); font-weight:700; color:var(--fg)}
+    .x{background:transparent; border:none; font-size:20px; line-height:1; cursor:pointer}
+    .modal-b{padding:14px 16px}
+    .kv{display:flex; align-items:center; justify-content:space-between; border:1px dashed var(--border); border-radius:10px; padding:10px 12px; margin-bottom:10px}
+    .kv span{opacity:.8}
+    .kv strong{font-weight:700}
+    .modal-f{display:flex; gap:10px; justify-content:flex-end; padding:14px 16px; border-top:1px solid var(--border)}
+    .btn.cancel{background:var(--danger)}
+    .btn.cancel:hover{background:var(--danger-hover)}
+    .btn.ok{background:var(--ok)}
+    .btn.ok:hover{filter:brightness(.95)}
+
     @media (max-width:600px){
       .topbar{flex-direction:column; text-align:center}
       .topbar .title{flex-direction:column; font-size:20px}
@@ -80,12 +95,19 @@
   </div>
 
   <div class="container">
-    <form method="POST">
+    <form id="formTransfer" method="POST" action="">
       <label for="imei">Selecciona IMEI</label>
       <select name="imei" id="imei" required>
         <option value="">-- Selecciona un IMEI --</option>
         {% for i in imeis %}
-          <option value="{{ i }}">{{ i }}</option>
+          <option
+            value="{{ i.imei if i.imei is defined else i }}"
+            data-modelo="{{ i.modelo if i.modelo is defined else '' }}"
+            data-estado="{{ i.estado if i.estado is defined else '' }}"
+            data-origen="{{ i.sucursal if i.sucursal is defined else '' }}"
+          >
+            {{ i.imei if i.imei is defined else i }}
+          </option>
         {% endfor %}
       </select>
 
@@ -101,5 +123,134 @@
     </form>
   </div>
 
+  <div class="modal-overlay" id="modalTransfer">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ttl">
+      <div class="modal-h">
+        <div id="ttl">Confirmar transferencia</div>
+        <button class="x" type="button" id="cerrar">×</button>
+      </div>
+      <div class="modal-b">
+        <div class="kv"><span>Suc origen</span><strong id="m_origen">—</strong></div>
+        <div class="kv"><span>Suc destino</span><strong id="m_destino">—</strong></div>
+        <div class="kv"><span>Nombre quien inició traspaso</span><strong id="m_iniciado">—</strong></div>
+        <div class="kv"><span>Fecha</span><strong id="m_fecha">—</strong></div>
+        <div class="kv"><span>Hora</span><strong id="m_hora">—</strong></div>
+        <div class="kv"><span>Modelo</span><strong id="m_modelo">—</strong></div>
+        <div class="kv"><span>IMEI</span><strong id="m_imei">—</strong></div>
+        <div class="kv"><span>Estado</span><strong id="m_estado">—</strong></div>
+      </div>
+      <div class="modal-f">
+        <button type="button" class="btn cancel" id="btnCancelar">Cancelar</button>
+        <button type="button" class="btn ok" id="btnConfirmar">Confirmar y transferir</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('formTransfer');
+    const modal = document.getElementById('modalTransfer');
+    const btnConfirmar = document.getElementById('btnConfirmar');
+    const btnCancelar = document.getElementById('btnCancelar');
+    const btnCerrar = document.getElementById('cerrar');
+    const selImei = document.getElementById('imei');
+    const selDestino = document.getElementById('destino');
+
+    const iniciadoPor = "{{ session.get('usuario','') }}";
+    const sucursalSesion = "{{ session.get('sucursal','') }}";
+
+    function fmtFechaHora(d){
+      const dd=String(d.getDate()).padStart(2,'0');
+      const mm=String(d.getMonth()+1).padStart(2,'0');
+      const yyyy=d.getFullYear();
+      const hh=String(d.getHours()).padStart(2,'0');
+      const mi=String(d.getMinutes()).padStart(2,'0');
+      const ss=String(d.getSeconds()).padStart(2,'0');
+      return {fecha:`${dd}-${mm}-${yyyy}`,hora:`${hh}:${mi}:${ss}`};
+    }
+
+    function openModal(){
+      modal.style.display='flex';
+      document.body.style.overflow='hidden';
+    }
+    function closeModal(){
+      modal.style.display='none';
+      document.body.style.overflow='';
+    }
+
+    async function obtenerInfoIMEI(imei){
+      const opt = selImei.selectedOptions[0];
+      const data = {
+        modelo: (opt?.dataset?.modelo || '').trim(),
+        estado: (opt?.dataset?.estado || '').trim(),
+        origen: (opt?.dataset?.origen || '').trim()
+      };
+      if (data.modelo && data.estado && data.origen) return data;
+
+      try{
+        const r = await fetch(`/api/imei-info?imei=${encodeURIComponent(imei)}`);
+        if(!r.ok) throw new Error('HTTP');
+        const j = await r.json();
+        return {
+          modelo: (j.modelo || data.modelo || '').toString(),
+          estado: (j.estado || data.estado || '').toString(),
+          origen: (j.sucursal || j.origen || data.origen || '').toString()
+        };
+      }catch(_){
+        return data;
+      }
+    }
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if(!selImei.value || !selDestino.value){ form.reportValidity(); return; }
+
+      const imei = selImei.value;
+      const destino = selDestino.value;
+
+      const info = await obtenerInfoIMEI(imei);
+      const now = fmtFechaHora(new Date());
+
+      const origen = (info.origen || sucursalSesion || '').trim();
+      const modelo = (info.modelo || '').trim();
+      const estado = (info.estado || '').trim();
+
+      document.getElementById('m_origen').textContent = origen || '—';
+      document.getElementById('m_destino').textContent = destino;
+      document.getElementById('m_iniciado').textContent = iniciadoPor || '—';
+      document.getElementById('m_fecha').textContent = now.fecha;
+      document.getElementById('m_hora').textContent = now.hora;
+      document.getElementById('m_modelo').textContent = modelo || '—';
+      document.getElementById('m_imei').textContent = imei;
+      document.getElementById('m_estado').textContent = estado || '—';
+
+      openModal();
+    });
+
+    btnConfirmar.addEventListener('click', ()=>{
+      const nowEls = {
+        fecha: document.getElementById('m_fecha').textContent,
+        hora: document.getElementById('m_hora').textContent
+      };
+      const hidden = (name,val)=>{
+        let el = form.querySelector(`input[name="${name}"]`);
+        if(!el){ el = document.createElement('input'); el.type='hidden'; el.name=name; form.appendChild(el); }
+        el.value = val;
+      };
+
+      hidden('fecha_transfer', nowEls.fecha);
+      hidden('hora_transfer', nowEls.hora);
+      hidden('modelo_enviado', document.getElementById('m_modelo').textContent || '');
+      hidden('estado_enviado', document.getElementById('m_estado').textContent || '');
+      hidden('suc_origen', document.getElementById('m_origen').textContent || '');
+      hidden('iniciado_por', document.getElementById('m_iniciado').textContent || '');
+
+      closeModal();
+      form.submit();
+    });
+
+    btnCancelar.addEventListener('click', closeModal);
+    btnCerrar.addEventListener('click', closeModal);
+    window.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+  </script>
 </body>
 </html>
