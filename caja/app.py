@@ -164,6 +164,7 @@ def registrar_log(usuario, tipo, accion):
             VALUES (?, ?, ?, ?, ?)
         """, (usuario, tipo, accion, fecha_hora, origen))
         conn.commit()
+        
 
 def get_caja():
     with sqlite3.connect(DB_PATH) as con:
