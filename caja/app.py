@@ -207,9 +207,10 @@ def registrar_log(usuario, tipo, accion):
             """
             INSERT INTO log_actividad (usuario, tipo, accion, fecha, origen)
             VALUES (?, ?, ?, ?, ?)
-        """,
+            """,
             (usuario, tipo, accion, fecha_hora, origen),
         )
+
 
 
 def get_caja():
