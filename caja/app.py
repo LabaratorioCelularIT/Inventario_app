@@ -120,7 +120,7 @@ def validar_contrasena_segura(contrasena):
 
 
 def init_db():
-    with write_tx(DB_PATH) as conn:
+    with write_tx() as conn:
         c = conn.cursor()
         c.execute("""
             CREATE TABLE IF NOT EXISTS usuarios (
@@ -201,7 +201,7 @@ def crear_pendiente(
 def registrar_log(usuario, tipo, accion):
     fecha_hora = fecha_hora_actual()
     origen = "Caja"
-    with write_tx(DB_PATH) as conn:
+    with write_tx() as conn:
         cur = conn.cursor()
         cur.execute(
             """
@@ -214,14 +214,14 @@ def registrar_log(usuario, tipo, accion):
 
 
 def get_caja():
-    with read_conn(DB_PATH) as con:
+    with read_conn() as con:
         cur = con.cursor()
         cur.execute("SELECT denom, cantidad FROM caja")
         return dict(cur.fetchall())
 
 
 def ya_envio_feria(sucursal, fecha):
-    with read_conn(DB_PATH) as conn:
+    with read_conn() as conn:
         cur = conn.cursor()
         cur.execute(
             "SELECT COUNT(*) FROM ciclos WHERE sucursal = ? AND fecha = ?",
@@ -232,7 +232,7 @@ def ya_envio_feria(sucursal, fecha):
 
 
 def obtener_sucursales():
-    with read_conn(DB_PATH) as conn:
+    with read_conn() as conn:
         cur = conn.cursor()
         try:
             cur.execute(
@@ -1364,7 +1364,7 @@ def log_actividad():
     origen = request.args.get("origen", "")
     TZ = pytz.timezone("America/Monterrey")
 
-    with read_conn(DB_PATH) as conn:
+    with read_conn() as conn:
         cur = conn.cursor()
         if origen:
             cur.execute(
@@ -1446,7 +1446,7 @@ def gastos():
             fecha_post_iso = hoy_iso
             sucursal_post = sucursal_sesion
 
-        with db_conn(DB_PATH) as conn:
+        with db_conn() as conn:
             cur = conn.cursor()
             cur.execute(
                 "INSERT INTO gastos (motivo, monto, fecha, sucursal) VALUES (?, ?, ?, ?)",
@@ -1461,7 +1461,7 @@ def gastos():
 
         return redirect(f"/gastos?sucursal={sucursal_filtro}&fecha={fecha_qs_iso}")
 
-    with read_conn(DB_PATH) as conn:
+    with read_conn() as conn:
         cur = conn.cursor()
         cur.execute(
             """
@@ -2071,7 +2071,7 @@ def ver_ticket(venta_id):
 
 @app.route("/fondo")
 def ver_fondo_caja():
-    with read_conn(DB_PATH) as conn:
+    with read_conn() as conn:
         c = conn.cursor()
         c.execute(
             "SELECT fecha, sucursal, cantidad FROM fondo_caja ORDER BY fecha DESC, sucursal ASC"
@@ -2091,7 +2091,7 @@ def cambio():
         sucursal = request.form["sucursal"]
         fecha = request.form["fecha"]
 
-        with read_conn(DB_PATH) as con:
+        with read_conn() as con:
             cur = con.cursor()
             cur.execute(
                 "SELECT datos FROM ciclos WHERE sucursal = ? AND fecha = ?",
@@ -2112,7 +2112,7 @@ def cambio():
         recibir = sum(abs(min(0, diferencias[d])) * d for d in DENOM)
 
         repuesto = {}
-        with read_conn(DB_PATH) as con:
+        with read_conn() as con:
             cur = con.cursor()
             for d in DENOM:
                 delta = diferencias[d]
@@ -2188,7 +2188,7 @@ def confirmar_cambio():
     ya_registrado = session.get("ya_registrado", False)
 
     if request.method == "POST" and not ya_registrado:
-        with write_tx(DB_PATH) as con:
+        with write_tx() as con:
             cur = con.cursor()
             for d in DENOM:
                 delta = data["diferencias"][d]
@@ -2226,7 +2226,7 @@ def caja_actual():
     if "acceso_caja" not in session:
         return redirect("/acceso-caja")
 
-    with write_tx(DB_PATH) as conn:
+    with write_tx() as conn:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
@@ -2296,7 +2296,7 @@ def guardar_ciclo():
     sucursal = session.get("sucursal", "Desconocida")
     fecha = datetime.now(TZ).strftime("%d-%m-%Y")
 
-    with write_tx(DB_PATH) as conn:
+    with write_tx() as conn:
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO ciclos (sucursal, fecha, datos) VALUES (?, ?, ?)",
@@ -2434,7 +2434,7 @@ def ver_fondo():
     if "usuario" not in session or session.get("tipo") != "admin":
         return redirect("/")
 
-    with read_conn(DB_PATH) as conn:
+    with read_conn() as conn:
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         cur.execute(
@@ -2511,7 +2511,7 @@ def faltantes_json():
     TZ = pytz.timezone("America/Monterrey")
     hoy = datetime.now(TZ).strftime("%Y-%m-%d")
 
-    with read_conn(DB_PATH) as conn:
+    with read_conn() as conn:
         cur = conn.cursor()
         cur.execute("SELECT DISTINCT sucursal FROM ciclos WHERE fecha = ?", (hoy,))
         registradas = [r[0] for r in cur.fetchall()]
@@ -2540,7 +2540,7 @@ def feria():
         entregar = {}
         total_objetivo = total_actual = total_reponer = total_entregar = 0
 
-        with write_tx(DB_PATH) as conn:
+        with write_tx() as conn:
             cur = conn.cursor()
             for denom in DENOM:
                 objetivo = objetivos.get(denom, 0)
@@ -2697,7 +2697,7 @@ def guardar_feria():
             repuesto[val] = 0
             total_recibir += val * dif
 
-    with write_tx(DB_PATH) as conn:
+    with write_tx() as conn:
         cur = conn.cursor()
 
         for val in objetivos:
@@ -2755,7 +2755,7 @@ def eliminar_ciclo(ciclo_id=None):
     suc = request.values.get("sucursal", "")
     fec = request.values.get("fecha", "")
 
-    with write_tx(DB_PATH) as conn:
+    with write_tx() as conn:
         cur = conn.cursor()
         cur.execute("DELETE FROM ciclos WHERE id = ?", (_id,))
 
@@ -2932,7 +2932,7 @@ def nota():
             return f"{d}-{m}-{y}"
         return s
 
-    with write_tx(DB_PATH) as conn:
+    with write_tx() as conn:
         cur = conn.cursor()
 
         if es_admin:
@@ -3022,7 +3022,7 @@ def eliminar_nota():
     fecha = request.form.get("fecha") or datetime.now(TZ).strftime("%d-%m-%Y")
     sucursal = request.form.get("sucursal") or session.get("sucursal", "")
 
-    with write_tx(DB_PATH) as conn:
+    with write_tx() as conn:
         cur = conn.cursor()
 
         if tipo == "consulta":
@@ -3053,7 +3053,7 @@ def enviar_mensaje():
 
     fecha = datetime.now(TZ).strftime("%d-%m-%Y %H:%M:%S")
 
-    with write_tx(DB_PATH) as con:
+    with write_tx() as con:
         cur = con.cursor()
         cur.execute(
             """
@@ -3072,7 +3072,7 @@ def recibir_mensajes():
     tipo = session.get("tipo", "")
     modulo = request.args.get("modulo", "")
 
-    with read_conn(DB_PATH) as con:
+    with read_conn() as con:
         con.row_factory = sqlite3.Row
         cur = con.cursor()
         cur.execute(
@@ -3095,7 +3095,7 @@ def notificaciones_chat():
     tipo = session.get("tipo", "")
     modulo = request.args.get("modulo", "")
 
-    with read_conn(DB_PATH) as con:
+    with read_conn() as con:
         cur = con.cursor()
         cur.execute(
             """
@@ -3130,7 +3130,7 @@ def ver_reporte_excel():
     tipo_usuario = session.get("tipo", "")
     suc_sesion = session.get("sucursal", "")
 
-    with read_conn(DB_PATH) as conn:
+    with read_conn() as conn:
         cur = conn.cursor()
         cur.execute("""
             SELECT DISTINCT sucursal FROM (
@@ -3188,7 +3188,7 @@ def api_reporte_excel_resumen():
         return any(r[1].lower() == col.lower() for r in cur.fetchall())
 
     try:
-        with read_conn(DB_PATH) as conn:
+        with read_conn() as conn:
             cur = conn.cursor()
 
             cur.execute(
@@ -3343,7 +3343,7 @@ def reporte_excel():
         fecha = fecha_hoy()
 
 
-    with read_conn(DB_PATH) as conn:
+    with read_conn() as conn:
         cur = conn.cursor()
 
         cur.execute(
@@ -3487,7 +3487,7 @@ def corte_del_dia():
     ventas_tarjeta = 0.0
 
 
-    with read_conn(DB_PATH) as conn:
+    with read_conn() as conn:
         cur = conn.cursor()
 
         cur.execute("""
