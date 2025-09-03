@@ -13,7 +13,9 @@ docker compose down
 docker compose up -d
 
 # 6. confirma que todo funciona
-docker compose logs -f inventari
+docker compose logs -f inventario
+docker compose logs -f caja
+
 
 pkill cloudflared || true
 cloudflared tunnel run apps
