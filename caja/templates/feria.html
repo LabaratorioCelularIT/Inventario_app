@@ -13,25 +13,21 @@
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:'Segoe UI',sans-serif;background-color:var(--celeste);color:var(--texto)}
-
-    /* Topbar unificada */
+    
     .topbar{
       background-color:var(--azul-rey); color:#fff; display:flex; align-items:center; justify-content:center; gap:12px;
       padding:16px 20px; font-size:22px; font-weight:700; box-shadow:0 2px 10px rgba(0,0,0,.2);
       position:sticky; top:0; z-index:50; border-bottom:3px solid #001f3f;
     }
     .topbar img{height:70px}
-
-    /* Botón Volver fijo */
+    
     .volver-fijo{position:fixed; top:16px; left:16px; z-index:60}
 
-    /* Contenedor tarjeta */
     .container{
       max-width:1000px; margin:30px auto; background:var(--blanco); padding:28px; border-radius:16px;
       box-shadow:0 8px 24px var(--sombra); border:1px solid var(--borde);
     }
 
-    /* Filtros admin */
     .filtros-admin{
       display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin-bottom:18px;
       background:var(--gris); padding:12px; border-radius:12px; border:1px solid var(--borde);
@@ -43,7 +39,6 @@
     }
     .input:focus,.select:focus{border-color:var(--azul); box-shadow:0 0 0 4px rgba(51,122,183,.15)}
 
-    /* Bloques de denominación */
     .denominacion{margin-bottom:32px; padding-bottom:20px; border-bottom:1px solid var(--borde)}
     .denominacion h2{margin:0 0 12px 0; font-size:20px; color:var(--azul-rey)}
     .campo{margin:10px 0}
@@ -58,7 +53,6 @@
     .faltante{color:var(--rojo); font-weight:700}
     .correcto{color:var(--verde); font-weight:700}
 
-    /* Botones */
     .btn{
       display:inline-flex; align-items:center; justify-content:center; gap:8px;
       padding:12px 18px; border-radius:10px; font-weight:700; border:2px solid #1c5e8c;
@@ -71,7 +65,6 @@
     .btn-rojo{background:var(--rojo); border-color:#001f3f} .btn-rojo:hover{background:var(--rojo-hover)}
     .acciones{display:flex; gap:10px; align-items:center}
 
-    /* Volver extra para móvil */
     .volver-bottom{display:none; text-align:center; margin-top:12px}
 
     @media (max-width:700px){
@@ -92,7 +85,6 @@
     <span>Registrar Feria — {{ sucursal }}</span>
   </div>
 
-  <!-- Volver fijo arriba -->
   <div class="volver-fijo">
     <a class="btn btn-rojo" href="/volver-panel">⬅ Volver al Panel</a>
   </div>
@@ -153,13 +145,11 @@
       </div>
     </form>
 
-    <!-- Volver extra para móviles -->
     <div class="volver-bottom">
       <a class="btn btn-rojo" href="/volver-panel" style="width:100%;">⬅ Volver al Panel</a>
     </div>
   </div>
 
-  <!-- ⚠ Mantengo tus funciones tal cual -->
   <script>
     const objetivos = {{ objetivos|tojson }};
     const denom = {{ denom|tojson }};
