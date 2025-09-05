@@ -632,7 +632,6 @@ def pendiente_realizado(pid):
                  WHERE id=?
             """, (usuario, ahora_mx(), pid))
 
-            # Liberar el bloqueo si era de feria
             cur.execute("SELECT tipo, referencia, sucursal, fecha FROM pendientes WHERE id=?", (pid,))
             row = cur.fetchone()
             if row:
@@ -851,6 +850,21 @@ def enviar_codigo():
     else:
         return render_template("enviar_codigo.html", error=f"No se pudo enviar el correo: {err}")
 
+@app.route("/volver-panel")
+def volver_panel():
+    if "usuario" not in session:
+        return redirect("/login")
+
+    tipo = session.get("tipo", "")
+    if tipo == "admin":
+        return redirect(url_for("panel_admin"))
+    elif tipo == "consulta":
+        return redirect(url_for("panel_consulta"))
+    elif tipo == "reparto":
+        return redirect(url_for("panel_reparto"))
+
+    return redirect("/login")
+    
 @app.route("/pendiente/autorizar/<int:pid>", methods=["POST"])
 def autorizar_pendiente(pid):
     if "usuario" not in session or session.get("tipo") != "admin":
@@ -898,7 +912,7 @@ def autorizar_pendiente(pid):
                         """, (nombre, contrasena, tipo_u, correo, telefono))
 
             if tipo == "feria":
-                bid = _bloqueo_id(referencia)  # <-- ESTA LÍNEA FALTABA
+                bid = _bloqueo_id(referencia)
                 if bid is not None:
                     cur.execute("UPDATE bloqueos_feria SET autorizado=1 WHERE id=?", (bid,))
                 else:
