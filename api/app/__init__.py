@@ -56,7 +56,7 @@ def register_error_handlers(app):
 
 def register_blueprints(app):
     """Register application blueprints"""
-    from app.api.v1 import auth_bp, inventory_bp, sales_bp, reports_bp, users_bp
+    from app.routes.v1 import auth_bp, inventory_bp, sales_bp, reports_bp, users_bp
     
     # API v1 routes
     app.register_blueprint(auth_bp, url_prefix='/api/v1/auth')

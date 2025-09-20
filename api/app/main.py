@@ -41,7 +41,7 @@ def create_app():
         })
     
     # Register blueprints
-    from app.api.v1 import auth_bp, inventory_bp, cash_bp
+    from app.routes.v1 import auth_bp, inventory_bp, cash_bp
     app.register_blueprint(auth_bp, url_prefix='/api/v1')
     app.register_blueprint(inventory_bp, url_prefix='/api/v1')
     app.register_blueprint(cash_bp, url_prefix='/api/v1')
