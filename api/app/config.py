@@ -1,6 +1,7 @@
 # API Configuration
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 
 @dataclass
 class Config:
@@ -20,8 +21,10 @@ class Config:
     JWT_SECRET_KEY: str = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
     JWT_ACCESS_TOKEN_EXPIRES: int = int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 86400))  # 24 hours
     
-    # CORS settings
-    CORS_ORIGINS: list = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+    # CORS settings - Fixed: using default_factory instead of mutable default
+    CORS_ORIGINS: List[str] = field(
+        default_factory=lambda: os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+    )
     
     # Redis/Celery (for background tasks)
     REDIS_URL: str = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
@@ -36,9 +39,9 @@ class Config:
     SMTP_FROM_NAME: str = os.getenv('SMTP_FROM_NAME', 'Celulares Crédito Fácil')
     
     # Business settings
-    SUCURSALES: list = [
+    SUCURSALES: list = field(default_factory=lambda: [
         "Colinas", "Hidalgo", "Voluntad 1", "Reservas", "Villas", "Todas"
-    ]
+    ])
     
     # Pagination
     DEFAULT_PAGE_SIZE: int = 50
@@ -74,9 +77,22 @@ class TestingConfig(Config):
     MONGO_URI: str = 'mongodb://localhost:27017/inventario_test'
 
 # Configuration factory
+def get_config(env_name='development'):
+    """Get configuration instance by environment name"""
+    configs = {
+        'development': DevelopmentConfig,
+        'production': ProductionConfig,
+        'testing': TestingConfig,
+        'default': DevelopmentConfig
+    }
+    
+    config_class = configs.get(env_name, DevelopmentConfig)
+    return config_class()
+
+# For backward compatibility, provide default development config
 config = {
-    'development': DevelopmentConfig(),
-    'production': ProductionConfig(),
-    'testing': TestingConfig(),
-    'default': DevelopmentConfig()
+    'development': lambda: DevelopmentConfig(),
+    'production': lambda: ProductionConfig(),
+    'testing': lambda: TestingConfig(),
+    'default': lambda: DevelopmentConfig()
 }

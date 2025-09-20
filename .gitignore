@@ -1,66 +1,183 @@
-# *.sqlite3
-# *.sqlite3-shm
-# *.sqlite3-wal
-# caja/*.sqlite3
-# caja/*.sqlite3-shm
-# caja/*.sqlite3-wal
-# inventario_app/*.sqlite3
-# inventario_app/*.sqlite3-shm
-# inventario_app/*.sqlite3-wal
+# ===============================
+# DATABASE FILES
+# ===============================
+# SQLite databases - these contain sensitive data
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.db
+*.db-shm
+*.db-wal
 
-# Dependencies
-node_modules/
+# Database backups and exports
+RespaldoBd*/
+*.sql.bak
+dump*.sql
+recovered*.sql
+*.sqlite3.bak.*
+
+# ===============================
+# PYTHON
+# ===============================
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
+*.py[cod]
+*$py.class
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Environment variables
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# ===============================
+# NODE.JS / REACT
+# ===============================
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Build outputs
+build/
+dist/
+.next/
+out/
+
+# ===============================
+# ENVIRONMENT VARIABLES
+# ===============================
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*.local
 
-# Logs
+# ===============================
+# IDE / EDITORS
+# ===============================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sublime-project
+.sublime-workspace
+
+# ===============================
+# LOGS
+# ===============================
 *.log
 logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 
-# Build outputs
-build/
-dist/
-*.egg-info/
-
-# Docker
-.dockerignore
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Flask
+# Flask logs
 instance/
 .webassets-cache
 
-# Coverage reports
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
+# ===============================
+# OS GENERATED FILES
+# ===============================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
 
-# Temporary files
+# ===============================
+# DOCKER
+# ===============================
+# .dockerignore
+
+# ===============================
+# TEMPORARY FILES
+# ===============================
 *.tmp
 *.temp
 *~
+*.bak
+*.backup
+*.old
+
+# ===============================
+# SPECIFIC PROJECT FILES
+# ===============================
+# Legacy app backups
+legacy/**/inventario*.sqlite3*
+legacy/**/caja*.sqlite3*
+
+# Excel reports (these can be regenerated)
+*.xlsx
+CORTE.xlsx
+
+# Development scripts that might contain sensitive info
+dev-launcher*.sh.bak

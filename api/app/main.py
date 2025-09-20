@@ -1,10 +1,11 @@
 from flask import Flask
 from flask_cors import CORS
-from app.config import Config
+from app.config import get_config
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_object(Config)
+    config_instance = get_config('development')
+    app.config.from_object(config_instance)
     
     CORS(app)
     

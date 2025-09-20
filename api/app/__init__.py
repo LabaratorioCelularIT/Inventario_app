@@ -3,7 +3,7 @@ from flask import Flask
 from flask_pymongo import PyMongo
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from app.config import config
+from app.config import get_config
 
 # Initialize extensions
 mongo = PyMongo()
@@ -15,7 +15,8 @@ def create_app(config_name='development'):
     app = Flask(__name__)
     
     # Load configuration
-    app.config.from_object(config[config_name])
+    config_instance = get_config(config_name)
+    app.config.from_object(config_instance)
     
     # Initialize extensions
     mongo.init_app(app)
