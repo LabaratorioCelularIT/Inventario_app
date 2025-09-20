@@ -1,12 +1,10 @@
-# Flask Application Factory
+# Flask Application Factory - Testing Mode
 from flask import Flask
-from flask_pymongo import PyMongo
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from app.config import get_config
 
-# Initialize extensions
-mongo = PyMongo()
+# Initialize extensions (without MongoDB for testing)
 jwt = JWTManager()
 cors = CORS()
 
@@ -18,8 +16,7 @@ def create_app(config_name='development'):
     config_instance = get_config(config_name)
     app.config.from_object(config_instance)
     
-    # Initialize extensions
-    mongo.init_app(app)
+    # Initialize extensions (skip MongoDB for testing)
     jwt.init_app(app)
     cors.init_app(app, origins=app.config['CORS_ORIGINS'])
     
@@ -28,6 +25,9 @@ def create_app(config_name='development'):
     
     # Register blueprints
     register_blueprints(app)
+    
+    # Skip database initialization for testing
+    app.logger.info("Running in testing mode - database disabled")
     
     return app
 
@@ -71,5 +71,5 @@ def register_blueprints(app):
         return {
             'status': 'healthy',
             'version': '1.0.0',
-            'database': 'connected' if mongo.db else 'disconnected'
+            'database': 'testing mode - disabled'
         }

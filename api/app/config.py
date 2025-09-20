@@ -12,7 +12,7 @@ class Config:
     DEBUG: bool = FLASK_ENV == 'development'
     
     # MongoDB settings
-    MONGO_URI: str = os.getenv('MONGO_URI', 'mongodb://localhost:27017/inventario_new')
+    MONGO_URI: str = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/inventario_app')
     
     # Legacy database (for migration)
     LEGACY_DB_PATH: str = os.getenv('LEGACY_DB_PATH', '/shared/databases/inventario.sqlite3')

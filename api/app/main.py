@@ -1,5 +1,6 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 from app.config import get_config
 
 def create_app():
@@ -7,7 +8,37 @@ def create_app():
     config_instance = get_config('development')
     app.config.from_object(config_instance)
     
+    # Initialize extensions
     CORS(app)
+    jwt = JWTManager(app)
+    
+    # Simple root route
+    @app.route('/')
+    def root():
+        return jsonify({
+            'message': 'Inventario API is running',
+            'version': '2.0',
+            'status': 'active',
+            'endpoints': {
+                'health': '/health',
+                'auth': '/api/v1/auth/',
+                'inventory': '/api/v1/inventory/',
+                'cash': '/api/v1/cash/'
+            }
+        })
+    
+    # Health check endpoint
+    @app.route('/health')
+    def health_check():
+        return jsonify({
+            'status': 'healthy',
+            'message': 'API is running successfully',
+            'timestamp': '2025-09-20',
+            'services': {
+                'api': 'running',
+                'database': 'not connected (testing mode)'
+            }
+        })
     
     # Register blueprints
     from app.api.v1 import auth_bp, inventory_bp, cash_bp
