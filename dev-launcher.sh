@@ -17,6 +17,15 @@ get_compose_cmd() {
 
 COMPOSE_CMD=$(get_compose_cmd)
 
+# Function to run compose commands properly
+run_compose() {
+    if [[ "$COMPOSE_CMD" == "docker compose" ]]; then
+        docker compose "$@"
+    else
+        docker-compose "$@"
+    fi
+}
+
 echo "=== Inventario App Development Environment ==="
 echo "Using: $COMPOSE_CMD"
 echo ""
@@ -36,7 +45,7 @@ read -p "Choose an option (1-8): " choice
 case $choice in
     1)
         echo "Starting all services..."
-        $COMPOSE_CMD up -d
+        run_compose up -d
         echo ""
         echo "Services running on:"
         echo "- New React Frontend: http://localhost:3000"
@@ -48,7 +57,7 @@ case $choice in
         ;;
     2)
         echo "Starting new architecture only..."
-        eval "$COMPOSE_CMD up -d api frontend mongo"
+        run_compose up -d api frontend mongo
         echo ""
         echo "New architecture running on:"
         echo "- React Frontend: http://localhost:3000"
@@ -57,7 +66,7 @@ case $choice in
         ;;
     3)
         echo "Starting legacy applications only..."
-        $COMPOSE_CMD up -d legacy-inventario legacy-caja legacy-calculadora
+        run_compose up -d legacy-inventario legacy-caja legacy-calculadora
         echo ""
         echo "Legacy applications running on:"
         echo "- Inventory: http://localhost:5001"
@@ -66,31 +75,31 @@ case $choice in
         ;;
     4)
         echo "Stopping all services..."
-        $COMPOSE_CMD down
+        run_compose down
         echo "All services stopped."
         ;;
     5)
         echo "Service status:"
-        $COMPOSE_CMD ps
+        run_compose ps
         ;;
     6)
         echo "Resetting and rebuilding all containers..."
-        $COMPOSE_CMD down -v
-        $COMPOSE_CMD build --no-cache
-        $COMPOSE_CMD up -d
+        run_compose down -v
+        run_compose build --no-cache
+        run_compose up -d
         echo "All containers rebuilt and started."
         ;;
     7)
         echo "Viewing logs for all services..."
-        $COMPOSE_CMD logs -f
+        run_compose logs -f
         ;;
     8)
         echo "Available services:"
-        $COMPOSE_CMD ps --services
+        run_compose ps --services
         echo ""
         read -p "Enter service name: " service
         echo "Viewing logs for $service (Press Ctrl+C to exit)..."
-        $COMPOSE_CMD logs -f "$service"
+        run_compose logs -f "$service"
         ;;
     *)
         echo "Invalid option. Please choose 1-8."
