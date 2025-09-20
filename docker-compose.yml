@@ -1,13 +1,54 @@
-version: "3.9"
+version: '3.8'
 
 services:
-  inventario:
-    build: ./inventario_app
+  # New Architecture - API
+  api:
+    build: ./api
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/inventario_app
+      - JWT_SECRET_KEY=development-secret-key
+      - FLASK_ENV=development
+    volumes:
+      - ./api:/app
+      - ./shared/databases:/app/databases
+    depends_on:
+      - mongo
+    networks:
+      - inventario-network
+
+  # New Architecture - Frontend
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000/api/v1
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - inventario-network
+
+  # MongoDB for new architecture
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: inventario_app
+    volumes:
+      - mongo_data:/data/db
+      - ./shared/databases/mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - inventario-network
+
+  # Legacy Applications (kept running for business continuity)
+  legacy-inventario:
+    build: ./legacy/inventario_app
     container_name: inventario_app
-    # Si no quieres tocar app.py, ejecuta Gunicorn importando app:app o wsgi:app
-    # command: gunicorn -b 0.0.0.0:5001 app:app
-    # Si prefieres flask dev server (no recomendado en prod):
-    # command: flask run --host=0.0.0.0 --port=5001
     environment:
       FLASK_APP: app.py
       FLASK_RUN_HOST: 0.0.0.0
@@ -15,19 +56,19 @@ services:
       FLASK_ENV: production
       INVENTARIO_DB: /app/inventario.sqlite3
     volumes:
-      - ./inventario_app:/app
+      - ./legacy/inventario_app:/app
       - ./inventario.sqlite3:/app/inventario.sqlite3
     command: flask run
     ports:
       - "127.0.0.1:5001:5001"
     restart: unless-stopped
     dns: [8.8.8.8, 1.1.1.1]
+    networks:
+      - inventario-network
 
-  caja:
-    build: ./caja
+  legacy-caja:
+    build: ./legacy/caja
     container_name: caja_app
-    # command: gunicorn -b 0.0.0.0:5003 app:app
-    # command: flask run --host=0.0.0.0 --port=5003
     environment:
       FLASK_APP: app.py
       FLASK_RUN_HOST: 0.0.0.0
@@ -39,10 +80,29 @@ services:
       SMTP_PASS: "********"
       SMTP_FROM_NAME: "Celulares Crédito Fácil"
     volumes:
-      - ./caja:/app
+      - ./legacy/caja:/app
       - ./inventario.sqlite3:/app/inventario.sqlite3
     command: flask run
     ports:
       - "127.0.0.1:5003:5003"
     restart: unless-stopped
     dns: [8.8.8.8, 1.1.1.1]
+    networks:
+      - inventario-network
+
+  legacy-calculadora:
+    build: ./legacy/calculadora_cambio
+    ports:
+      - "5004:5000"
+    volumes:
+      - ./legacy/calculadora_cambio:/app
+      - ./shared/databases:/app/databases
+    networks:
+      - inventario-network
+
+volumes:
+  mongo_data:
+
+networks:
+  inventario-network:
+    driver: bridge
