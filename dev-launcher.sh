@@ -27,9 +27,11 @@ echo "3. Start only legacy applications"
 echo "4. Stop all services"
 echo "5. View service status"
 echo "6. Reset and rebuild all containers"
+echo "7. View logs (all services)"
+echo "8. View logs (specific service)"
 echo ""
 
-read -p "Choose an option (1-6): " choice
+read -p "Choose an option (1-8): " choice
 
 case $choice in
     1)
@@ -78,7 +80,19 @@ case $choice in
         $COMPOSE_CMD up -d
         echo "All containers rebuilt and started."
         ;;
+    7)
+        echo "Viewing logs for all services..."
+        $COMPOSE_CMD logs -f
+        ;;
+    8)
+        echo "Available services:"
+        $COMPOSE_CMD ps --services
+        echo ""
+        read -p "Enter service name: " service
+        echo "Viewing logs for $service (Press Ctrl+C to exit)..."
+        $COMPOSE_CMD logs -f "$service"
+        ;;
     *)
-        echo "Invalid option. Please choose 1-6."
+        echo "Invalid option. Please choose 1-8."
         ;;
 esac
