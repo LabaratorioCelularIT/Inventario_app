@@ -5,9 +5,9 @@
 
 # Detect which compose command to use
 get_compose_cmd() {
-    if docker compose version &> /dev/null; then
+    if docker compose version > /dev/null 2>&1; then
         echo "docker compose"
-    elif command -v docker-compose &> /dev/null; then
+    elif command -v docker-compose > /dev/null 2>&1; then
         echo "docker-compose"
     else
         echo "ERROR: Neither 'docker compose' nor 'docker-compose' is available"
@@ -19,7 +19,7 @@ COMPOSE_CMD=$(get_compose_cmd)
 
 # Function to run compose commands properly
 run_compose() {
-    if [[ "$COMPOSE_CMD" == "docker compose" ]]; then
+    if [ "$COMPOSE_CMD" = "docker compose" ]; then
         docker compose "$@"
     else
         docker-compose "$@"
