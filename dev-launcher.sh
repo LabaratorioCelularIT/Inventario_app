@@ -48,7 +48,7 @@ case $choice in
         ;;
     2)
         echo "Starting new architecture only..."
-        $COMPOSE_CMD up -d api frontend mongo
+        eval "$COMPOSE_CMD up -d api frontend mongo"
         echo ""
         echo "New architecture running on:"
         echo "- React Frontend: http://localhost:3000"
