@@ -3,22 +3,7 @@
 # Inventario App Development Launcher
 # This script helps start different parts of the application
 
-# Detect which compose command to use
-get_compose_cmd() {
-    if docker compose version &> /dev/null; then
-        echo "docker compose"
-    elif command -v docker-compose &> /dev/null; then
-        echo "docker-compose"
-    else
-        echo "ERROR: Neither 'docker compose' nor 'docker-compose' is available"
-        exit 1
-    fi
-}
-
-COMPOSE_CMD=$(get_compose_cmd)
-
 echo "=== Inventario App Development Environment ==="
-echo "Using: $COMPOSE_CMD"
 echo ""
 echo "Available options:"
 echo "1. Start all services (legacy + new)"
@@ -34,7 +19,7 @@ read -p "Choose an option (1-6): " choice
 case $choice in
     1)
         echo "Starting all services..."
-        $COMPOSE_CMD up -d
+        docker-compose up -d
         echo ""
         echo "Services running on:"
         echo "- New React Frontend: http://localhost:3000"
@@ -46,7 +31,7 @@ case $choice in
         ;;
     2)
         echo "Starting new architecture only..."
-        $COMPOSE_CMD up -d api frontend mongo
+        docker-compose up -d api frontend mongo
         echo ""
         echo "New architecture running on:"
         echo "- React Frontend: http://localhost:3000"
@@ -55,7 +40,7 @@ case $choice in
         ;;
     3)
         echo "Starting legacy applications only..."
-        $COMPOSE_CMD up -d legacy-inventario legacy-caja legacy-calculadora
+        docker-compose up -d legacy-inventario legacy-caja legacy-calculadora
         echo ""
         echo "Legacy applications running on:"
         echo "- Inventory: http://localhost:5001"
@@ -64,18 +49,18 @@ case $choice in
         ;;
     4)
         echo "Stopping all services..."
-        $COMPOSE_CMD down
+        docker-compose down
         echo "All services stopped."
         ;;
     5)
         echo "Service status:"
-        $COMPOSE_CMD ps
+        docker-compose ps
         ;;
     6)
         echo "Resetting and rebuilding all containers..."
-        $COMPOSE_CMD down -v
-        $COMPOSE_CMD build --no-cache
-        $COMPOSE_CMD up -d
+        docker-compose down -v
+        docker-compose build --no-cache
+        docker-compose up -d
         echo "All containers rebuilt and started."
         ;;
     *)
